@@ -1,0 +1,67 @@
+{% load static %}
+{% load user_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ArmGuard - Armory Management System{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if user.is_authenticated %}
+    <!-- Header Actions Bar -->
+    <div class="header-actions no-print">
+        <div class="welcome-text">
+            Welcome, {{ user.username }} | Role: {{ user|get_user_role }}
+        </div>
+        <a href="{% url 'logout' %}" class="btn-logout">Logout</a>
+    </div>
+
+    <div class="no-print">
+        {% include 'includes/navbar.html' %}
+    </div>
+    {% endif %}
+    
+    <!-- Messages -->
+    {% if messages %}
+    <div class="container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="footer no-print">
+        <p>&copy; 2025 ArmGuard - Armory Management System</p>
+        <p>Developed by 9533 R&D Squadron for Philippine Air Force | Military Time: <span id="digital-clock"></span></p>
+    </footer>
+
+    <script src="{% static 'js/main.js' %}"></script>
+        <script>
+            function updateClock() {
+                const now = new Date();
+                const day = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const year = String(now.getFullYear()).slice(-2);
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const formatted = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+                document.getElementById('digital-clock').textContent = formatted;
+            }
+            setInterval(updateClock, 1000);
+            updateClock();
+        </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+

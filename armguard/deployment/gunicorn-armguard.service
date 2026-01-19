@@ -1,0 +1,47 @@
+[Unit]
+Description=Gunicorn daemon for ArmGuard
+Documentation=https://github.com/Stealth3535/armguard
+After=network.target
+
+[Service]
+Type=notify
+# The specific user and group that should run Gunicorn
+User=www-data
+Group=www-data
+
+# Working directory where your Django project is located
+WorkingDirectory=/var/www/armguard
+
+# Environment variables
+Environment="PATH=/var/www/armguard/.venv/bin"
+Environment="DJANGO_SETTINGS_MODULE=core.settings_production"
+
+# Load environment variables from .env file
+EnvironmentFile=/var/www/armguard/.env
+
+# Gunicorn execution command
+# Adjust paths and worker count based on your server
+ExecStart=/var/www/armguard/.venv/bin/gunicorn \
+          --workers 3 \
+          --bind unix:/run/gunicorn-armguard.sock \
+          --timeout 60 \
+          --access-logfile /var/log/armguard/access.log \
+          --error-logfile /var/log/armguard/error.log \
+          --log-level info \
+          core.wsgi:application
+
+# Restart policy
+Restart=always
+RestartSec=3
+
+# Security settings
+PrivateTmp=true
+NoNewPrivileges=true
+
+# Process management
+KillMode=mixed
+KillSignal=SIGQUIT
+TimeoutStopSec=5
+
+[Install]
+WantedBy=multi-user.target

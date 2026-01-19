@@ -1,0 +1,5 @@
+# robots.txt for ArmGuard
+# This file prevents search engines from indexing your app
+
+User-agent: *
+Disallow: /

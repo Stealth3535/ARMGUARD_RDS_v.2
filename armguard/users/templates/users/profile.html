@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'users/users.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <h1>User Profile</h1>
+    <div class="profile-details">
+        <div class="profile-header">
+            <h2>{{ user.get_full_name|default:user.username }}</h2>
+            <a href="{% url 'users:edit_profile' %}" class="btn btn-primary">Edit Profile</a>
+        </div>
+        
+        <div class="profile-info">
+            <div class="info-group">
+                <label>Username:</label>
+                <span>{{ user.username }}</span>
+            </div>
+            
+            <div class="info-group">
+                <label>Email:</label>
+                <span>{{ user.email|default:'Not provided' }}</span>
+            </div>
+            
+            <div class="info-group">
+                <label>First Name:</label>
+                <span>{{ user.first_name|default:'Not provided' }}</span>
+            </div>
+            
+            <div class="info-group">
+                <label>Last Name:</label>
+                <span>{{ user.last_name|default:'Not provided' }}</span>
+            </div>
+            
+            {% if user.userprofile %}
+            <div class="info-group">
+                <label>Phone Number:</label>
+                <span>{{ user.userprofile.phone_number|default:'Not provided' }}</span>
+            </div>
+            
+            <div class="info-group">
+                <label>Department:</label>
+                <span>{{ user.userprofile.department|default:'Not assigned' }}</span>
+            </div>
+            
+            <div class="info-group">
+                <label>Badge Number:</label>
+                <span>{{ user.userprofile.badge_number|default:'Not assigned' }}</span>
+            </div>
+            
+            <div class="info-group">
+                <label>Role:</label>
+                <span>{% if user.userprofile.is_armorer %}Armorer{% else %}Personnel{% endif %}</span>
+            </div>
+            {% endif %}
+            
+            <div class="info-group">
+                <label>Date Joined:</label>
+                <span>{{ user.date_joined|date:'F d, Y' }}</span>
+            </div>
+            
+            <div class="info-group">
+                <label>Last Login:</label>
+                <span>{{ user.last_login|date:'F d, Y H:i'|default:'Never' }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

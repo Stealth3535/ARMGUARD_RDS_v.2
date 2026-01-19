@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Print Transactions - ArmGuard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header no-print">
+        <h1 class="page-title">Print Transactions</h1>
+        <button onclick="window.print()" class="btn btn-primary">🖨️ Print</button>
+    </div>
+
+    <div class="print-section">
+        <div class="transactions-header">
+            <h2>Transaction History Report</h2>
+            <p>Generated: {{ "now"|date:"d/m/Y H:i" }}</p>
+            <p>Total Transactions: {{ transactions.count }}</p>
+        </div>
+
+        <table class="transactions-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Date/Time</th>
+                    <th>Action</th>
+                    <th>Personnel</th>
+                    <th>Item Serial</th>
+                    <th>Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction.id }}</td>
+                    <td>{{ transaction.date_time|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <span class="action-badge {% if transaction.action == 'Take' %}action-take{% else %}action-return{% endif %}">
+                            {{ transaction.action }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if transaction.personnel %}
+                            {{ transaction.personnel.full_name }}<br>
+                            <small>{{ transaction.personnel.personnel_id }}</small>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if transaction.item %}
+                            {{ transaction.item.serial }}<br>
+                            <small>{{ transaction.item.item_type }}</small>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>{{ transaction.remarks|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">No transactions found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .transactions-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid #000;
+    }
+    
+    .transactions-header h2 {
+        margin: 0 0 10px 0;
+        font-size: 24px;
+    }
+    
+    .transactions-header p {
+        margin: 5px 0;
+        color: #666;
+    }
+    
+    .transactions-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        font-size: 12px;
+    }
+    
+    .transactions-table thead {
+        background: #333;
+        color: white;
+    }
+    
+    .transactions-table th,
+    .transactions-table td {
+        padding: 10px;
+        text-align: left;
+        border: 1px solid #ddd;
+    }
+    
+    .transactions-table th {
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 11px;
+    }
+    
+    .transactions-table tbody tr:nth-child(even) {
+        background: #f9f9f9;
+    }
+    
+    .action-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+    
+    .action-take {
+        background: #ffebee;
+        color: #c62828;
+        border: 1px solid #c62828;
+    }
+    
+    .action-return {
+        background: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid #2e7d32;
+    }
+    
+    small {
+        font-size: 10px;
+        color: #666;
+    }
+    
+    .text-center {
+        text-align: center !important;
+    }
+    
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        
+        .transactions-table {
+            font-size: 10px;
+        }
+        
+        .transactions-table th,
+        .transactions-table td {
+            padding: 6px;
+        }
+        
+        body {
+            background: white;
+        }
+        
+        @page {
+            margin: 1cm;
+            size: landscape;
+        }
+    }
+</style>
+{% endblock %}

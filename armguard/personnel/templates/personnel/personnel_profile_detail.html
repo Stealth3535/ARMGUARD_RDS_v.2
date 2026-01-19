@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ personnel.get_full_name }} - Personnel Detail{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Breadcrumb -->
+    <div style="margin-bottom: 1rem;">
+        <a href="{% url 'dashboard' %}" style="color: var(--text-light);">Dashboard</a> / 
+        <a href="{% url 'personnel:personnel_profile_list' %}" style="color: var(--text-light);">Personnel</a> / 
+        <strong>{{ personnel.get_full_name }}</strong>
+    </div>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">{{ personnel.get_full_name }}</h1>
+            <p class="page-subtitle">{{ personnel.rank }} | {{ personnel.office }}</p>
+        </div>
+    </div>
+
+    <div class="grid grid-3">
+        <!-- Personal Information -->
+        <div class="card">
+            <h2 class="card-title">Personal Information</h2>
+            
+            <div class="text-center mb-3">
+                {% if personnel.picture %}
+                <img src="{{ personnel.picture.url }}" alt="{{ personnel.get_full_name }}" class="personnel-picture">
+                {% else %}
+                <div class="no-picture">No Photo Available</div>
+                {% endif %}
+            </div>
+            
+            <div class="detail-item mb-2">
+                <div class="detail-label">Full Name</div>
+                <div class="detail-value">{{ personnel.get_full_name }}</div>
+            </div>
+            
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <div class="detail-label">Surname</div>
+                    <div class="detail-value">{{ personnel.surname }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">First Name</div>
+                    <div class="detail-value">{{ personnel.firstname }}</div>
+                </div>
+            </div>
+            
+            {% if personnel.middle_initial %}
+            <div class="detail-item">
+                <div class="detail-label">Middle Initial</div>
+                <div class="detail-value">{{ personnel.middle_initial }}</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Military Information -->
+        <div class="card">
+            <h2 class="card-title">Military Information</h2>
+            
+            <div class="detail-item mb-2">
+                <div class="detail-label">Rank</div>
+                <div class="detail-value">{{ personnel.rank }}</div>
+            </div>
+            
+            <div class="detail-item mb-2">
+                <div class="detail-label">Serial Number</div>
+                <div class="detail-value">{{ personnel.serial }}</div>
+            </div>
+            
+            <div class="detail-item mb-2">
+                <div class="detail-label">Office</div>
+                <div class="detail-value">{{ personnel.office }}</div>
+            </div>
+            
+            <div class="detail-item mb-2">
+                <div class="detail-label">Classification</div>
+                <div class="detail-value">
+                    {% if personnel.is_officer %}
+                    <span class="badge badge-officer">Officer</span>
+                    {% else %}
+                    <span class="badge badge-enlisted">Enlisted Personnel</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="detail-item">
+                <div class="detail-label">Status</div>
+                <div class="detail-value">
+                    {% if personnel.status == 'Active' %}
+                    <span class="badge badge-active">{{ personnel.status }}</span>
+                    {% else %}
+                    <span class="badge badge-inactive">{{ personnel.status }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- System Information -->
+        <div class="card">
+            <h2 class="card-title">System Information</h2>
+            
+            <div class="detail-item mb-2">
+                <div class="detail-label">Personnel ID</div>
+                <div class="detail-value" style="font-family: monospace;">{{ personnel.id }}</div>
+            </div>
+            
+            <div class="detail-item mb-2">
+                <div class="detail-label">Contact Number</div>
+                <div class="detail-value">{{ personnel.tel }}</div>
+            </div>
+            
+            <div class="detail-item mb-2">
+                <div class="detail-label">Registration Date</div>
+                <div class="detail-value">{{ personnel.registration_date|date:"d/m/y" }}</div>
+            </div>
+            
+            <div class="detail-item mb-2">
+                <div class="detail-label">QR Code</div>
+                <div class="detail-value" style="font-family: monospace; font-size: 0.9rem;">{{ personnel.qr_code }}</div>
+            </div>
+            
+            <div class="detail-item mb-2">
+                <div class="detail-label">Created</div>
+                <div class="detail-value">{{ personnel.created_at|date:"d/m/y H:i" }}</div>
+            </div>
+            
+            <div class="detail-item">
+                <div class="detail-label">Last Updated</div>
+                <div class="detail-value">{{ personnel.updated_at|date:"d/m/y H:i" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction History -->
+    <div class="card">
+        <h2 class="card-title">Transaction History</h2>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Item</th>
+                        <th>Action</th>
+                        <th>Date/Time</th>
+                        <th>Duty Type</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in personnel.transactions.all %}
+                    <tr>
+                        <td><strong>#{{ transaction.id }}</strong></td>
+                        <td>
+                            {{ transaction.item.item_type }} - {{ transaction.item.serial }}<br>
+                            <small class="text-muted">{{ transaction.item.id }}</small>
+                        </td>
+                        <td>
+                            {% if transaction.action == 'Take' %}
+                            <span class="badge badge-issued">Withdraw</span>
+                            {% else %}
+                            <span class="badge badge-available">Return</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ transaction.date_time|date:"d/m/y H:i:s" }}</td>
+                        <td>{{ transaction.duty_type|default:"-" }}</td>
+                        <td>{{ transaction.notes|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No transaction history</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- QR Code Section -->
+    <div class="card">
+        <h2 class="card-title">QR Code</h2>
+        <div class="qr-code-container">
+            <p class="text-muted">Personnel QR Code: {{ personnel.qr_code }}</p>
+            {% if qr_code_obj and qr_code_obj.qr_image %}
+            <div style="display: flex; justify-content: center; margin: 1rem 0;">
+                <img src="{{ qr_code_obj.qr_image.url }}?v={{ qr_code_obj.updated_at|date:'U' }}" alt="QR Code for {{ personnel.get_full_name }}" style="width: 256px; height: 256px; border-radius: 8px; background: #f8f8f8;">
+            </div>
+            {% else %}
+            <div style="display: flex; justify-content: center; margin: 1rem 0; padding: 128px 0; background: #f0f0f0; border-radius: 8px;">
+                <p style="margin: 0; color: #999;">No QR Code Available</p>
+            </div>
+            {% endif %}
+            <p class="mt-2 text-center">
+                {% if qr_code_obj %}
+                <a href="{% url 'print_handler:print_single_qr' qr_code_obj.id %}" class="btn btn-primary btn-sm" target="_blank">🖨️ Print QR Code</a>
+                {% else %}
+                <button class="btn btn-secondary btn-sm" disabled>🖨️ Print QR Code</button>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// No JavaScript QR generation needed - using saved media images
+</script>
+{% endblock %}

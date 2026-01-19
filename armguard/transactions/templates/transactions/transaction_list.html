@@ -1,0 +1,773 @@
+{% extends "base.html" %}
+
+{% block title %}Transactions - ArmGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 2rem;
+    }
+    
+    .page-title {
+        font-size: 2rem;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .page-subtitle {
+        color: #7f8c8d;
+        font-size: 1rem;
+    }
+    
+    .view-selector {
+        background: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .view-selector label {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .view-selector select {
+        padding: 0.5rem 1rem;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        font-size: 1rem;
+        min-width: 200px;
+        cursor: pointer;
+    }
+
+    .view-selector select:focus {
+        outline: none;
+        border-color: #2c5f2d;
+    }
+    
+    .search-bar {
+        margin-bottom: 20px;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 12px 20px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: all 0.3s;
+    }
+    
+    .search-input:focus {
+        border-color: #2c5f2d;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(44, 95, 45, 0.1);
+    }
+    
+    .filter-bar {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 2rem;
+    }
+    
+    .form-group {
+        flex: 1;
+    }
+    
+    .mode-action-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .transaction-form {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 15px;
+        margin-bottom: 20px;
+        align-items: start;
+    }
+    
+    .form-row label {
+        font-weight: 600;
+        padding-top: 10px;
+    }
+    
+    .info-text {
+        margin-top: 8px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        display: none;
+    }
+    
+    .info-text.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .info-text.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .scan-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 20px 0;
+    }
+    
+    .btn-submit-transaction {
+        width: 100%;
+        padding: 15px;
+        font-size: 18px;
+        font-weight: bold;
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+    
+    .btn-submit-transaction:hover {
+        background: #218838;
+    }
+    
+    .issued-items-section, .transaction-history {
+        margin-top: 40px;
+    }
+    
+    .badge-issued {
+        background: #dc3545;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+    
+    .badge-available {
+        background: #28a745;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+    }
+    
+    #qrScannerModal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0,0,0,0.8);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .scanner-content {
+        background: #222;
+        padding: 24px;
+        border-radius: 8px;
+        max-width: 400px;
+        margin: auto;
+        position: relative;
+    }
+    
+    .scanner-content h3 {
+        color: #fff;
+        margin-bottom: 20px;
+    }
+    
+    #qr-reader {
+        width: 320px;
+        margin: 0 auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Transactions</h1>
+            <p class="page-subtitle">{{ recent_transactions.count }} Total Transactions</p>
+        </div>
+    </div>
+
+    <!-- Mode and Action Selection -->
+    <div class="mode-action-row">
+        <select id="modeSelect" class="form-control">
+            <option value="normal">Normal Mode</option>
+            <option value="defcon">Defcon Mode</option>
+        </select>
+        <select id="actionSelect" class="form-control">
+            <option value="withdraw">Withdraw Item</option>
+            <option value="return">Return Item</option>
+        </select>
+    </div>
+
+    <!-- Transaction Form (Inline) -->
+    <div class="transaction-form">
+        <h3>📝 Create Transaction</h3>
+        <form id="transactionForm" onsubmit="return false;">
+            {% csrf_token %}
+            
+            <!-- Personnel Input -->
+            <div class="form-row">
+                <label for="personnelInput">Personnel ID:</label>
+                <div>
+                    <input type="text" id="personnelInput" class="form-control" placeholder="Scan or enter Personnel ID" autocomplete="off">
+                    <div id="personnelInfo" class="info-text"></div>
+                </div>
+            </div>
+
+            <!-- Item Input -->
+            <div class="form-row">
+                <label for="itemInput">Item ID:</label>
+                <div>
+                    <input type="text" id="itemInput" class="form-control" placeholder="Scan or enter Item ID" autocomplete="off">
+                    <div id="itemInfo" class="info-text"></div>
+                </div>
+            </div>
+
+            <!-- Duty Type (Normal Mode Only) -->
+            <div class="form-row" id="dutyTypeRow">
+                <label for="dutyType">Duty Type:</label>
+                <select id="dutyType" class="form-control">
+                    <option value="">Select Duty Type</option>
+                    <option value="Duty Sentinel">Duty Sentinel</option>
+                    <option value="Duty Security">Duty Security</option>
+                    <option value="Vigil">Vigil</option>
+                    <option value="Guard Duty">Guard Duty</option>
+                </select>
+            </div>
+
+            <!-- Mags -->
+            <div class="form-row" id="magsRow">
+                <label for="mags">Mags:</label>
+                <input type="number" id="mags" class="form-control" placeholder="Number of mags" min="0">
+            </div>
+
+            <!-- Rounds -->
+            <div class="form-row" id="roundsRow">
+                <label for="rounds">Rounds of Ammo:</label>
+                <input type="number" id="rounds" class="form-control" placeholder="Rounds of ammo" min="0">
+            </div>
+
+            <!-- Notes -->
+            <div class="form-row">
+                <label for="notes">Notes:</label>
+                <textarea id="notes" class="form-control" placeholder="Optional notes..." rows="3"></textarea>
+            </div>
+
+            <!-- Scan Buttons -->
+            <div class="scan-buttons">
+                <button type="button" class="btn btn-secondary" onclick="openQrScanner('personnelInput')">📷 Scan Personnel</button>
+                <button type="button" class="btn btn-secondary" onclick="openQrScanner('itemInput')">📷 Scan Item</button>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="button" class="btn-submit-transaction" onclick="handleManualSubmit()">✅ Submit Transaction</button>
+        </form>
+    </div>
+
+    <!-- QR Scanner Modal -->
+    <div id="qrScannerModal">
+        <div class="scanner-content">
+            <h3>Scan QR Code</h3>
+            <div id="qr-reader"></div>
+            <button type="button" onclick="closeQrScanner()" class="btn btn-danger" style="margin-top:16px; width: 100%;">Close</button>
+        </div>
+    </div>
+
+    <!-- View Selector -->
+    <div class="view-selector" style="margin-top: 3rem;">
+        <label for="viewSelector">📊 View Transactions By:</label>
+        <select id="viewSelector" onchange="location.href=this.value;">
+            <option value="{% url 'transactions:list' %}" selected>Personnel Transactions</option>
+            <option value="{% url 'transactions:item_transactions' %}">Item Transactions</option>
+        </select>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by personnel name, rank, or item...">
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div class="form-group" style="margin: 0; min-width: 200px;">
+            <select id="actionFilter" class="form-control form-select">
+                <option value="">All Actions</option>
+                <option value="Take">Withdraw</option>
+                <option value="Return">Return</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin: 0; min-width: 200px;">
+            <select id="dutyFilterDropdown" class="form-control form-select">
+                <option value="">All Duty Types</option>
+                <option value="Duty Sentinel">Duty Sentinel</option>
+                <option value="Duty Security">Duty Security</option>
+                <option value="Vigil">Vigil</option>
+                <option value="Guard Duty">Guard Duty</option>
+                <option value="Patrol">Patrol</option>
+                <option value="Training">Training</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Currently Issued Items -->
+    <div class="issued-items-section">
+        <h2>Currently Issued Items</h2>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Date/Time</th>
+                        <th>Personnel</th>
+                        <th>Item Type</th>
+                        <th>Serial</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in issued_items %}
+                    <tr>
+                        <td>{{ transaction.date_time|date:"d/m/y H:i" }}</td>
+                        <td>
+                            {{ transaction.personnel.get_full_name }}<br>
+                            <small class="text-muted">{{ transaction.personnel.rank }}</small>
+                        </td>
+                        <td>{{ transaction.item.item_type }}</td>
+                        <td>{{ transaction.item.serial }}</td>
+                        <td>{{ transaction.notes|truncatewords:15|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No items currently issued</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Transaction History -->
+    <div class="transaction-history">
+        <h2>Recent Transaction History</h2>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Personnel</th>
+                        <th>Item</th>
+                        <th>Action</th>
+                        <th>Date/Time</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in recent_transactions %}
+                    <tr data-duty-type="{{ transaction.duty_type }}" data-item-type="{{ transaction.item.item_type }}">
+                        <td><strong>#{{ transaction.id }}</strong></td>
+                        <td>
+                            {{ transaction.personnel.get_full_name }}<br>
+                            <small class="text-muted">{{ transaction.personnel.rank }}</small>
+                        </td>
+                        <td>{{ transaction.item.item_type }} - {{ transaction.item.serial }}</td>
+                        <td>
+                            {% if transaction.action == 'Take' %}
+                            <span class="badge-issued">Withdraw</span>
+                            {% else %}
+                            <span class="badge-available">Return</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ transaction.date_time|date:"d/m/y H:i" }}</td>
+                        <td>{{ transaction.notes|truncatewords:10|default:"-" }}</td>
+                        <td>
+                            <a href="{% url 'transactions:detail' transaction.id %}" class="btn btn-primary btn-sm">View</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">No transactions found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+let currentQrTarget = null;
+
+function openQrScanner(targetInputId) {
+    currentQrTarget = targetInputId;
+    document.getElementById('qrScannerModal').style.display = 'flex';
+    if (window.qrScannerInstance) {
+        window.qrScannerInstance.clear();
+    }
+    window.qrScannerInstance = new Html5Qrcode("qr-reader");
+    window.qrScannerInstance.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        qrCodeMessage => {
+            const input = document.getElementById(currentQrTarget);
+            input.value = qrCodeMessage;
+            closeQrScanner();
+            setTimeout(() => input.dispatchEvent(new Event('blur')), 100);
+        },
+        errorMessage => {}
+    ).catch(err => {
+        alert('Camera error: ' + err);
+        closeQrScanner();
+    });
+}
+
+function closeQrScanner() {
+    document.getElementById('qrScannerModal').style.display = 'none';
+    if (window.qrScannerInstance) {
+        window.qrScannerInstance.stop().then(() => window.qrScannerInstance.clear());
+    }
+}
+
+// Mode selection handling
+const modeSelect = document.getElementById('modeSelect');
+const dutyTypeRow = document.getElementById('dutyTypeRow');
+const magsRow = document.getElementById('magsRow');
+const roundsRow = document.getElementById('roundsRow');
+
+modeSelect.addEventListener('change', function() {
+    if (this.value === 'defcon') {
+        dutyTypeRow.style.display = 'none';
+        magsRow.style.display = 'none';
+        roundsRow.style.display = 'none';
+    } else {
+        dutyTypeRow.style.display = 'grid';
+        magsRow.style.display = 'grid';
+        roundsRow.style.display = 'grid';
+    }
+});
+
+// Personnel validation
+const personnelInput = document.getElementById('personnelInput');
+const personnelInfo = document.getElementById('personnelInfo');
+
+personnelInput.addEventListener('blur', async function() {
+    const personnelId = this.value.trim();
+    if (!personnelId) {
+        personnelInfo.style.display = 'none';
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/personnel/${personnelId}/`);
+        if (response.ok) {
+            const data = await response.json();
+            personnelInfo.className = 'info-text success';
+            personnelInfo.textContent = `✓ ${data.firstname} ${data.middle_initial ? data.middle_initial + '.' : ''} ${data.surname} - ${data.rank}`;
+            personnelInfo.style.display = 'block';
+            
+            // Show automatic notification for successful personnel scan
+            showNotification(`Personnel scanned: ${data.firstname} ${data.surname} - ${data.rank}`, 'success');
+        } else {
+            personnelInfo.className = 'info-text error';
+            personnelInfo.textContent = '✗ Personnel not found';
+            personnelInfo.style.display = 'block';
+        }
+    } catch (error) {
+        personnelInfo.className = 'info-text error';
+        personnelInfo.textContent = '✗ Error validating personnel';
+        personnelInfo.style.display = 'block';
+    }
+});
+
+// Item validation
+const itemInput = document.getElementById('itemInput');
+const itemInfo = document.getElementById('itemInfo');
+const actionSelect = document.getElementById('actionSelect');
+
+itemInput.addEventListener('blur', async function() {
+    const itemId = this.value.trim();
+    if (!itemId) {
+        itemInfo.style.display = 'none';
+        return;
+    }
+
+    try {
+        // Include duty type in request for autofill suggestions
+        const dutyType = document.getElementById('dutyType').value;
+        const url = `/api/items/${itemId}/${dutyType ? '?duty_type=' + encodeURIComponent(dutyType) : ''}`;
+        const response = await fetch(url);
+        if (response.ok) {
+            const data = await response.json();
+            const action = actionSelect.value;
+            
+            if (action === 'withdraw' && data.status !== 'Available') {
+                itemInfo.className = 'info-text error';
+                itemInfo.textContent = `✗ Item not available (Status: ${data.status})`;
+            } else if (action === 'return' && data.status !== 'Issued') {
+                itemInfo.className = 'info-text error';
+                itemInfo.textContent = `✗ Item not issued (Status: ${data.status})`;
+            } else {
+                itemInfo.className = 'info-text success';
+                itemInfo.textContent = `✓ ${data.item_type} - Serial: ${data.serial} - Status: ${data.status}`;
+                
+                // Auto-fill using data from utils.py
+                if (data.autofill) {
+                    if (data.autofill.mags > 0) {
+                        document.getElementById('mags').value = data.autofill.mags;
+                    }
+                    if (data.autofill.rounds > 0) {
+                        document.getElementById('rounds').value = data.autofill.rounds;
+                    }
+                }
+            }
+            itemInfo.style.display = 'block';
+        } else {
+            itemInfo.className = 'info-text error';
+            itemInfo.textContent = '✗ Item not found';
+            itemInfo.style.display = 'block';
+        }
+    } catch (error) {
+        itemInfo.className = 'info-text error';
+        itemInfo.textContent = '✗ Error validating item';
+        itemInfo.style.display = 'block';
+    }
+});
+
+// Prevent any automatic form submission
+document.getElementById('transactionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    console.log('Automatic form submission prevented');
+    return false;
+});
+
+// Add Enter key prevention for all form inputs
+document.querySelectorAll('#transactionForm input, #transactionForm select, #transactionForm textarea').forEach(element => {
+    element.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            console.log('Enter key submission prevented');
+            return false;
+        }
+    });
+});
+
+// Manual submit handler - only called when button is clicked
+function handleManualSubmit() {
+    const mode = document.getElementById('modeSelect').value;
+    console.log('Manual submit triggered in mode:', mode);
+    
+    // In normal mode, always require explicit user action
+    if (mode === 'normal') {
+        submitTransaction();
+    } else if (mode === 'defcon') {
+        // Defcon mode might have different behavior in the future
+        submitTransaction();
+    }
+}
+
+// Actual transaction submission function
+async function submitTransaction() {
+    console.log('Submitting transaction...'); // Debug log
+    
+    // Get form values
+    const personnelId = document.getElementById('personnelInput').value.trim();
+    const itemId = document.getElementById('itemInput').value.trim();
+    const action = document.getElementById('actionSelect').value;
+    const mode = document.getElementById('modeSelect').value;
+    const notes = document.getElementById('notes').value.trim();
+    const dutyType = document.getElementById('dutyType').value;
+    const mags = document.getElementById('mags').value;
+    const rounds = document.getElementById('rounds').value;
+
+    // Validate required fields - show inline error instead of popup
+    if (!personnelId || !itemId) {
+        // Show inline error message instead of popup
+        let errorDiv = document.getElementById('form-error');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.id = 'form-error';
+            errorDiv.style.cssText = 'background: #f8d7da; color: #721c24; padding: 10px; border: 1px solid #f5c6cb; border-radius: 4px; margin: 10px 0;';
+            document.getElementById('transactionForm').insertBefore(errorDiv, document.querySelector('.btn-submit-transaction'));
+        }
+        errorDiv.textContent = 'Please enter both Personnel ID and Item ID before submitting.';
+        errorDiv.style.display = 'block';
+        
+        // Hide error after 5 seconds
+        setTimeout(() => {
+            if (errorDiv) errorDiv.style.display = 'none';
+        }, 5000);
+        
+        return;
+    }
+    
+    // Hide any existing error
+    const existingErrorDiv = document.getElementById('form-error');
+    if (existingErrorDiv) existingErrorDiv.style.display = 'none';
+
+    try {
+        const response = await fetch('/api/transactions/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                personnel_id: personnelId,
+                item_id: itemId,
+                action: action === 'withdraw' ? 'Take' : 'Return',
+                notes: notes,
+                mags: mags || 0,
+                rounds: rounds || 0,
+                duty_type: dutyType
+            })
+        });
+        
+        if (response.ok) {
+            showNotification('Transaction successful!', 'success');
+            location.reload();
+        } else {
+            const error = await response.json();
+            showNotification('Transaction failed: ' + (error.error || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        showNotification('Transaction failed: ' + error.message, 'error');
+    }
+}
+
+// Filter functionality for transaction tables
+const searchInput = document.getElementById('searchInput');
+const actionFilter = document.getElementById('actionFilter');
+const dutyFilterDropdown = document.getElementById('dutyFilterDropdown');
+const itemTypeFilter = document.getElementById('itemTypeFilter');
+
+function filterTransactions() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const selectedAction = actionFilter.value;
+    const selectedDuty = dutyFilterDropdown.value;
+    const selectedItemType = itemTypeFilter.value;
+    
+    const rows = document.querySelectorAll('.transaction-history tbody tr');
+    
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length === 0) return; // Skip empty rows
+        
+        // Get row data
+        const personnel = cells[1]?.textContent.toLowerCase() || '';
+        const item = cells[2]?.textContent.toLowerCase() || '';
+        const action = cells[3]?.textContent.trim();
+        const notes = cells[5]?.textContent.toLowerCase() || '';
+        
+        // Extract duty type and item type from row
+        const dutyType = row.dataset.dutyType || '';
+        const itemType = row.dataset.itemType || '';
+        
+        // Search match
+        const searchMatch = !searchTerm || 
+            personnel.includes(searchTerm) || 
+            item.includes(searchTerm) || 
+            notes.includes(searchTerm);
+        
+        // Action match
+        const actionMatch = !selectedAction || 
+            (selectedAction === 'Take' && action.includes('Withdraw')) ||
+            (selectedAction === 'Return' && action.includes('Return'));
+        
+        // Duty type match
+        const dutyMatch = !selectedDuty || dutyType === selectedDuty;
+        
+        // Item type match
+        const itemTypeMatch = !selectedItemType || itemType.includes(selectedItemType);
+        
+        // Show/hide row
+        if (searchMatch && actionMatch && dutyMatch && itemTypeMatch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+searchInput.addEventListener('input', filterTransactions);
+actionFilter.addEventListener('change', filterTransactions);
+dutyFilterDropdown.addEventListener('change', filterTransactions);
+itemTypeFilter.addEventListener('change', filterTransactions);
+
+// Notification system
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: bold;
+        z-index: 10000;
+        max-width: 400px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+    `;
+    
+    // Set background color based on type
+    if (type === 'success') {
+        notification.style.background = '#28a745';
+    } else if (type === 'error') {
+        notification.style.background = '#dc3545';
+    } else {
+        notification.style.background = '#007bff';
+    }
+    
+    notification.textContent = message;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Animate in
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+    }, 100);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                document.body.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+</script>
+{% endblock %}

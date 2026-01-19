@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}QR Transaction Scanner - ArmGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .scanner-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .scanner-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-top: 30px;
+    }
+    
+    .scan-box {
+        background: white;
+        border: 3px dashed #ccc;
+        border-radius: 12px;
+        padding: 30px;
+        text-align: center;
+        min-height: 250px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        transition: all 0.3s;
+    }
+    
+    .scan-box.scanned {
+        border-color: #28a745;
+        background: #f0fff4;
+    }
+    
+    .scan-box h3 {
+        color: #333;
+        margin-bottom: 20px;
+    }
+    
+    .scan-icon {
+        font-size: 64px;
+        margin-bottom: 20px;
+        opacity: 0.3;
+    }
+    
+    .scan-box.scanned .scan-icon {
+        opacity: 1;
+    }
+    
+    .scanned-info {
+        display: none;
+        margin-top: 15px;
+        text-align: left;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+    }
+    
+    .scan-box.scanned .scanned-info {
+        display: block;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: bold;
+        color: #666;
+    }
+    
+    .info-value {
+        color: #333;
+    }
+    
+    .btn-scan {
+        margin-top: 15px;
+        padding: 12px 30px;
+        font-size: 16px;
+        border-radius: 8px;
+    }
+    
+    .transaction-form {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        margin-top: 30px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+    
+    .action-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .btn-action {
+        padding: 15px;
+        font-size: 16px;
+        font-weight: bold;
+        border-radius: 8px;
+        border: 2px solid;
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .btn-action.btn-take {
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+    
+    .btn-action.btn-take:hover, .btn-action.btn-take.active {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-action.btn-return {
+        border-color: #28a745;
+        color: #28a745;
+    }
+    
+    .btn-action.btn-return:hover, .btn-action.btn-return.active {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-submit {
+        width: 100%;
+        padding: 15px;
+        font-size: 18px;
+        font-weight: bold;
+    }
+    
+    #qr-reader {
+        width: 100%;
+        border-radius: 8px;
+        overflow: hidden;
+        margin: 20px 0;
+    }
+    
+    .video-container {
+        display: none;
+    }
+    
+    .video-container.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="scanner-container">
+    <h1>🎯 QR Transaction Scanner</h1>
+    <p class="text-muted">Scan personnel QR code and item QR code to create a transaction</p>
+    
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="scanner-grid">
+        <!-- Personnel Scanner -->
+        <div class="scan-box" id="personnel-box">
+            <div class="scan-icon">👤</div>
+            <h3>Scan Personnel QR Code</h3>
+            <button class="btn btn-primary btn-scan" onclick="startScan('personnel')">
+                📷 Start Scanner
+            </button>
+            <div class="scanned-info" id="personnel-info">
+                <div class="info-row">
+                    <span class="info-label">Name:</span>
+                    <span class="info-value" id="personnel-name"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Rank:</span>
+                    <span class="info-value" id="personnel-rank"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Badge:</span>
+                    <span class="info-value" id="personnel-badge"></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Item Scanner -->
+        <div class="scan-box" id="item-box">
+            <div class="scan-icon">🔫</div>
+            <h3>Scan Item QR Code</h3>
+            <button class="btn btn-primary btn-scan" onclick="startScan('item')">
+                📷 Start Scanner
+            </button>
+            <div class="scanned-info" id="item-info">
+                <div class="info-row">
+                    <span class="info-label">Type:</span>
+                    <span class="info-value" id="item-type"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Serial:</span>
+                    <span class="info-value" id="item-serial"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Status:</span>
+                    <span class="info-value" id="item-status"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Video Container -->
+    <div class="video-container" id="video-container">
+        <div id="qr-reader"></div>
+        <button class="btn btn-secondary" onclick="stopScan()">❌ Stop Scanner</button>
+    </div>
+    
+    <!-- Transaction Form -->
+    <div class="transaction-form" id="transaction-form" style="display: none;">
+        <h3>📝 Transaction Details</h3>
+        <form method="POST" action="{% url 'transactions:create_qr_transaction' %}">
+            {% csrf_token %}
+            <input type="hidden" name="personnel_id" id="form-personnel-id">
+            <input type="hidden" name="item_id" id="form-item-id">
+            <input type="hidden" name="action" id="form-action">
+            
+            <div class="action-buttons">
+                <button type="button" class="btn-action btn-take" onclick="selectAction('Take')">
+                    📤 WITHDRAW
+                </button>
+                <button type="button" class="btn-action btn-return" onclick="selectAction('Return')">
+                    📥 RETURN
+                </button>
+            </div>
+            
+            <div class="form-group">
+                <label>Magazines (optional)</label>
+                <input type="number" name="mags" class="form-control" min="0" placeholder="Number of magazines">
+            </div>
+            
+            <div class="form-group">
+                <label>Rounds (optional)</label>
+                <input type="number" name="rounds" class="form-control" min="0" placeholder="Number of rounds">
+            </div>
+            
+            <div class="form-group">
+                <label>Duty Type (optional)</label>
+                <input type="text" name="duty_type" class="form-control" placeholder="e.g., Patrol, Guard Duty">
+            </div>
+            
+            <div class="form-group">
+                <label>Notes (optional)</label>
+                <textarea name="notes" class="form-control" rows="3" placeholder="Additional notes"></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-success btn-submit" id="submit-btn" disabled>
+                ✅ Create Transaction
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+let html5QrCode = null;
+let currentScanType = null;
+let scannedData = {
+    personnel: null,
+    item: null
+};
+
+function startScan(type) {
+    currentScanType = type;
+    document.getElementById('video-container').classList.add('active');
+    
+    html5QrCode = new Html5Qrcode("qr-reader");
+    html5QrCode.start(
+        { facingMode: "environment" },
+        {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
+        },
+        onScanSuccess,
+        onScanError
+    ).catch(err => {
+        console.error('Error starting scanner:', err);
+        alert('Could not start camera. Please check permissions.');
+    });
+}
+
+function stopScan() {
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            document.getElementById('video-container').classList.remove('active');
+            html5QrCode = null;
+        }).catch(err => {
+            console.error('Error stopping scanner:', err);
+        });
+    }
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+    stopScan();
+    verifyQRCode(decodedText, currentScanType);
+}
+
+function onScanError(error) {
+    // Ignore scan errors (happens when no QR code in frame)
+}
+
+function verifyQRCode(qrData, scanType) {
+    fetch("{% url 'transactions:verify_qr' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `qr_data=${encodeURIComponent(qrData)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.type === 'personnel' && scanType === 'personnel') {
+                scannedData.personnel = data;
+                updatePersonnelDisplay(data);
+            } else if (data.type === 'item' && scanType === 'item') {
+                scannedData.item = data;
+                updateItemDisplay(data);
+            } else {
+                alert(`Wrong QR code type! Expected ${scanType} but got ${data.type}`);
+            }
+            checkFormReady();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to verify QR code');
+    });
+}
+
+function updatePersonnelDisplay(data) {
+    document.getElementById('personnel-name').textContent = data.name;
+    document.getElementById('personnel-rank').textContent = data.rank;
+    document.getElementById('personnel-badge').textContent = data.badge_number;
+    document.getElementById('personnel-box').classList.add('scanned');
+    document.getElementById('form-personnel-id').value = data.id;
+}
+
+function updateItemDisplay(data) {
+    document.getElementById('item-type').textContent = data.item_type;
+    document.getElementById('item-serial').textContent = data.serial;
+    document.getElementById('item-status').textContent = data.status;
+    document.getElementById('item-box').classList.add('scanned');
+    document.getElementById('form-item-id').value = data.id;
+}
+
+function checkFormReady() {
+    if (scannedData.personnel && scannedData.item) {
+        document.getElementById('transaction-form').style.display = 'block';
+        document.getElementById('transaction-form').scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function selectAction(action) {
+    document.getElementById('form-action').value = action;
+    
+    // Update button states
+    document.querySelectorAll('.btn-action').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    if (action === 'Take') {
+        document.querySelector('.btn-take').classList.add('active');
+    } else {
+        document.querySelector('.btn-return').classList.add('active');
+    }
+    
+    // Enable submit button
+    document.getElementById('submit-btn').disabled = false;
+}
+</script>
+{% endblock %}

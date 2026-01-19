@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Transaction Lookup - ArmGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .lookup-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .scanner-section {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .lookup-info {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .info-label {
+        font-size: 12px;
+        color: #666;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+    
+    .info-value {
+        font-size: 16px;
+        color: #333;
+        font-weight: bold;
+    }
+    
+    .transactions-table {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .badge-take {
+        background: #dc3545;
+    }
+    
+    .badge-return {
+        background: #28a745;
+    }
+    
+    #qr-reader {
+        max-width: 500px;
+        margin: 20px auto;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .scan-btn {
+        padding: 15px 30px;
+        font-size: 18px;
+        margin: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lookup-container">
+    <h1>🔍 Transaction Lookup</h1>
+    <p class="text-muted">Scan a QR code to view transaction history</p>
+    
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <!-- Scanner Section -->
+    <div class="scanner-section">
+        <h3>📷 Scan QR Code</h3>
+        <p>Scan personnel or item QR code to view transaction history</p>
+        
+        <div id="qr-reader" style="display: none;"></div>
+        
+        <button class="btn btn-primary scan-btn" onclick="startScanner()">
+            📷 Start Scanner
+        </button>
+        <button class="btn btn-secondary scan-btn" onclick="stopScanner()" style="display: none;" id="stop-btn">
+            ❌ Stop Scanner
+        </button>
+    </div>
+    
+    <!-- Lookup Results -->
+    {% if lookup_info %}
+    <div class="lookup-info">
+        <h4>
+            {% if lookup_type == 'personnel' %}
+                👤 Personnel Information
+            {% else %}
+                🔫 Item Information
+            {% endif %}
+        </h4>
+        
+        <div class="info-grid">
+            {% if lookup_type == 'personnel' %}
+                <div class="info-item">
+                    <span class="info-label">Name</span>
+                    <span class="info-value">{{ lookup_info.name }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Rank</span>
+                    <span class="info-value">{{ lookup_info.rank }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Badge Number</span>
+                    <span class="info-value">{{ lookup_info.badge_number }}</span>
+                </div>
+            {% else %}
+                <div class="info-item">
+                    <span class="info-label">Item Type</span>
+                    <span class="info-value">{{ lookup_info.item_type }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Serial Number</span>
+                    <span class="info-value">{{ lookup_info.serial }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Status</span>
+                    <span class="info-value">{{ lookup_info.status }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Condition</span>
+                    <span class="info-value">{{ lookup_info.condition }}</span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Transactions Table -->
+    {% if transactions %}
+    <div class="transactions-table">
+        <table class="table table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date/Time</th>
+                    <th>Action</th>
+                    {% if lookup_type == 'personnel' %}
+                        <th>Item</th>
+                    {% else %}
+                        <th>Personnel</th>
+                    {% endif %}
+                    <th>Mags</th>
+                    <th>Rounds</th>
+                    <th>Duty Type</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction.date_time|date:"d/m/y H:i" }}</td>
+                    <td>
+                        <span class="badge {% if transaction.action == 'Take' %}badge-take{% else %}badge-return{% endif %}">
+                            {{ transaction.action }}
+                        </span>
+                    </td>
+                    {% if lookup_type == 'personnel' %}
+                        <td>{{ transaction.item.item_type }} - {{ transaction.item.serial }}</td>
+                    {% else %}
+                        <td>{{ transaction.personnel.get_full_name }}</td>
+                    {% endif %}
+                    <td>{{ transaction.mags|default:"-" }}</td>
+                    <td>{{ transaction.rounds|default:"-" }}</td>
+                    <td>{{ transaction.duty_type|default:"-" }}</td>
+                    <td>{{ transaction.notes|default:"-"|truncatewords:10 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No transactions found for this {% if lookup_type == 'personnel' %}personnel{% else %}item{% endif %}.
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+let html5QrCode = null;
+
+function startScanner() {
+    document.getElementById('qr-reader').style.display = 'block';
+    document.querySelector('.scan-btn').style.display = 'none';
+    document.getElementById('stop-btn').style.display = 'inline-block';
+    
+    html5QrCode = new Html5Qrcode("qr-reader");
+    html5QrCode.start(
+        { facingMode: "environment" },
+        {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
+        },
+        onScanSuccess,
+        onScanError
+    ).catch(err => {
+        console.error('Error starting scanner:', err);
+        alert('Could not start camera. Please check permissions.');
+        resetScanner();
+    });
+}
+
+function stopScanner() {
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            resetScanner();
+        }).catch(err => {
+            console.error('Error stopping scanner:', err);
+            resetScanner();
+        });
+    }
+}
+
+function resetScanner() {
+    document.getElementById('qr-reader').style.display = 'none';
+    document.querySelector('.scan-btn').style.display = 'inline-block';
+    document.getElementById('stop-btn').style.display = 'none';
+    html5QrCode = null;
+}
+
+function onScanSuccess(decodedText) {
+    stopScanner();
+    window.location.href = `{% url 'transactions:lookup_transactions' %}?qr=${encodeURIComponent(decodedText)}`;
+}
+
+function onScanError(error) {
+    // Ignore scan errors
+}
+</script>
+{% endblock %}

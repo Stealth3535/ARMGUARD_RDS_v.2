@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Inventory - ArmGuard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'inventory/inventory.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Firearms Inventory</h1>
+            <p class="page-subtitle">{{ items|length }} Items in Inventory</p>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by type, serial, or description...">
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div class="form-group" style="margin: 0; min-width: 200px;">
+            <select id="typeFilter" class="form-control form-select">
+                <option value="">All Types</option>
+                <option value="M14">M14</option>
+                <option value="M16">M16</option>
+                <option value="M4">M4</option>
+                <option value="GLOCK">GLOCK</option>
+                <option value="45">.45</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin: 0; min-width: 200px;">
+            <select id="statusFilter" class="form-control form-select">
+                <option value="">All Status</option>
+                <option value="Available">Available</option>
+                <option value="Issued">Issued</option>
+                <option value="Maintenance">Maintenance</option>
+                <option value="Retired">Retired</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin: 0; min-width: 200px;">
+            <select id="conditionFilter" class="form-control form-select">
+                <option value="">All Conditions</option>
+                <option value="Good">Good</option>
+                <option value="Fair">Fair</option>
+                <option value="Poor">Poor</option>
+                <option value="Damaged">Damaged</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Inventory Table -->
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Serial Number</th>
+                    <th>Status</th>
+                    <th>Condition</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="inventoryTable">
+                {% for item in items %}
+                <tr class="item-row" 
+                    data-type="{{ item.item_type }}"
+                    data-status="{{ item.status }}"
+                    data-condition="{{ item.condition }}"
+                    data-search="{{ item.item_type|lower }} {{ item.serial|lower }} {{ item.description|lower }}">
+                    <td><strong>{{ item.id }}</strong></td>
+                    <td>
+                        <strong>{{ item.item_type }}</strong><br>
+                        <small class="text-muted">
+                            {% if item.is_rifle %}Rifle{% else %}Pistol{% endif %}
+                        </small>
+                    </td>
+                    <td>{{ item.serial }}</td>
+                    <td>
+                        {% if item.status == 'Available' %}
+                        <span class="badge badge-available">{{ item.status }}</span>
+                        {% elif item.status == 'Issued' %}
+                        <span class="badge badge-issued">{{ item.status }}</span>
+                        {% elif item.status == 'Maintenance' %}
+                        <span class="badge badge-maintenance">{{ item.status }}</span>
+                        {% else %}
+                        <span class="badge badge-inactive">{{ item.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.condition == 'Good' %}
+                        <span class="badge badge-available">{{ item.condition }}</span>
+                        {% elif item.condition == 'Fair' %}
+                        <span class="badge badge-issued">{{ item.condition }}</span>
+                        {% elif item.condition == 'Poor' %}
+                        <span class="badge badge-maintenance">{{ item.condition }}</span>
+                        {% else %}
+                        <span class="badge badge-inactive">{{ item.condition }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.description|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'inventory:item_detail' item.id %}" class="btn btn-primary btn-sm">View</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted">No items found in inventory.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Filter functionality
+document.getElementById('searchInput').addEventListener('input', filterItems);
+document.getElementById('typeFilter').addEventListener('change', filterItems);
+document.getElementById('statusFilter').addEventListener('change', filterItems);
+document.getElementById('conditionFilter').addEventListener('change', filterItems);
+
+function filterItems() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const typeFilter = document.getElementById('typeFilter').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    const conditionFilter = document.getElementById('conditionFilter').value;
+    
+    const rows = document.querySelectorAll('.item-row');
+    
+    rows.forEach(row => {
+        const searchData = row.getAttribute('data-search');
+        const type = row.getAttribute('data-type');
+        const status = row.getAttribute('data-status');
+        const condition = row.getAttribute('data-condition');
+        
+        const matchesSearch = searchData.includes(searchTerm);
+        const matchesType = !typeFilter || type === typeFilter;
+        const matchesStatus = !statusFilter || status === statusFilter;
+        const matchesCondition = !conditionFilter || condition === conditionFilter;
+        
+        if (matchesSearch && matchesType && matchesStatus && matchesCondition) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}
+

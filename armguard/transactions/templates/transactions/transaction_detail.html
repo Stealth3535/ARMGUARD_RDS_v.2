@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Transaction #{{ transaction.id }} - ArmGuard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <h1 class="page-title">Transaction #{{ transaction.id }}</h1>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Transaction Details</h3>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr>
+                            <th style="width: 200px;">Date & Time:</th>
+                            <td>{{ transaction.date_time|date:"F j, Y, g:i A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Action:</th>
+                            <td>
+                                {% if transaction.action == 'Take' %}
+                                    <span class="badge badge-danger">WITHDRAW</span>
+                                {% else %}
+                                    <span class="badge badge-success">RETURN</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Personnel:</th>
+                            <td>
+                                <strong>{{ transaction.personnel.get_full_name }}</strong><br>
+                                <small class="text-muted">
+                                    {{ transaction.personnel.rank }}<br>
+                                    Badge: {{ transaction.personnel.badge_number }}
+                                </small>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Item:</th>
+                            <td>
+                                <strong>{{ transaction.item.item_type }}</strong><br>
+                                <small class="text-muted">
+                                    Serial: {{ transaction.item.serial }}<br>
+                                    Current Status: {{ transaction.item.status }}
+                                </small>
+                            </td>
+                        </tr>
+                        {% if transaction.duty_type %}
+                        <tr>
+                            <th>Duty Type:</th>
+                            <td>{{ transaction.duty_type }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if transaction.mags %}
+                        <tr>
+                            <th>Magazines:</th>
+                            <td>{{ transaction.mags }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if transaction.rounds %}
+                        <tr>
+                            <th>Rounds:</th>
+                            <td>{{ transaction.rounds }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if transaction.notes %}
+                        <tr>
+                            <th>Notes:</th>
+                            <td>{{ transaction.notes }}</td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <a href="{% url 'transactions:list' %}" class="btn btn-secondary">← Back to Transactions</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

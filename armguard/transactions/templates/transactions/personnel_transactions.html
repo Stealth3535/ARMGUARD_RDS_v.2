@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Transactions{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'transactions/personnel_transactions.css' %}">
+<style>
+.view-selector {
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.view-selector label {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.view-selector select {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    min-width: 200px;
+    cursor: pointer;
+}
+
+.view-selector select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Transactions</h1>
+            <p class="page-subtitle">{{ transactions|length }} Total Transactions</p>
+        </div>
+    </div>
+
+    <!-- View Selector -->
+    <div class="view-selector">
+        <label for="viewSelector">📊 View Transactions By:</label>
+        <select id="viewSelector" onchange="location.href=this.value;">
+            <option value="{% url 'transactions:personnel_transactions' %}" selected>Personnel Transactions</option>
+            <option value="{% url 'transactions:item_transactions' %}">Item Transactions</option>
+        </select>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by personnel name, rank, or item...">
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div class="form-group" style="margin: 0; min-width: 200px;">
+            <select id="actionFilter" class="form-control form-select">
+                <option value="">All Actions</option>
+                <option value="Take">Withdraw</option>
+                <option value="Return">Return</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin: 0; min-width: 200px;">
+            <select id="dutyFilter" class="form-control form-select">
+                <option value="">All Duty Types</option>
+                <option value="Guard Duty">Guard Duty</option>
+                <option value="Patrol">Patrol</option>
+                <option value="Training">Training</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Date/Time</th>
+                    <th>Personnel</th>
+                    <th>Item</th>
+                    <th>Action</th>
+                    <th>Duty Type</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody id="transactionTable">
+                {% for transaction in transactions %}
+                <tr class="transaction-row"
+                    data-action="{{ transaction.action }}"
+                    data-duty="{{ transaction.duty_type }}"
+                    data-search="{{ transaction.personnel.get_full_name|lower }} {{ transaction.personnel.rank|lower }} {{ transaction.item.item_type|lower }} {{ transaction.item.serial|lower }}">
+                    <td><strong>#{{ transaction.id }}</strong></td>
+                    <td>{{ transaction.date_time|date:"d/m/y H:i:s" }}</td>
+                    <td>
+                        <strong>{{ transaction.personnel.get_full_name }}</strong><br>
+                        <small class="text-muted">{{ transaction.personnel.rank }} | {{ transaction.personnel.office }}</small>
+                    </td>
+                    <td>
+                        {{ transaction.item.item_type }} - {{ transaction.item.serial }}<br>
+                        <small class="text-muted">{{ transaction.item.id }}</small>
+                    </td>
+                    <td>
+                        {% if transaction.action == 'Take' %}
+                        <span class="badge badge-issued">Withdraw</span>
+                        {% else %}
+                        <span class="badge badge-available">Return</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ transaction.duty_type|default:"-" }}</td>
+                    <td>{{ transaction.notes|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted">No transactions found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Filter functionality
+document.getElementById('searchInput').addEventListener('input', filterTransactions);
+document.getElementById('actionFilter').addEventListener('change', filterTransactions);
+document.getElementById('dutyFilter').addEventListener('change', filterTransactions);
+
+function filterTransactions() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const actionFilter = document.getElementById('actionFilter').value;
+    const dutyFilter = document.getElementById('dutyFilter').value;
+    
+    const rows = document.querySelectorAll('.transaction-row');
+    
+    rows.forEach(row => {
+        const searchData = row.getAttribute('data-search');
+        const action = row.getAttribute('data-action');
+        const duty = row.getAttribute('data-duty');
+        
+        const matchesSearch = searchData.includes(searchTerm);
+        const matchesAction = !actionFilter || action === actionFilter;
+        const matchesDuty = !dutyFilter || duty === dutyFilter;
+        
+        if (matchesSearch && matchesAction && matchesDuty) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}
+

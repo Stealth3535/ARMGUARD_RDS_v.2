@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}QR Codes{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'qr_codes/personnel_qr_codes.css' %}">
+<style>
+.view-selector {
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.view-selector label {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.view-selector select {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    min-width: 200px;
+    cursor: pointer;
+}
+
+.view-selector select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.print-options {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.print-options label {
+    font-weight: 600;
+    color: var(--text-color);
+    white-space: nowrap;
+}
+
+.print-select {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    min-width: 280px;
+    cursor: pointer;
+    background: white;
+}
+
+.print-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">QR Codes</h1>
+            <p class="page-subtitle">{{ personnel_list|length }} QR Codes</p>
+        </div>
+        <div class="print-options">
+            <label for="printSelector">🖨️ Print Options:</label>
+            <select id="printSelector" class="print-select">
+                <option value="">-- Select Print Option --</option>
+                <option value="{% url 'print_handler:print_qr_codes' %}">Print All QR Codes (Personnel & Items)</option>
+                <option value="{% url 'print_handler:print_qr_codes' %}?type=personnel">Print Personnel QR Codes Only</option>
+                <option value="{% url 'print_handler:print_qr_codes' %}?type=items">Print Item QR Codes Only</option>
+            </select>
+            <button onclick="printSelected()" class="btn btn-primary">Go</button>
+        </div>
+    </div>
+
+    <!-- View Selector -->
+    <div class="view-selector">
+        <label for="viewSelector">🔍 View QR Codes For:</label>
+        <select id="viewSelector" onchange="location.href=this.value;">
+            <option value="{% url 'qr_manager:personnel_qr_codes' %}" selected>Personnel QR Codes</option>
+            <option value="{% url 'qr_manager:item_qr_codes' %}">Item QR Codes</option>
+        </select>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by name, rank, or serial...">
+    </div>
+
+    <!-- QR Codes Grid -->
+    <div class="grid grid-4" id="qrGrid">
+        {% for person in personnel_list %}
+        <div class="card qr-card" data-search="{{ person.get_full_name|lower }} {{ person.rank|lower }} {{ person.serial|lower }}">
+            <div class="text-center">
+                <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem;">{{ person.get_full_name }}</h3>
+                <p style="margin: 0; color: var(--text-light); font-size: 0.85rem;">{{ person.rank }}</p>
+                <p style="margin: 0 0 1rem 0; color: var(--text-light); font-size: 0.85rem;">{{ person.serial }}</p>
+                
+                {% if person.qr_code_obj and person.qr_code_obj.qr_image %}
+                <div class="qr-code-display">
+                    <img src="{{ person.qr_code_obj.qr_image.url }}?v={{ person.qr_code_obj.updated_at|date:'U' }}" alt="QR Code for {{ person.get_full_name }}" style="width: 150px; height: 150px; border-radius: 8px; background: #f8f8f8;">
+                </div>
+                {% else %}
+                <div class="qr-code-display" style="padding: 75px 0; background: #f0f0f0; border-radius: 8px;">
+                    <p style="margin: 0; color: #999; font-size: 0.85rem;">No QR Code</p>
+                </div>
+                {% endif %}
+                
+                <p style="margin: 0.5rem 0 0 0; font-family: monospace; font-size: 0.75rem;">{{ person.qr_code }}</p>
+                
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: center;">
+                    <a href="{% url 'personnel:personnel_profile_detail' person.id %}" class="btn btn-sm btn-secondary">View Profile</a>
+                    {% if person.qr_code_obj %}
+                    <a href="{% url 'print_handler:print_single_qr' person.qr_code_obj.id %}" class="btn btn-sm btn-primary" target="_blank" title="Print this QR code">🖨️</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="card" style="grid-column: 1 / -1;">
+            <p class="text-center text-muted">No personnel found.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Search functionality
+document.getElementById('searchInput').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const cards = document.querySelectorAll('.qr-card');
+    
+    cards.forEach(card => {
+        const searchData = card.getAttribute('data-search');
+        if (searchData.includes(searchTerm)) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+});
+
+// Print options handler
+function printSelected() {
+    const selector = document.getElementById('printSelector');
+    const url = selector.value;
+    if (url) {
+        window.open(url, '_blank');
+    } else {
+        alert('Please select a print option');
+    }
+}
+</script>
+{% endblock %}
+

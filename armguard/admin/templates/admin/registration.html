@@ -1,0 +1,394 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Registration - ArmGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .registration-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    .registration-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    
+    .registration-header h1 {
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+    
+    .registration-header p {
+        color: #666;
+        font-size: 1.1rem;
+    }
+    
+    .registration-form {
+        background: white;
+        padding: 2.5rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
+    .form-section h3 {
+        color: #333;
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+    }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .form-row.single {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #333;
+        font-weight: 500;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 1rem;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+    
+    .btn {
+        padding: 0.75rem 2rem;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+        min-width: 150px;
+    }
+    
+    .btn-primary {
+        background: #667eea;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #5568d3;
+        transform: translateY(-1px);
+    }
+    
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #4b5563;
+    }
+    
+    .required {
+        color: #dc2626;
+    }
+    
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        color: #dc2626;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #666;
+        margin-top: 0.25rem;
+    }
+    
+    @media (max-width: 768px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .registration-container {
+            padding: 1rem;
+        }
+        
+        .registration-form {
+            padding: 1.5rem;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const userTypeSelect = document.getElementById('user_type');
+    const accountSection = document.getElementById('account-section');
+    const personnelSection = document.getElementById('personnel-section');
+    const usernameField = document.querySelector('input[name="username"]');
+    const emailField = document.querySelector('input[name="email"]');
+    const passwordFields = document.querySelectorAll('input[type="password"]');
+    
+    function updateFormFields() {
+        const userType = userTypeSelect.value;
+        
+        if (userType === 'personnel') {
+            // Personnel only - hide account fields, show personnel fields
+            accountSection.style.display = 'none';
+            personnelSection.style.display = 'block';
+            usernameField.required = false;
+            emailField.required = false;
+            passwordFields.forEach(field => field.required = false);
+            
+            // Update submit button text
+            document.querySelector('.btn-primary').innerHTML = '<i class="fas fa-user-plus"></i> Register Personnel';
+        } else {
+            // User account types - show account fields
+            accountSection.style.display = 'block';
+            personnelSection.style.display = 'block';
+            usernameField.required = true;
+            emailField.required = true;
+            passwordFields.forEach(field => field.required = true);
+            
+            // Update submit button text based on type
+            const buttonText = {
+                'admin': 'Register Administrator',
+                'armorer': 'Register Armorer'
+            }[userType] || 'Register User';
+            
+            document.querySelector('.btn-primary').innerHTML = '<i class="fas fa-user-plus"></i> ' + buttonText;
+        }
+    }
+    
+    userTypeSelect.addEventListener('change', updateFormFields);
+    updateFormFields(); // Initial setup
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="registration-container">
+    <div class="registration-header">
+        <h1>🛡️ Registration Form</h1>
+        <p>Register new users and personnel in the ArmGuard system</p>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="registration-form">
+        {% csrf_token %}
+
+        <div class="form-section">
+            <h3>User Type</h3>
+
+            <div class="form-row single">
+                <div class="form-group">
+                    <label for="user_type">Select User Type <span class="required">*</span></label>
+                    <select id="user_type" name="user_type" class="form-control" required>
+                        <option value="">-- Select User Type --</option>
+                        <option value="admin">Administrator</option>
+                        <option value="armorer">Armorer</option>
+                        <option value="personnel">Personnel Only (No Login)</option>
+                    </select>
+                    <div class="help-text">Choose the type of user account to create</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Personal Information</h3>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.first_name.errors }}
+                    <label for="{{ form.first_name.id_for_label }}">
+                        {{ form.first_name.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.first_name }}
+                </div>
+                <div class="form-group">
+                    {{ form.last_name.errors }}
+                    <label for="{{ form.last_name.id_for_label }}">
+                        {{ form.last_name.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.last_name }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.middle_initial.errors }}
+                    <label for="{{ form.middle_initial.id_for_label }}">
+                        {{ form.middle_initial.label }}
+                    </label>
+                    {{ form.middle_initial }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.username.errors }}
+                    <label for="{{ form.username.id_for_label }}">
+                        {{ form.username.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.username }}
+                </div>
+                <div class="form-group">
+                    {{ form.email.errors }}
+                    <label for="{{ form.email.id_for_label }}">
+                        {{ form.email.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.email }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section" id="account-section">
+            <h3>Account Security</h3>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.password1.errors }}
+                    <label for="{{ form.password1.id_for_label }}">
+                        {{ form.password1.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.password1 }}
+                </div>
+                <div class="form-group">
+                    {{ form.password2.errors }}
+                    <label for="{{ form.password2.id_for_label }}">
+                        {{ form.password2.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.password2 }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section" id="personnel-section">
+            <h3>Personnel Information (Optional)</h3>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="rank">Military Rank</label>
+                    <select name="rank" id="rank" class="form-control">
+                        <option value="">-- Select Rank --</option>
+                        <option value="AM">AM - Airman</option>
+                        <option value="AW">AW - Airwoman</option>
+                        <option value="A2C">A2C - Airman Second Class</option>
+                        <option value="AW2C">AW2C - Airwoman Second Class</option>
+                        <option value="A1C">A1C - Airman First Class</option>
+                        <option value="AW1C">AW1C - Airwoman First Class</option>
+                        <option value="Sgt">Sgt - Sergeant</option>
+                        <option value="SSgt">SSgt - Staff Sergeant</option>
+                        <option value="TSgt">TSgt - Technical Sergeant</option>
+                        <option value="MSgt">MSgt - Master Sergeant</option>
+                        <option value="SMSgt">SMSgt - Senior Master Sergeant</option>
+                        <option value="CMSgt">CMSgt - Chief Master Sergeant</option>
+                        <option value="2LT">2LT - Second Lieutenant</option>
+                        <option value="1LT">1LT - First Lieutenant</option>
+                        <option value="CPT">CPT - Captain</option>
+                        <option value="MAJ">MAJ - Major</option>
+                        <option value="LTC">LTC - Lieutenant Colonel</option>
+                        <option value="COL">COL - Colonel</option>
+                        <option value="BG">BG - Brigadier General</option>
+                        <option value="MG">MG - Major General</option>
+                        <option value="LTG">LTG - Lieutenant General</option>
+                        <option value="GEN">GEN - General</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="serial">Serial Number</label>
+                    <input type="text" name="serial" id="serial" class="form-control" placeholder="Serial Number">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="office">Office/Unit</label>
+                    <input type="text" name="office" id="office" class="form-control" placeholder="Office or Unit Assignment">
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" name="phone" id="phone" class="form-control" placeholder="Contact Phone Number">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select name="status" id="status" class="form-control">
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                        <option value="DEPLOYED">Deployed</option>
+                        <option value="LEAVE">On Leave</option>
+                        <option value="RETIRED">Retired</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Profile Information</h3>
+
+            <div class="form-row single">
+                <div class="form-group">
+                    {{ form.profile_picture.errors }}
+                    <label for="{{ form.profile_picture.id_for_label }}">{{ form.profile_picture.label }}</label>
+                    {{ form.profile_picture }}
+                    {% if form.profile_picture.help_text %}
+                    <div class="help-text">{{ form.profile_picture.help_text }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-user-plus"></i> Register User
+            </button>
+            <a href="{% url 'armguard_admin:dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
