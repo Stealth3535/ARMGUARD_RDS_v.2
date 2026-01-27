@@ -106,7 +106,7 @@
             <div class="text-center">
                 <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem;">{{ person.get_full_name }}</h3>
                 <p style="margin: 0; color: var(--text-light); font-size: 0.85rem;">{{ person.rank }}</p>
-                <p style="margin: 0 0 1rem 0; color: var(--text-light); font-size: 0.85rem;">{{ person.serial }}</p>
+                <p style="margin: 0 0 1rem 0; color: var(--text-light); font-size: 0.85rem;">{{ person.get_serial_display }}</p>
                 
                 {% if person.qr_code_obj and person.qr_code_obj.qr_image %}
                 <div class="qr-code-display">

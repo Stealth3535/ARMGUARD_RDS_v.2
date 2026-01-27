@@ -7,6 +7,13 @@
     <div class="no-print">
         <h1>🖨️ Print QR Codes</h1>
         <p>QR Size: {{ qr_size_mm }}mm | Cards per row: {{ cards_per_row }}</p>
+        <div style="background: #fff3cd; border: 2px solid #ffc107; padding: 10px; margin: 10px 0; border-radius: 5px;">
+            <strong>⚠️ Print Settings Required:</strong>
+            <ul style="margin: 5px 0;">
+                <li><strong>Quality:</strong> High Quality (for sharp QR codes)</li>
+                <li><strong>Color:</strong> Black & White</li>
+            </ul>
+        </div>
         <button onclick="window.print()" class="btn btn-primary">🖨️ Print</button>
     </div>
 
@@ -17,7 +24,11 @@
             <div class="qr-card">
                 <div class="qr-id">ID: {{ qr.reference_id }}</div>
                 <div class="qr-name">{{ qr.name }}</div>
+                {% if qr.qr_image %}
                 <img src="{{ qr.qr_image.url }}" class="qr-image" alt="QR Code">
+                {% else %}
+                <div class="qr-placeholder">QR Code Missing</div>
+                {% endif %}
                 <div class="badge">PERSONNEL</div>
             </div>
             {% endfor %}
@@ -29,7 +40,11 @@
             <div class="qr-card">
                 <div class="qr-id">ID: {{ qr.reference_id }}</div>
                 <div class="qr-name">{{ qr.name }}</div>
+                {% if qr.qr_image %}
                 <img src="{{ qr.qr_image.url }}" class="qr-image" alt="QR Code">
+                {% else %}
+                <div class="qr-placeholder">QR Code Missing</div>
+                {% endif %}
                 <div class="badge">ITEM</div>
             </div>
             {% endfor %}
@@ -82,6 +97,19 @@
     background: #f0f0f0;
     padding: 2px 8px;
     border: 1px solid black;
+}
+
+.qr-placeholder {
+    width: {{ qr_size_mm }}mm;
+    height: {{ qr_size_mm }}mm;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+    border: 2px dashed #ccc;
+    color: #999;
+    font-size: 10pt;
 }
 
 @media print {

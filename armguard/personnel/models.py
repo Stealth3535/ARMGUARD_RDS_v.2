@@ -8,6 +8,20 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 
 
+class PersonnelManager(models.Manager):
+    """Custom manager to filter out soft-deleted personnel by default"""
+    def get_queryset(self):
+        return super().get_queryset().filter(deleted_at__isnull=True)
+    
+    def with_deleted(self):
+        """Include soft-deleted personnel"""
+        return super().get_queryset()
+    
+    def deleted_only(self):
+        """Get only soft-deleted personnel"""
+        return super().get_queryset().filter(deleted_at__isnull=False)
+
+
 class Personnel(models.Model):
     """Personnel model - Military personnel in the armory system"""
     
@@ -17,6 +31,13 @@ class Personnel(models.Model):
     STATUS_CHOICES = [
         (STATUS_ACTIVE, 'Active'),
         (STATUS_INACTIVE, 'Inactive'),
+    ]
+    
+    # Classification choices
+    CLASSIFICATION_CHOICES = [
+        ('ENLISTED PERSONNEL', 'Enlisted Personnel'),
+        ('OFFICER', 'Officer'),
+        ('SUPERUSER', 'Superuser'),
     ]
     
     # Rank choices - Enlisted
@@ -51,12 +72,12 @@ class Personnel(models.Model):
     
     ALL_RANKS = RANKS_ENLISTED + RANKS_OFFICER
     
-    # Office choices
-    OFFICE_CHOICES = [
+    # Group choices
+    GROUP_CHOICES = [
         ('HAS', 'HAS'),
-        ('951', '951'),
-        ('952', '952'),
-        ('953', '953'),
+        ('951st', '951st'),
+        ('952nd', '952nd'),
+        ('953rd', '953rd'),
     ]
     
     # ID format: PE/PO + serial + DDMMYY
@@ -71,13 +92,19 @@ class Personnel(models.Model):
     middle_initial = models.CharField(max_length=10, blank=True, null=True)
     
     # Military Information
-    rank = models.CharField(max_length=20, choices=ALL_RANKS)
+    rank = models.CharField(
+        max_length=20, 
+        choices=ALL_RANKS,
+        blank=True,
+        null=True,
+        help_text="Military rank (not required for superusers)"
+    )
     serial = models.CharField(
         max_length=20, 
         unique=True,
         help_text="Serial number (6 digits for enlisted, or O-XXXXXX for officers)"
     )
-    office = models.CharField(max_length=10, choices=OFFICE_CHOICES)
+    group = models.CharField(max_length=10, choices=GROUP_CHOICES, default='HAS')
     
     # Contact Information
     tel = models.CharField(
@@ -90,6 +117,12 @@ class Personnel(models.Model):
     registration_date = models.DateField(default=timezone.now)
     qr_code = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
+    classification = models.CharField(
+        max_length=20, 
+        choices=CLASSIFICATION_CHOICES, 
+        default='ENLISTED PERSONNEL',
+        help_text="Personnel classification (ENLISTED PERSONNEL, OFFICER, SUPERUSER)"
+    )
     picture = models.ImageField(
         upload_to='personnel/pictures/', 
         blank=True, 
@@ -100,6 +133,11 @@ class Personnel(models.Model):
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    deleted_at = models.DateTimeField(null=True, blank=True, help_text="Soft delete timestamp - record kept for reference")
+    
+    # Managers
+    objects = PersonnelManager()  # Default manager excludes soft-deleted
+    all_objects = models.Manager()  # Access all including soft-deleted
     
     class Meta:
         db_table = 'personnel'
@@ -108,7 +146,12 @@ class Personnel(models.Model):
         verbose_name_plural = 'Personnel'
     
     def __str__(self):
-        return f"{self.get_full_name()} ({self.rank})"
+        if self.rank:
+            return f"{self.get_full_name()} ({self.rank})"
+        elif self.classification == 'SUPERUSER':
+            return f"{self.get_full_name()} (SUPERUSER)"
+        else:
+            return f"{self.get_full_name()}"
     
     def get_full_name(self):
         """Return full name with middle initial"""
@@ -118,14 +161,41 @@ class Personnel(models.Model):
     
     def is_officer(self):
         """Check if personnel is an officer"""
-        return self.serial.startswith('O-') or self.rank in [r[0] for r in self.RANKS_OFFICER]
+        officer_ranks = [rank_code for rank_code, _ in self.RANKS_OFFICER]
+        return self.rank in officer_ranks
+    
+    def get_serial_display(self):
+        """Return formatted serial number with O- prefix for officers"""
+        if self.is_officer():
+            # Add O- prefix if not already present
+            if not self.serial.startswith('O-'):
+                return f"O-{self.serial}"
+            return self.serial
+        return self.serial
+    
+    def get_classification_from_rank(self):
+        """Auto-determine classification based on rank"""
+        if not self.rank:
+            return 'SUPERUSER'  # No rank means superuser
+        elif self.is_officer():
+            return 'OFFICER'
+        else:
+            return 'ENLISTED PERSONNEL'
     
     def get_personnel_class(self):
         """Return personnel class - EP for Enlisted, O for Officer"""
         return 'O' if self.is_officer() else 'EP'
     
     def save(self, *args, **kwargs):
-        """Override save to generate ID if not set and capitalize officer names"""
+        """Override save to generate ID, auto-set classification, and format names"""
+        # Auto-determine classification if not set or using old values
+        if not self.classification or self.classification in ['REGULAR', 'ADMIN']:
+            if hasattr(self, 'user') and self.user and self.user.is_superuser:
+                self.classification = 'SUPERUSER'
+            else:
+                self.classification = self.get_classification_from_rank()
+        
+        # Format names based on classification
         if self.is_officer():
             self.surname = self.surname.upper()
             self.firstname = self.firstname.upper()
@@ -141,14 +211,29 @@ class Personnel(models.Model):
             if self.rank:
                 self.rank = self.rank.upper()
 
+        # Generate ID if not set
         if not self.id:
-            # Generate ID: PE/PO + serial + DDMMYY
             prefix = 'PO' if self.is_officer() else 'PE'
             date_suffix = timezone.now().strftime('%d%m%y')
             clean_serial = self.serial.replace('O-', '') if self.is_officer() else self.serial
             self.id = f"{prefix}-{clean_serial}{date_suffix}"
+        
         # Set QR code to ID if not set
         if not self.qr_code:
             self.qr_code = self.id
+        
         super().save(*args, **kwargs)
+    
+    def soft_delete(self):
+        """Soft delete: Mark as deleted and inactive, keep record for reference"""
+        self.deleted_at = timezone.now()
+        self.status = self.STATUS_INACTIVE
+        self.save()
+        
+        # Deactivate associated QR code (keep in DB but mark as inactive)
+        from qr_manager.models import QRCodeImage
+        QRCodeImage.objects.filter(qr_type='personnel', reference_id=self.id).update(
+            is_active=False,
+            deleted_at=timezone.now()
+        )
 

@@ -9,8 +9,8 @@ from .models import Personnel
 class PersonnelAdmin(admin.ModelAdmin):
     """Admin interface for Personnel"""
     
-    list_display = ['id', 'get_full_name', 'rank', 'serial', 'office', 'status', 'registration_date']
-    list_filter = ['status', 'rank', 'office', 'registration_date']
+    list_display = ['id', 'get_full_name', 'rank', 'serial', 'group', 'status', 'registration_date']
+    list_filter = ['status', 'rank', 'group', 'registration_date']
     search_fields = ['surname', 'firstname', 'serial', 'id']
     readonly_fields = ['id', 'qr_code', 'created_at', 'updated_at']
     
@@ -19,7 +19,7 @@ class PersonnelAdmin(admin.ModelAdmin):
             'fields': ('surname', 'firstname', 'middle_initial', 'picture')
         }),
         ('Military Information', {
-            'fields': ('rank', 'serial', 'office')
+            'fields': ('rank', 'serial', 'group')
         }),
         ('Contact Information', {
             'fields': ('tel',)

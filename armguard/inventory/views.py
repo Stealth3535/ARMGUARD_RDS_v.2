@@ -46,10 +46,12 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'item'
     
     def get_context_data(self, **kwargs):
-        """Add QR code object to context"""
+        """Add QR code object and last take transaction to context"""
         context = super().get_context_data(**kwargs)
         # Import here to avoid circular imports
         from qr_manager.models import QRCodeImage
+        from transactions.models import Transaction
+        
         try:
             context['qr_code_obj'] = QRCodeImage.objects.get(
                 qr_type=QRCodeImage.TYPE_ITEM,
@@ -57,6 +59,18 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
             )
         except QRCodeImage.DoesNotExist:
             context['qr_code_obj'] = None
+        
+        # Get last 'Take' transaction for issued items
+        if self.object.status == 'Issued':
+            last_take = self.object.transactions.filter(action='Take').order_by('-date_time').first()
+            # Check if there's no return after this take
+            if last_take and not self.object.transactions.filter(action='Return', date_time__gt=last_take.date_time).exists():
+                context['last_take'] = last_take
+            else:
+                context['last_take'] = None
+        else:
+            context['last_take'] = None
+            
         return context
 
 

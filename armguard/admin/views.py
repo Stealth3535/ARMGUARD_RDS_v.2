@@ -10,32 +10,60 @@ from django.conf import settings
 from django.db import transaction
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 from inventory.models import Item
 from personnel.models import Personnel
 from transactions.models import Transaction
 from users.models import UserProfile
+from .models import AuditLog, DeletedRecord
 import qrcode
 from io import BytesIO
 import base64
 
 from .forms import (
-    UniversalRegistrationForm, AdminUserForm, ArmorerRegistrationForm, 
-    PersonnelRegistrationForm, ItemRegistrationForm, SystemSettingsForm
+    UniversalForm, ItemRegistrationForm, SystemSettingsForm
 )
-
 
 def is_admin_user(user):
     """Check if user is admin or superuser - only they can register users"""
     return user.is_authenticated and (user.is_superuser or user.groups.filter(name='Admin').exists())
 
 
+def is_superuser(user):
+    """Check if user is superuser - required for critical operations like deletion"""
+    return user.is_authenticated and user.is_superuser
+
+
+def is_staff_or_superuser(user):
+    """Check if user is staff or superuser - can delete items"""
+    return user.is_authenticated and (user.is_staff or user.is_superuser)
+
+
+def is_admin_or_armorer(user):
+    """Check if user is admin, superuser, or armorer - can add items"""
+    return user.is_authenticated and (
+        user.is_superuser or 
+        user.groups.filter(name='Admin').exists() or 
+        user.groups.filter(name='Armorer').exists()
+    )
+
+
+def is_armorer(user):
+    """Check if user is armorer - can issue items"""
+    return user.is_authenticated and user.groups.filter(name='Armorer').exists()
+
+
+@never_cache
 @login_required
-@user_passes_test(is_admin_user)
+@user_passes_test(is_admin_or_armorer)
 def dashboard(request):
     """Admin dashboard with system overview and centralized registration access"""
     # Get statistics
     total_items = Item.objects.count()
     total_personnel = Personnel.objects.count()
+    active_personnel = Personnel.objects.filter(status='Active').count()
+    officers_count = Personnel.objects.filter(classification='OFFICER').count()
+    enlisted_count = Personnel.objects.filter(classification='ENLISTED PERSONNEL').count()
     total_transactions = Transaction.objects.count()
     total_users = User.objects.count()
     active_users = User.objects.filter(is_active=True).count()
@@ -51,6 +79,10 @@ def dashboard(request):
     # Users by role
     admins_count = User.objects.filter(groups__name='Admin').count()
     superusers_count = User.objects.filter(is_superuser=True).count()
+    # Total administrators = Admin group + Superusers (combined, avoiding duplicates)
+    administrators_count = User.objects.filter(
+        Q(groups__name='Admin') | Q(is_superuser=True)
+    ).distinct().count()
     armorers_count = User.objects.filter(groups__name='Armorer').count()
     
     # Unlinked personnel count
@@ -59,10 +91,14 @@ def dashboard(request):
     context = {
         'total_items': total_items,
         'total_personnel': total_personnel,
+        'active_personnel': active_personnel,
+        'officers_count': officers_count,
+        'enlisted_count': enlisted_count,
         'total_transactions': total_transactions,
         'total_users': total_users,
         'active_users': active_users,
         'admins_count': admins_count,
+        'administrators_count': administrators_count,
         'superusers_count': superusers_count,
         'armorers_count': armorers_count,
         'unlinked_personnel': unlinked_personnel,
@@ -76,12 +112,15 @@ def dashboard(request):
 @login_required
 @user_passes_test(is_admin_user, login_url='/')
 def personnel_registration(request):
-    """Traditional Personnel Registration Form"""
+    """Personnel-only registration using UniversalForm"""
     if request.method == 'POST':
-        form = PersonnelRegistrationForm(request.POST, request.FILES)
+        # Add operation_type for personnel-only creation
+        data = request.POST.copy()
+        data['operation_type'] = 'create_personnel_only'
+        form = UniversalForm(data, request.FILES)
         if form.is_valid():
-            personnel = form.save()
-            messages.success(request, f'Personnel {personnel.get_full_name()} has been registered successfully!')
+            user, personnel = form.save()
+            messages.success(request, f'Personnel {personnel.firstname} {personnel.surname} has been registered successfully!')
             
             # Generate QR code if not already created
             from qr_manager.models import QRCodeImage
@@ -89,12 +128,14 @@ def personnel_registration(request):
                 QRCodeImage.objects.create(
                     qr_type=QRCodeImage.TYPE_PERSONNEL,
                     reference_id=personnel.id,
-                    data_content=f"Personnel: {personnel.get_full_name()}\nRank: {personnel.rank}\nSerial: {personnel.serial}\nID: {personnel.id}"
+                    data_content=f"Personnel: {personnel.firstname} {personnel.surname}\nRank: {personnel.rank}\nSerial: {personnel.serial}\nID: {personnel.id}"
                 )
             
             return redirect('armguard_admin:personnel_registration_success', pk=personnel.id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
     else:
-        form = PersonnelRegistrationForm()
+        form = UniversalForm(initial={'operation_type': 'create_personnel_only'})
     
     context = {
         'form': form,
@@ -133,7 +174,7 @@ def universal_registration(request):
     if request.method == 'POST':
         print(f"DEBUG: Registration POST data: {request.POST}")
         print(f"DEBUG: Registration FILES data: {request.FILES}")
-        form = UniversalRegistrationForm(request.POST, request.FILES)
+        form = UniversalForm(request.POST, request.FILES)
         print(f"DEBUG: Registration form is_valid: {form.is_valid()}")
         if not form.is_valid():
             print(f"DEBUG: Registration form errors: {form.errors}")
@@ -142,24 +183,13 @@ def universal_registration(request):
                 with transaction.atomic():
                     user, personnel = form.save()
                     
-                    # Generate QR codes if applicable
-                    qr_codes = {}
-                    
-                    if user:
-                        # Generate user QR code
-                        user_data = f"USER:{user.id}:{user.username}:{user.email}"
-                        qr_user = qrcode.QRCode(version=1, box_size=10, border=5)
-                        qr_user.add_data(user_data)
-                        qr_user.make(fit=True)
-                        
-                        img_user = qr_user.make_image(fill_color="black", back_color="white")
-                        buffer_user = BytesIO()
-                        img_user.save(buffer_user, format='PNG')
-                        qr_codes['user'] = base64.b64encode(buffer_user.getvalue()).decode()
+                    # Generate single personnel QR code
+                    qr_code = None
                     
                     if personnel:
-                        # Generate personnel QR code
-                        personnel_data = f"PERSONNEL:{personnel.id}:{personnel.rank} {personnel.surname}, {personnel.firstname}:{personnel.serial}"
+                        # Generate personnel QR code (includes user link if exists)
+                        user_info = f":{user.username}" if user else ""
+                        personnel_data = f"PERSONNEL:{personnel.id}:{personnel.rank} {personnel.surname}, {personnel.firstname}:{personnel.serial}{user_info}"
                         qr_personnel = qrcode.QRCode(version=1, box_size=10, border=5)
                         qr_personnel.add_data(personnel_data)
                         qr_personnel.make(fit=True)
@@ -167,48 +197,75 @@ def universal_registration(request):
                         img_personnel = qr_personnel.make_image(fill_color="black", back_color="white")
                         buffer_personnel = BytesIO()
                         img_personnel.save(buffer_personnel, format='PNG')
-                        qr_codes['personnel'] = base64.b64encode(buffer_personnel.getvalue()).decode()
+                        qr_code = base64.b64encode(buffer_personnel.getvalue()).decode()
                     
                     # Success message based on what was created
-                    registration_type = form.cleaned_data['registration_type']
-                    if registration_type == 'user_only':
-                        messages.success(request, f'User account "{user.username}" created successfully with QR code.')
-                    elif registration_type == 'personnel_only':
+                    operation_type = form.cleaned_data['operation_type']
+                    if operation_type == 'create_personnel_only':
                         messages.success(request, f'Personnel record for "{personnel.rank} {personnel.surname}" created successfully with QR code.')
-                    elif registration_type == 'user_with_personnel':
-                        messages.success(request, f'User account "{user.username}" and personnel record for "{personnel.rank} {personnel.surname}" created successfully with QR codes.')
-                    elif registration_type == 'link_existing':
-                        messages.success(request, f'User account "{user.username}" linked to personnel "{personnel.rank} {personnel.surname}" successfully.')
+                    elif operation_type == 'create_user_with_personnel':
+                        messages.success(request, f'User account "{user.username}" and personnel record for "{personnel.rank} {personnel.surname}" created successfully with QR code.')
+                    elif operation_type in ['edit_user', 'edit_personnel', 'edit_both']:
+                        messages.success(request, f'Records updated successfully.')
                     
-                    # Store QR codes in session for display
-                    request.session['qr_codes'] = qr_codes
+                    # Store QR code in session for display
+                    request.session['qr_code'] = qr_code
+                    request.session['personnel_name'] = f"{personnel.rank} {personnel.surname}, {personnel.firstname}" if personnel else None
                     
                     return redirect('armguard_admin:registration_success')
                     
             except Exception as e:
                 messages.error(request, f'Error during registration: {str(e)}')
     else:
-        form = UniversalRegistrationForm()
+        form = UniversalForm()
     
-    return render(request, 'admin/universal_registration.html', {'form': form})
+    context = {
+        'form': form,
+        'is_edit': False,
+        'page_title': 'Universal Registration',
+        'submit_text': 'Register',
+    }
+    return render(request, 'admin/universal_form.html', context)
 
 
 @login_required
-@user_passes_test(is_admin_user)
+@user_passes_test(is_admin_or_armorer)
 def registration_success(request):
-    """Display success page with QR codes"""
-    qr_codes = request.session.pop('qr_codes', {})
-    return render(request, 'admin/registration_success.html', {'qr_codes': qr_codes})
+    """Display success page with QR code"""
+    qr_code = request.session.pop('qr_code', None)
+    personnel_name = request.session.pop('personnel_name', None)
+    return render(request, 'admin/registration_success.html', {
+        'qr_code': qr_code,
+        'personnel_name': personnel_name
+    })
 
 
+@never_cache
 @login_required
 @user_passes_test(is_admin_user)
 def user_management(request):
     """User management interface"""
-    users = User.objects.select_related('userprofile').prefetch_related('groups').order_by('-date_joined')
+    # Get only admin users (Superuser, Admin, Armorer) for User Management section
+    admin_users = User.objects.select_related('userprofile').prefetch_related('groups').filter(
+        Q(is_superuser=True) | Q(groups__name__in=['Admin', 'Armorer'])
+    ).distinct().order_by('-date_joined')
     
-    # Add personnel linking info
-    for user in users:
+    # Get only personnel users (non-admin, non-staff) for Personnel Management section
+    personnel_users = User.objects.select_related('userprofile').prefetch_related('groups').filter(
+        is_staff=False,
+        is_superuser=False
+    ).exclude(
+        groups__name__in=['Admin', 'Armorer']
+    ).order_by('-date_joined')
+    
+    # Add personnel linking info for both groups
+    for user in admin_users:
+        try:
+            user.personnel = Personnel.objects.get(user=user)
+        except Personnel.DoesNotExist:
+            user.personnel = None
+    
+    for user in personnel_users:
         try:
             user.personnel = Personnel.objects.get(user=user)
         except Personnel.DoesNotExist:
@@ -220,31 +277,46 @@ def user_management(request):
     
     if role_filter:
         if role_filter == 'admin':
-            users = users.filter(groups__name='Admin')
+            admin_users = admin_users.filter(groups__name='Admin')
         elif role_filter == 'superuser':
-            users = users.filter(is_superuser=True)
+            admin_users = admin_users.filter(is_superuser=True)
         elif role_filter == 'armorer':
-            users = users.filter(groups__name='Armorer')
-        elif role_filter == 'regular':
-            users = users.filter(is_staff=False, is_superuser=False)
+            admin_users = admin_users.filter(groups__name='Armorer')
     
     if search_query:
-        users = users.filter(
+        admin_users = admin_users.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(email__icontains=search_query)
+        )
+        personnel_users = personnel_users.filter(
             Q(username__icontains=search_query) |
             Q(first_name__icontains=search_query) |
             Q(last_name__icontains=search_query) |
             Q(email__icontains=search_query)
         )
     
+    # Get all personnel records (without user accounts)
+    personnel = Personnel.objects.filter(user__isnull=True).order_by('surname', 'firstname')
+    
+    # Check if current user can edit personnel (Admin or Superuser)
+    can_edit_personnel = request.user.is_superuser or request.user.groups.filter(name='Admin').exists()
+    
     context = {
-        'users': users,
-        'user_count': users.count(),
-        'admin_count': users.filter(groups__name='Admin').count(),
-        'armorer_count': users.filter(groups__name='Armorer').count(),
-        'active_count': users.filter(is_active=True).count(),
-        'unlinked_personnel': Personnel.objects.filter(user__isnull=True),
+        'users': admin_users,  # Admin users (Superuser, Admin, Armorer)
+        'personnel_users': personnel_users,  # Personnel users with accounts
+        'user_count': admin_users.count(),
+        'personnel_user_count': personnel_users.count(),
+        'admin_count': admin_users.filter(groups__name='Admin').count(),
+        'armorer_count': admin_users.filter(groups__name='Armorer').count(),
+        'superuser_count': admin_users.filter(is_superuser=True).count(),
+        'active_count': admin_users.filter(is_active=True).count(),
+        'personnel': personnel,  # Personnel without user accounts
+        'unlinked_personnel': personnel,
         'role_filter': role_filter,
         'search_query': search_query,
+        'can_edit_personnel': can_edit_personnel,
     }
     return render(request, 'admin/user_management.html', context)
 
@@ -271,102 +343,30 @@ def edit_user(request, user_id):
     if request.method == 'POST':
         print(f"DEBUG: POST data: {request.POST}")
         print(f"DEBUG: FILES data: {request.FILES}")
-        form = AdminUserForm(request.POST, request.FILES, instance=edit_user_obj)
+        # Set up data for UniversalForm edit operation
+        data = request.POST.copy()
+        # Check if user has linked personnel to determine operation type
+        has_personnel = hasattr(edit_user_obj, 'personnel') and edit_user_obj.personnel
+        if has_personnel:
+            data['operation_type'] = 'edit_both'
+            data['edit_personnel_id'] = edit_user_obj.personnel.id
+        else:
+            data['operation_type'] = 'edit_user'
+        data['edit_user_id'] = edit_user_obj.id
+        
+        # Pass both edit_user and edit_personnel if personnel exists
+        form_kwargs = {'edit_user': edit_user_obj}
+        if has_personnel:
+            form_kwargs['edit_personnel'] = edit_user_obj.personnel
+        form = UniversalForm(data, request.FILES, **form_kwargs)
+        
         print(f"DEBUG: Form is_valid: {form.is_valid()}")
         if not form.is_valid():
             print(f"DEBUG: Form errors: {form.errors}")
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    user = form.save(commit=False)
-                    
-                    # Update password if provided
-                    new_password = form.cleaned_data.get('password')
-                    if new_password:
-                        user.set_password(new_password)
-                    
-                    # Update role-based permissions
-                    role = form.cleaned_data['role']
-                    user.groups.clear()  # Clear existing groups
-                    
-                    if role == 'admin':
-                        user.is_staff = True
-                        user.is_superuser = False
-                        admin_group, _ = Group.objects.get_or_create(name='Admin')
-                        user.groups.add(admin_group)
-                    elif role == 'superuser':
-                        user.is_staff = True
-                        user.is_superuser = True
-                    elif role == 'armorer':
-                        user.is_staff = True
-                        user.is_superuser = False
-                        armorer_group, _ = Group.objects.get_or_create(name='Armorer')
-                        user.groups.add(armorer_group)
-                    else:
-                        user.is_staff = False
-                        user.is_superuser = False
-                    
-                    user.save()
-                    
-                    # Update or create user profile
-                    try:
-                        profile = user.userprofile
-                    except:
-                        # Import UserProfile model to create one if it doesn't exist
-                        from users.models import UserProfile
-                        profile = UserProfile.objects.create(user=user)
-                    
-                    profile.department = form.cleaned_data.get('department', '')
-                    profile.phone_number = form.cleaned_data.get('phone_number', '')
-                    profile.badge_number = form.cleaned_data.get('badge_number', '')
-                    profile.is_armorer = (role == 'armorer')
-                    
-
-                    # Handle profile picture upload (UserProfile)
-                    uploaded_file = form.cleaned_data.get('profile_picture')
-                    if uploaded_file:
-                        print(f"DEBUG: Processing uploaded file: {uploaded_file.name}, size: {uploaded_file.size}")
-                        profile.profile_picture = uploaded_file
-                        print(f"DEBUG: Set profile_picture to: {profile.profile_picture}")
-                    profile.save()
-                    print(f"DEBUG: UserProfile saved, profile_picture: {profile.profile_picture}")
-
-                    # Also update Personnel.picture if user is linked to Personnel
-                    try:
-                        from personnel.models import Personnel
-                        personnel = getattr(user, 'personnel', None)
-                        if not personnel:
-                            # Try to find Personnel by serial or username, or create if missing
-                            personnel = Personnel.objects.filter(serial=user.username).first()
-                            if not personnel:
-                                # Create a minimal Personnel record if none exists
-                                personnel = Personnel.objects.create(
-                                    serial=user.username,
-                                    surname=user.last_name or 'Unknown',
-                                    firstname=user.first_name or 'User',
-                                    rank='AM',  # Default rank
-                                    office='HAS',  # Default office
-                                    tel='+639000000000',  # Default phone
-                                    status='ACTIVE',
-                                )
-                                personnel.user = user
-                                personnel.save()
-                                print(f"DEBUG: Created new personnel: {personnel.id}")
-                            else:
-                                personnel.user = user
-                                personnel.save()
-                                print(f"DEBUG: Linked existing personnel: {personnel.id}")
-                        
-                        # Save the uploaded image to Personnel.picture
-                        if uploaded_file:
-                            personnel.picture = uploaded_file
-                            personnel.save()
-                            print(f"DEBUG: Saved image to personnel {personnel.id}, picture: {personnel.picture}")
-                    except Exception as e:
-                        print(f"DEBUG: Error updating personnel: {str(e)}")
-                        import traceback
-                        traceback.print_exc()
-                    
+                    user, personnel = form.save()
                     messages.success(request, f'User \"{user.username}\" updated successfully!')
                     return redirect('armguard_admin:user_management')
                     
@@ -379,15 +379,150 @@ def edit_user(request, user_id):
                 for error in errors:
                     messages.error(request, f'{field}: {error}')
     else:
-        # Create form with instance - form will auto-populate from __init__
-        form = AdminUserForm(instance=edit_user_obj)
+        # Create form for editing - include personnel if linked
+        has_personnel = hasattr(edit_user_obj, 'personnel') and edit_user_obj.personnel
+        operation_type = 'edit_both' if has_personnel else 'edit_user'
+        
+        form_kwargs = {'edit_user': edit_user_obj}
+        if has_personnel:
+            form_kwargs['edit_personnel'] = edit_user_obj.personnel
+        
+        form = UniversalForm(initial={'operation_type': operation_type}, **form_kwargs)
     
     context = {
         'form': form,
         'edit_user': edit_user_obj,
         'is_edit': True,
+        'page_title': f'Edit User: {edit_user_obj.username}',
+        'submit_text': 'Save Changes',
     }
-    return render(request, 'admin/edit_user.html', context)
+    return render(request, 'admin/universal_form.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def edit_personnel(request, personnel_id):
+    """Edit personnel record - Admin and Superuser can edit"""
+    from personnel.models import Personnel
+    
+    edit_personnel_obj = get_object_or_404(Personnel, id=personnel_id)
+    
+    if request.method == 'POST':
+        # Set up data for UniversalForm edit operation
+        data = request.POST.copy()
+        data['operation_type'] = 'edit_personnel'
+        data['edit_personnel_id'] = edit_personnel_obj.id
+        
+        form = UniversalForm(data, request.FILES, edit_personnel=edit_personnel_obj)
+        
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    user, personnel = form.save()
+                    
+                    # Log the update action
+                    AuditLog.objects.create(
+                        performed_by=request.user,
+                        action='UPDATE',
+                        target_model='Personnel',
+                        target_id=personnel.id,
+                        target_name=personnel.get_full_name(),
+                        description=f'Updated personnel record: {personnel.get_full_name()}',
+                        ip_address=request.META.get('REMOTE_ADDR')
+                    )
+                    
+                    messages.success(request, f'Personnel record for "{personnel.get_full_name()}" updated successfully!')
+                    return redirect('armguard_admin:user_management')
+                    
+            except Exception as e:
+                messages.error(request, f'Error updating personnel: {str(e)}')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+    else:
+        # Create form for editing personnel only
+        form = UniversalForm(
+            initial={'operation_type': 'edit_personnel'}, 
+            edit_personnel=edit_personnel_obj
+        )
+    
+    context = {
+        'form': form,
+        'edit_personnel': edit_personnel_obj,
+        'is_edit': True,
+        'page_title': f'Edit Personnel: {edit_personnel_obj.get_full_name()}',
+        'submit_text': 'Save Changes',
+    }
+    return render(request, 'admin/universal_form.html', context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+def delete_personnel(request, personnel_id):
+    """Delete personnel record - Only Superuser can delete"""
+    from personnel.models import Personnel
+    
+    personnel_obj = get_object_or_404(Personnel, id=personnel_id)
+    
+    if request.method == 'POST':
+        reason = request.POST.get('reason', '').strip()
+        
+        if not reason:
+            messages.error(request, 'Deletion reason is required.')
+            return redirect('armguard_admin:delete_personnel', personnel_id=personnel_id)
+        
+        try:
+            with transaction.atomic():
+                # Save personnel data before deletion
+                personnel_data = {
+                    'id': personnel_obj.id,
+                    'firstname': personnel_obj.firstname,
+                    'surname': personnel_obj.surname,
+                    'middle_initial': personnel_obj.middle_initial,
+                    'rank': personnel_obj.rank,
+                    'serial': personnel_obj.serial,
+                    'group': personnel_obj.group,
+                    'has_user_account': hasattr(personnel_obj, 'user'),
+                }
+                
+                # Create DeletedRecord
+                DeletedRecord.objects.create(
+                    deleted_by=request.user,
+                    model_name='Personnel',
+                    record_id=personnel_obj.id,
+                    record_data=personnel_data,
+                    reason=reason
+                )
+                
+                # Create AuditLog
+                AuditLog.objects.create(
+                    performed_by=request.user,
+                    action='DELETE',
+                    target_model='Personnel',
+                    target_id=personnel_obj.id,
+                    target_name=personnel_obj.get_full_name(),
+                    description=f'Soft-deleted personnel record: {personnel_obj.get_full_name()}. Reason: {reason}',
+                    ip_address=request.META.get('REMOTE_ADDR')
+                )
+                
+                # Soft delete the personnel record (keeps in DB, deletes QR)
+                full_name = personnel_obj.get_full_name()
+                personnel_obj.soft_delete()
+                
+                messages.success(request, f'Personnel record for "{full_name}" has been archived. The record is kept for reference but QR code has been removed.')
+                return redirect('armguard_admin:user_management')
+                
+        except Exception as e:
+            messages.error(request, f'Error deleting personnel: {str(e)}')
+            return redirect('armguard_admin:user_management')
+    
+    # GET request - show confirmation page
+    context = {
+        'personnel_to_delete': personnel_obj,
+    }
+    return render(request, 'admin/delete_personnel_confirm.html', context)
 
 
 @login_required
@@ -407,9 +542,9 @@ def register_personnel(request):
 
 
 @login_required
-@user_passes_test(is_admin_user)
+@user_passes_test(is_admin_or_armorer)
 def register_item(request):
-    """Register new inventory item"""
+    """Register new inventory item - Admin and Armorer can add items"""
     if request.method == 'POST':
         form = ItemRegistrationForm(request.POST)
         if form.is_valid():
@@ -473,28 +608,112 @@ def system_settings(request):
 
 
 @login_required
-@user_passes_test(is_admin_user)
-@require_POST
+@user_passes_test(is_superuser)
 def delete_user(request, user_id):
-    """Delete user (AJAX endpoint)"""
-    try:
-        user_obj = get_object_or_404(User, id=user_id)
-        
-        # Prevent self-deletion
-        if user_obj == request.user:
-            return JsonResponse({'success': False, 'message': 'Cannot delete your own account.'})
-        
-        # Prevent deletion of last superuser
-        if user_obj.is_superuser and User.objects.filter(is_superuser=True).count() <= 1:
-            return JsonResponse({'success': False, 'message': 'Cannot delete the last superuser account.'})
-        
-        username = user_obj.username
-        user_obj.delete()
-        
-        return JsonResponse({'success': True, 'message': f'User "{username}" deleted successfully.'})
-        
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': f'Error deleting user: {str(e)}'})
+    """Delete user with audit logging (Superuser only)"""
+    from .models import AuditLog, DeletedRecord
+    import json
+    
+    user_obj = get_object_or_404(User, id=user_id)
+    
+    # Prevent self-deletion
+    if user_obj == request.user:
+        messages.error(request, 'Cannot delete your own account.')
+        return redirect('armguard_admin:user_management')
+    
+    # Prevent deletion of last superuser
+    if user_obj.is_superuser and User.objects.filter(is_superuser=True).count() <= 1:
+        messages.error(request, 'Cannot delete the last superuser account.')
+        return redirect('armguard_admin:user_management')
+    
+    if request.method == 'POST':
+        try:
+            # Collect all user data before deletion
+            user_data = {
+                'id': user_obj.id,
+                'username': user_obj.username,
+                'email': user_obj.email,
+                'first_name': user_obj.first_name,
+                'last_name': user_obj.last_name,
+                'is_active': user_obj.is_active,
+                'is_staff': user_obj.is_staff,
+                'is_superuser': user_obj.is_superuser,
+                'date_joined': user_obj.date_joined.isoformat(),
+                'last_login': user_obj.last_login.isoformat() if user_obj.last_login else None,
+            }
+            
+            # Check for linked personnel
+            linked_personnel = None
+            if hasattr(user_obj, 'personnel'):
+                personnel = user_obj.personnel
+                linked_personnel = {
+                    'personnel_id': personnel.id,
+                    'firstname': personnel.firstname,
+                    'surname': personnel.surname,
+                    'rank': personnel.rank,
+                    'group': personnel.group,
+                    'serial': personnel.serial,
+                }
+                user_data['linked_personnel'] = linked_personnel
+            
+            # Get deletion reason from form
+            reason = request.POST.get('reason', 'No reason provided')
+            
+            # Create deleted record entry
+            DeletedRecord.objects.create(
+                deleted_by=request.user,
+                model_name='User',
+                record_id=user_obj.id,
+                record_data=user_data,
+                reason=reason
+            )
+            
+            # Create audit log entry
+            AuditLog.objects.create(
+                performed_by=request.user,
+                action='DELETE',
+                target_model='User',
+                target_id=user_obj.id,
+                target_name=user_obj.username,
+                description=f'Deleted user account: {user_obj.username}',
+                changes={'deleted_data': user_data, 'reason': reason},
+                ip_address=request.META.get('REMOTE_ADDR', ''),
+            )
+            
+            username = user_obj.username
+            
+            # Soft delete linked personnel BEFORE deleting user (keeps record, deactivates QR)
+            personnel_to_soft_delete = None
+            if hasattr(user_obj, 'personnel') and user_obj.personnel:
+                personnel_to_soft_delete = user_obj.personnel
+            
+            # Delete user (this will set personnel.user to NULL due to SET_NULL)
+            user_obj.delete()
+            
+            # Now soft delete the personnel
+            if personnel_to_soft_delete:
+                personnel_to_soft_delete.soft_delete()
+                messages.success(request, f'User "{username}" has been successfully deleted. Linked personnel record archived (kept for reference, QR deactivated).')
+            else:
+                messages.success(request, f'User "{username}" has been successfully deleted.')
+            
+            return redirect('armguard_admin:user_management')
+            
+        except Exception as e:
+            messages.error(request, f'Error deleting user: {str(e)}')
+            return redirect('armguard_admin:user_management')
+    
+    # GET request - show confirmation page
+    context = {
+        'user_to_delete': user_obj,
+        'linked_personnel': None,
+    }
+    
+    # Check for linked personnel
+    if hasattr(user_obj, 'personnel'):
+        context['linked_personnel'] = user_obj.personnel
+    
+    return render(request, 'admin/delete_user_confirm.html', context)
 
 
 @login_required
@@ -564,92 +783,250 @@ def link_user_personnel(request):
 
 
 @login_required
-@user_passes_test(is_admin_user)
+@user_passes_test(is_admin_or_armorer)
 def registration(request):
-    """Registration form for all user types"""
-    from consolidated_forms import UserRegistrationForm
-    from personnel.models import Personnel
-    from django.contrib.auth.models import Group
+    """Main registration form - uses UniversalForm"""
+    # Check if user is armorer (limited permissions)
+    user_is_armorer = request.user.groups.filter(name='Armorer').exists() and not request.user.is_superuser and not request.user.groups.filter(name='Admin').exists()
     
     if request.method == 'POST':
-        user_type = request.POST.get('user_type')
-        
-        if user_type == 'personnel':
-            # Create personnel only (no user account)
-            try:
-                personnel = Personnel.objects.create(
-                    surname=request.POST.get('last_name', ''),
-                    firstname=request.POST.get('first_name', ''),
-                    middle_initial=request.POST.get('middle_initial', ''),
-                    rank=request.POST.get('rank', ''),
-                    serial=request.POST.get('serial', ''),
-                    office=request.POST.get('office', ''),
-                    tel=request.POST.get('phone', ''),
-                    status=request.POST.get('status', 'ACTIVE'),
-                    picture=request.FILES.get('profile_picture') if 'profile_picture' in request.FILES else None
-                )
-                messages.success(request, f'Personnel {personnel.get_full_name()} has been registered successfully!')
-                return redirect('armguard_admin:dashboard')
-            except Exception as e:
-                messages.error(request, f'Error creating personnel: {str(e)}')
-        else:
-            # Create user account
-            form = UserRegistrationForm(request.POST, request.FILES)
-            if form.is_valid():
-                user = form.save(commit=True)  # Let the form handle profile picture creation
-                
-                # Set user permissions based on type
-                if user_type == 'admin':
-                    user.is_staff = True
-                    user.is_superuser = False
-                elif user_type == 'armorer':
-                    user.is_staff = True
-                    user.is_superuser = False
-                
-                user.save()
-                
-                # Add user to appropriate groups
-                if user_type == 'admin':
-                    admin_group, created = Group.objects.get_or_create(name='Administrators')
-                    user.groups.add(admin_group)
-                elif user_type == 'armorer':
-                    armorer_group, created = Group.objects.get_or_create(name='Armorers')
-                    user.groups.add(armorer_group)
-                
-                # Create personnel record if personnel data provided
-                rank = request.POST.get('rank')
-                serial = request.POST.get('serial')
-                if rank or serial:
-                    try:
-                        personnel = Personnel.objects.create(
-                            user=user,
-                            surname=user.last_name,
-                            firstname=user.first_name,
-                            middle_initial=request.POST.get('middle_initial', ''),
-                            rank=rank or '',
-                            serial=serial or '',
-                            office=request.POST.get('office', ''),
-                            tel=request.POST.get('phone', ''),
-                            status=request.POST.get('status', 'ACTIVE')
-                        )
-                        # Copy profile picture from user profile to personnel if it exists
-                        if hasattr(user, 'userprofile') and user.userprofile.profile_picture:
-                            personnel.picture = user.userprofile.profile_picture
-                            personnel.save()
-                    except Exception as e:
-                        messages.warning(request, f'User created but personnel record failed: {str(e)}')
-                
-                user_type_names = {
-                    'admin': 'Administrator',
-                    'armorer': 'Armorer',
-                    'user': 'User'
+        # Restrict armorers to personnel-only registration
+        if user_is_armorer:
+            data = request.POST.copy()
+            operation_type = data.get('operation_type', '')
+            # Only allow personnel-only operations for armorers
+            if operation_type not in ['create_personnel_only']:
+                messages.error(request, 'Armorers can only register personnel. Please contact an administrator for user account registration.')
+                form = UniversalForm(initial={'operation_type': 'create_personnel_only'})
+                context = {
+                    'form': form,
+                    'is_edit': False,
+                    'page_title': 'Registration Form',
+                    'submit_text': 'Register',
+                    'user_is_armorer': user_is_armorer,
                 }
-                messages.success(request, f'{user_type_names.get(user_type, "User")} "{user.username}" has been registered successfully!')
-                return redirect('armguard_admin:dashboard')
+                return render(request, 'admin/universal_form.html', context)
+        
+        form = UniversalForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    user, personnel = form.save()
+                    
+                    # Generate single personnel QR code
+                    qr_code = None
+                    
+                    if personnel:
+                        # Generate personnel QR code (includes user link if exists)
+                        user_info = f":{user.username}" if user else ""
+                        personnel_data = f"PERSONNEL:{personnel.id}:{personnel.rank} {personnel.surname}, {personnel.firstname}:{personnel.serial}{user_info}"
+                        qr_personnel = qrcode.QRCode(version=1, box_size=10, border=5)
+                        qr_personnel.add_data(personnel_data)
+                        qr_personnel.make(fit=True)
+                        
+                        img_personnel = qr_personnel.make_image(fill_color="black", back_color="white")
+                        buffer_personnel = BytesIO()
+                        img_personnel.save(buffer_personnel, format='PNG')
+                        qr_code = base64.b64encode(buffer_personnel.getvalue()).decode()
+                    
+                    # Success message based on what was created
+                    operation_type = form.cleaned_data['operation_type']
+                    if operation_type == 'create_personnel_only':
+                        messages.success(request, f'Personnel record for "{personnel.firstname} {personnel.surname}" created successfully!')
+                    elif operation_type == 'create_user_with_personnel':
+                        messages.success(request, f'User "{user.username}" and personnel "{personnel.firstname} {personnel.surname}" created successfully!')
+                    
+                    # Store QR code in session for display
+                    request.session['qr_code'] = qr_code
+                    request.session['personnel_name'] = f"{personnel.rank} {personnel.surname}, {personnel.firstname}" if personnel else None
+                    
+                    return redirect('armguard_admin:registration_success')
+                    
+            except Exception as e:
+                messages.error(request, f'Error during registration: {str(e)}')
+        else:
+            messages.error(request, 'Please correct the errors below.')
     else:
-        form = UserRegistrationForm()
+        # Set initial operation type based on user role
+        if user_is_armorer:
+            form = UniversalForm(initial={'operation_type': 'create_personnel_only'})
+        else:
+            form = UniversalForm(initial={'operation_type': 'create_user_with_personnel'})
     
     context = {
         'form': form,
+        'is_edit': False,
+        'page_title': 'Registration Form',
+        'submit_text': 'Register',
+        'user_is_armorer': user_is_armorer,
     }
-    return render(request, 'admin/registration.html', context)
+    return render(request, 'admin/universal_form.html', context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+def audit_logs(request):
+    """View audit logs and deleted records (Superuser only)"""
+    from .models import AuditLog, DeletedRecord
+    from django.db.models import Q
+    
+    # Get filter parameters
+    action_filter = request.GET.get('action', '')
+    search_query = request.GET.get('search', '')
+    
+    # Get audit logs
+    logs = AuditLog.objects.select_related('performed_by').all()
+    
+    if action_filter:
+        logs = logs.filter(action=action_filter)
+    
+    if search_query:
+        logs = logs.filter(
+            Q(target_name__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(performed_by__username__icontains=search_query)
+        )
+    
+    logs = logs.order_by('-timestamp')[:100]  # Last 100 entries
+    
+    # Get deleted records
+    deleted_records = DeletedRecord.objects.select_related('deleted_by').order_by('-deleted_at')[:50]
+    
+    context = {
+        'audit_logs': logs,
+        'deleted_records': deleted_records,
+        'action_filter': action_filter,
+        'search_query': search_query,
+        'action_choices': AuditLog.ACTION_CHOICES,
+    }
+    
+    return render(request, 'admin/audit_logs.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_user)
+def edit_item(request, item_id):
+    """Edit inventory item details - Admin only"""
+    from .forms import ItemEditForm
+    from .models import AuditLog
+    
+    item = get_object_or_404(Item, pk=item_id)
+    
+    if request.method == 'POST':
+        form = ItemEditForm(request.POST, instance=item)
+        if form.is_valid():
+            try:
+                # Store old values for audit
+                old_values = {
+                    'item_type': item.item_type,
+                    'serial': item.serial,
+                    'condition': item.condition,
+                    'status': item.status,
+                }
+                
+                # Save updated item
+                updated_item = form.save()
+                
+                # Log the changes
+                changes = []
+                for field, old_value in old_values.items():
+                    new_value = getattr(updated_item, field)
+                    if old_value != new_value:
+                        changes.append(f"{field}: {old_value} → {new_value}")
+                
+                if changes:
+                    AuditLog.objects.create(
+                        action='ITEM_EDIT',
+                        target_model='Item',
+                        target_id=str(updated_item.id),
+                        target_name=f"{updated_item.item_type} - {updated_item.serial}",
+                        description=f"Updated item: {', '.join(changes)}",
+                        performed_by=request.user,
+                        ip_address=request.META.get('REMOTE_ADDR'),
+                        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+                    )
+                
+                messages.success(request, f'Item "{updated_item.item_type} - {updated_item.serial}" updated successfully!')
+                return redirect('inventory:item_detail', pk=updated_item.pk)
+                
+            except Exception as e:
+                messages.error(request, f'Error updating item: {str(e)}')
+    else:
+        form = ItemEditForm(instance=item)
+    
+    context = {
+        'form': form,
+        'item': item,
+        'is_edit': True,
+    }
+    return render(request, 'admin/edit_item.html', context)
+
+
+@login_required
+@user_passes_test(is_staff_or_superuser)
+def delete_item(request, item_id):
+    """Delete inventory item with audit logging - Staff/Superuser only"""
+    from .models import AuditLog, DeletedRecord
+    import json
+    
+    item = get_object_or_404(Item, pk=item_id)
+    
+    # Check if item is issued
+    if item.status == Item.STATUS_ISSUED:
+        messages.error(request, 'Cannot delete an issued item. Please return the item first.')
+        return redirect('inventory:item_detail', pk=item_id)
+    
+    if request.method == 'POST':
+        try:
+            # Store item details before deletion
+            item_data = {
+                'id': item.id,
+                'item_type': item.item_type,
+                'serial': item.serial,
+                'description': item.description,
+                'condition': item.condition,
+                'status': item.status,
+                'registration_date': str(item.registration_date),
+            }
+            
+            item_name = f"{item.item_type} - {item.serial}"
+            item_id_str = str(item.id)
+            
+            # Create deleted record
+            DeletedRecord.objects.create(
+                model_name='Item',
+                record_id=item_id_str,
+                record_name=item_name,
+                record_data=item_data,
+                deleted_by=request.user,
+                reason=request.POST.get('reason', ''),
+                deletion_reason=request.POST.get('reason', '')
+            )
+            
+            # Create audit log
+            AuditLog.objects.create(
+                action='ITEM_DELETE',
+                target_model='Item',
+                target_id=item_id_str,
+                target_name=item_name,
+                description=f"Deleted item: {item_name}. Reason: {request.POST.get('reason', 'Not specified')}",
+                performed_by=request.user,
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500]
+            )
+            
+            # Delete the item (signal will handle QR code cleanup)
+            item.delete()
+            
+            messages.success(request, f'Item "{item_name}" deleted successfully.')
+            return redirect('inventory:item_list')
+            
+        except Exception as e:
+            messages.error(request, f'Error deleting item: {str(e)}')
+            return redirect('inventory:item_detail', pk=item_id)
+    
+    context = {
+        'item': item,
+        'item_type': 'Item',
+    }
+    return render(request, 'admin/delete_item_confirm.html', context)

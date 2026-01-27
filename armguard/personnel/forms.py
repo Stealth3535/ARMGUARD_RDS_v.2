@@ -13,7 +13,7 @@ class PersonnelSearchForm(forms.Form):
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Search by name, rank, serial, or office...',
+            'placeholder': 'Search by name, rank, serial, or group...',
             'id': 'search-input'
         })
     )
@@ -34,8 +34,8 @@ class PersonnelSearchForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     
-    office = forms.ChoiceField(
-        choices=[('', 'All Offices')] + Personnel.OFFICE_CHOICES,
+    group = forms.ChoiceField(
+        choices=[('', 'All Groups')] + Personnel.GROUP_CHOICES,
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
@@ -45,19 +45,22 @@ class PersonnelQuickEditForm(forms.ModelForm):
     """Form for quick editing of personnel information (admin only)"""
     class Meta:
         model = Personnel
-        fields = ['rank', 'office', 'tel', 'status', 'picture']
+        fields = ['rank', 'group', 'tel', 'status', 'picture']
         widgets = {
             'rank': forms.Select(attrs={'class': 'form-control'}),
-            'office': forms.Select(attrs={'class': 'form-control'}),
-            'tel': forms.TextInput(attrs={'class': 'form-control'}),
+            'group': forms.Select(attrs={'class': 'form-control'}),
+            'tel': forms.TextInput(attrs={'class': 'form-control', 'maxlength': '13'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
             'picture': forms.FileInput(attrs={'class': 'form-control-file'}),
         }
     
     def clean_tel(self):
-        tel = self.cleaned_data['tel']
-        if tel and not tel.startswith('+639'):
-            raise ValidationError('Telephone number must start with +639')
-        if tel and len(tel) != 13:
-            raise ValidationError('Telephone number must be 13 digits including +639')
+        tel = self.cleaned_data.get('tel')
+        if tel:
+            # Auto-convert 09XXXXXXXXX to +639XXXXXXXXX
+            if tel.startswith('09') and len(tel) == 11 and tel.isdigit():
+                tel = '+63' + tel[1:]
+                self.cleaned_data['tel'] = tel
+            elif not tel.startswith('+639') or len(tel) != 13:
+                raise ValidationError('Phone number must be in +639XXXXXXXXX format or 09XXXXXXXXX format.')
         return tel

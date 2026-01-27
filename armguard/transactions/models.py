@@ -4,6 +4,7 @@ Based on APP/app/backend/database.py transactions table
 """
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
 from personnel.models import Personnel
 from inventory.models import Item
 
@@ -35,6 +36,14 @@ class Transaction(models.Model):
         on_delete=models.PROTECT,
         related_name='transactions',
         db_column='item_id'
+    )
+    issued_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='issued_transactions',
+        help_text="User who processed this transaction"
     )
     
     # Transaction Details

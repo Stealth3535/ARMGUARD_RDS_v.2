@@ -18,6 +18,15 @@
             <h1 class="page-title">{{ item.item_type }} - {{ item.serial }}</h1>
             <p class="page-subtitle">{{ item.id }}</p>
         </div>
+        <div style="display: flex; gap: 10px;">
+            <a href="{% url 'inventory:item_list' %}" class="btn btn-secondary">Back to Inventory</a>
+            {% if user.is_staff or user.is_superuser or user.userprofile.is_armorer %}
+            <a href="{% url 'armguard_admin:edit_item' item.id %}" class="btn btn-warning">Edit Item</a>
+            {% endif %}
+            {% if user.is_staff or user.is_superuser %}
+            <a href="{% url 'armguard_admin:delete_item' item.id %}" class="btn btn-danger">Delete Item</a>
+            {% endif %}
+        </div>
     </div>
 
     <div class="grid grid-2">
@@ -59,14 +68,12 @@
                     {% elif item.status == 'Issued' %}
                         <span class="badge badge-issued">{{ item.status }}</span>
                         {# Show to whom it was issued #}
-                        {% with last_take=item.transactions.filter(action='Take').order_by('-date_time').first %}
-                            {% if last_take and (not item.transactions.filter(action='Return', date_time__gt=last_take.date_time).exists()) %}
-                                <span style="margin-left: 10px; color: #555; font-size: 0.95em;">
-                                    to <strong>{{ last_take.personnel.get_full_name }}</strong>
-                                    <small class="text-muted">({{ last_take.personnel.rank }})</small>
-                                </span>
-                            {% endif %}
-                        {% endwith %}
+                        {% if last_take %}
+                            <span style="margin-left: 10px; color: #555; font-size: 0.95em;">
+                                to <strong>{{ last_take.personnel.get_full_name }}</strong>
+                                <small class="text-muted">({{ last_take.personnel.rank }})</small>
+                            </span>
+                        {% endif %}
                     {% elif item.status == 'Maintenance' %}
                         <span class="badge badge-maintenance">{{ item.status }}</span>
                     {% else %}

@@ -286,14 +286,14 @@ class PersonnelRegistrationForm(forms.ModelForm):
 
     class Meta:
         model = Personnel
-        fields = ['surname', 'firstname', 'middle_initial', 'rank', 'serial', 'office', 'tel', 'status', 'picture']
+        fields = ['surname', 'firstname', 'middle_initial', 'rank', 'serial', 'group', 'tel', 'status', 'picture']
         widgets = {
             'surname': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'}),
             'firstname': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'}),
             'middle_initial': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'M.I. (Optional)'}),
             'rank': forms.Select(attrs={'class': 'form-control'}),
             'serial': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Serial Number'}),
-            'office': forms.Select(attrs={'class': 'form-control'}),
+            'group': forms.Select(attrs={'class': 'form-control'}),
             'tel': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '+639XXXXXXXXX', 'pattern': r'\+639\d{9}'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
             'picture': forms.FileInput(attrs={'class': 'form-control-file'}),
@@ -306,11 +306,14 @@ class PersonnelRegistrationForm(forms.ModelForm):
         return serial
 
     def clean_tel(self):
-        tel = self.cleaned_data['tel']
-        if tel and not tel.startswith('+639'):
-            raise ValidationError('Phone number must start with +639')
-        if tel and len(tel) != 13:
-            raise ValidationError('Phone number must be exactly 13 digits including +639')
+        tel = self.cleaned_data.get('tel')
+        if tel:
+            # Auto-convert 09XXXXXXXXX to +639XXXXXXXXX
+            if tel.startswith('09') and len(tel) == 11 and tel.isdigit():
+                tel = '+63' + tel[1:]
+                self.cleaned_data['tel'] = tel
+            elif not tel.startswith('+639') or len(tel) != 13:
+                raise ValidationError('Phone number must be in +639XXXXXXXXX format or 09XXXXXXXXX format.')
         return tel
 
     def clean(self):
@@ -594,8 +597,8 @@ class UniversalRegistrationForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control'}),
         help_text="Serial number (6 digits for enlisted, or O-XXXXXX for officers)"
     )
-    office = forms.ChoiceField(
-        choices=Personnel.OFFICE_CHOICES,
+    group = forms.ChoiceField(
+        choices=Personnel.GROUP_CHOICES,
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
@@ -657,7 +660,7 @@ class UniversalRegistrationForm(forms.Form):
         
         if registration_type in ['personnel_only', 'user_with_personnel']:
             # Personnel fields required
-            required_personnel_fields = ['surname', 'firstname', 'rank', 'serial', 'office', 'tel']
+            required_personnel_fields = ['surname', 'firstname', 'rank', 'serial', 'group', 'tel']
             for field in required_personnel_fields:
                 if not cleaned_data.get(field):
                     self.add_error(field, f'This field is required for {registration_type} registration.')
@@ -735,7 +738,7 @@ class UniversalRegistrationForm(forms.Form):
                 middle_initial=self.cleaned_data.get('middle_initial', ''),
                 rank=self.cleaned_data['rank'],
                 serial=self.cleaned_data['serial'],
-                office=self.cleaned_data['office'],
+                group=self.cleaned_data['group'],
                 tel=self.cleaned_data['tel'],
                 status=self.cleaned_data.get('personnel_status', Personnel.STATUS_ACTIVE),
             )

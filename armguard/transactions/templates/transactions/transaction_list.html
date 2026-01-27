@@ -205,6 +205,16 @@
 
 {% block content %}
 <div class="container">
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 350px; max-width: 500px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: slideIn 0.3s ease-out;">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+    
     <!-- Page Header -->
     <div class="page-header">
         <div>
@@ -352,7 +362,7 @@
                 <tbody>
                     {% for transaction in issued_items %}
                     <tr>
-                        <td>{{ transaction.date_time|date:"d/m/y H:i" }}</td>
+                        <td>{{ transaction.date_time|date:"d/m/y H:i:s" }}</td>
                         <td>
                             {{ transaction.personnel.get_full_name }}<br>
                             <small class="text-muted">{{ transaction.personnel.rank }}</small>
@@ -403,7 +413,7 @@
                             <span class="badge-available">Return</span>
                             {% endif %}
                         </td>
-                        <td>{{ transaction.date_time|date:"d/m/y H:i" }}</td>
+                        <td>{{ transaction.date_time|date:"d/m/y H:i:s" }}</td>
                         <td>{{ transaction.notes|truncatewords:10|default:"-" }}</td>
                         <td>
                             <a href="{% url 'transactions:detail' transaction.id %}" class="btn btn-primary btn-sm">View</a>
@@ -651,8 +661,28 @@ async function submitTransaction() {
         });
         
         if (response.ok) {
+            const data = await response.json();
             showNotification('Transaction successful!', 'success');
-            location.reload();
+            
+            // Auto-print PDF only for withdrawals (Take)
+            if (data.action === 'Take' && data.transaction_id) {
+                console.log('Auto-print triggered for transaction', data.transaction_id);
+                
+                // Open print page in new window
+                const printUrl = `/print/transaction/${data.transaction_id}/print/`;
+                const printWindow = window.open(printUrl, 'PrintWindow', 'width=900,height=700,menubar=no,toolbar=no,location=no');
+                
+                if (!printWindow) {
+                    console.error('Print window blocked! Please allow pop-ups for this site.');
+                    showNotification('Print blocked! Please allow pop-ups for: ' + window.location.host, 'error');
+                }
+                
+                // Reload page after 5 seconds to allow time for printing
+                setTimeout(() => location.reload(), 5000);
+            } else {
+                // For Return transactions, reload immediately
+                setTimeout(() => location.reload(), 800);
+            }
         } else {
             const error = await response.json();
             showNotification('Transaction failed: ' + (error.error || 'Unknown error'), 'error');
@@ -769,5 +799,29 @@ function showNotification(message, type = 'info') {
         }, 300);
     }, 3000);
 }
+
+// Auto-dismiss Django messages after 10 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 10000);
+    });
+});
 </script>
+
+<style>
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+</style>
 {% endblock %}

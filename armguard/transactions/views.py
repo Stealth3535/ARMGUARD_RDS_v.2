@@ -4,7 +4,7 @@ Transaction Views
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, DetailView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q
 from django.http import JsonResponse
 from django.contrib import messages
@@ -13,6 +13,15 @@ from inventory.models import Item
 from personnel.models import Personnel
 from qr_manager.models import QRCodeImage
 from django.utils import timezone
+
+
+def is_admin_or_armorer(user):
+    """Check if user is admin, superuser, or armorer - can issue items"""
+    return user.is_authenticated and (
+        user.is_superuser or 
+        user.groups.filter(name='Admin').exists() or 
+        user.groups.filter(name='Armorer').exists()
+    )
 
 
 class TransactionListView(LoginRequiredMixin, ListView):
@@ -65,8 +74,9 @@ def item_transactions(request):
 
 
 @login_required
+@user_passes_test(is_admin_or_armorer)
 def qr_transaction_scanner(request):
-    """QR Scanner page for creating transactions"""
+    """QR Scanner page for creating transactions - Admin and Armorer only"""
     return render(request, 'transactions/qr_scanner.html')
 
 
@@ -79,29 +89,72 @@ def verify_qr_code(request):
         if not qr_data:
             return JsonResponse({'success': False, 'error': 'No QR code data provided'})
         
+        # Parse QR code data
+        # Format: "PERSONNEL:PE-123456:SGT Name:123456" or "ITEM:ITM-123456:Type:Serial"
+        personnel_id = None
+        item_id = None
+        
+        if qr_data.startswith('PERSONNEL:'):
+            # Extract personnel ID from QR data
+            parts = qr_data.split(':')
+            if len(parts) >= 2:
+                personnel_id = parts[1]
+        elif qr_data.startswith('ITEM:'):
+            # Extract item ID from QR data
+            parts = qr_data.split(':')
+            if len(parts) >= 2:
+                item_id = parts[1]
+        else:
+            # Assume it's a direct ID (legacy format)
+            # Try to determine type by prefix
+            if qr_data.startswith('PE-') or qr_data.startswith('PO-'):
+                personnel_id = qr_data
+            elif qr_data.startswith('ITM-'):
+                item_id = qr_data
+            else:
+                return JsonResponse({'success': False, 'error': 'Invalid QR code format'})
+        
         try:
-            # Look up QR code in database
-            qr_code = QRCodeImage.objects.get(reference_id=qr_data)
-            
-            if qr_code.qr_type == 'personnel':
+            if personnel_id:
+                # Look up QR code and validate
+                qr_code = QRCodeImage.objects.get(qr_type='personnel', reference_id=personnel_id)
+                
+                # Validate QR code is active
+                is_valid, message = qr_code.is_valid_for_transaction()
+                if not is_valid:
+                    return JsonResponse({'success': False, 'error': message})
+                
                 # Get personnel details
                 try:
-                    personnel = Personnel.objects.get(id=qr_data)
+                    personnel = Personnel.objects.get(id=personnel_id)
+                    badge_number = ''
+                    if personnel.user and hasattr(personnel.user, 'userprofile'):
+                        badge_number = personnel.user.userprofile.badge_number or ''
                     return JsonResponse({
                         'success': True,
                         'type': 'personnel',
                         'id': personnel.id,
                         'name': personnel.get_full_name(),
                         'rank': personnel.rank,
-                        'badge_number': personnel.badge_number,
+                        'badge_number': badge_number,
+                        'serial': personnel.serial,
+                        'group': personnel.group,
                     })
                 except Personnel.DoesNotExist:
                     return JsonResponse({'success': False, 'error': 'Personnel not found'})
                     
-            elif qr_code.qr_type == 'item':
+            elif item_id:
+                # Look up QR code and validate
+                qr_code = QRCodeImage.objects.get(qr_type='item', reference_id=item_id)
+                
+                # Validate QR code is active
+                is_valid, message = qr_code.is_valid_for_transaction()
+                if not is_valid:
+                    return JsonResponse({'success': False, 'error': message})
+                
                 # Get item details
                 try:
-                    item = Item.objects.get(id=qr_data)
+                    item = Item.objects.get(id=item_id)
                     return JsonResponse({
                         'success': True,
                         'type': 'item',
@@ -114,7 +167,7 @@ def verify_qr_code(request):
                 except Item.DoesNotExist:
                     return JsonResponse({'success': False, 'error': 'Item not found'})
             else:
-                return JsonResponse({'success': False, 'error': 'Unknown QR code type'})
+                return JsonResponse({'success': False, 'error': 'Could not parse QR code data'})
                 
         except QRCodeImage.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'QR code not found in system'})
@@ -123,8 +176,9 @@ def verify_qr_code(request):
 
 
 @login_required
+@user_passes_test(is_admin_or_armorer)
 def create_qr_transaction(request):
-    """Create transaction from scanned QR codes"""
+    """Create transaction from scanned QR codes - Admin and Armorer only"""
     if request.method == 'POST':
         personnel_id = request.POST.get('personnel_id')
         item_id = request.POST.get('item_id')
@@ -152,10 +206,12 @@ def create_qr_transaction(request):
                 rounds=int(rounds) if rounds else 0,
                 duty_type=duty_type,
                 notes=notes,
-                date_time=timezone.now()
+                date_time=timezone.now(),
+                issued_by=request.user
             )
             
-            messages.success(request, f'Transaction created successfully: {action} {item.item_type} - {item.serial} by {personnel.get_full_name()}')
+            # Success message (PDF can be downloaded from transaction detail page)
+            messages.success(request, f'✓ Transaction #{transaction.id} created: {action} {item.item_type} - {item.serial} by {personnel.get_full_name()}')
             return redirect('transactions:qr_scanner')
             
         except Personnel.DoesNotExist:
@@ -173,34 +229,88 @@ def create_qr_transaction(request):
 @login_required
 def lookup_transactions(request):
     """Look up transactions by scanning QR code"""
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+    
     qr_data = request.GET.get('qr', '').strip()
     transactions = None
     lookup_type = None
     lookup_info = None
+    page_obj = None
     
     if qr_data:
+        # Parse QR code data
+        personnel_id = None
+        item_id = None
+        
+        if qr_data.startswith('PERSONNEL:'):
+            parts = qr_data.split(':')
+            if len(parts) >= 2:
+                personnel_id = parts[1]
+        elif qr_data.startswith('ITEM:'):
+            parts = qr_data.split(':')
+            if len(parts) >= 2:
+                item_id = parts[1]
+        else:
+            # Legacy format - direct ID
+            if qr_data.startswith('PE-') or qr_data.startswith('PO-'):
+                personnel_id = qr_data
+            elif qr_data.startswith('ITM-'):
+                item_id = qr_data
+        
         try:
-            qr_code = QRCodeImage.objects.get(reference_id=qr_data)
-            
-            if qr_code.qr_type == 'personnel':
+            if personnel_id:
+                qr_code = QRCodeImage.objects.get(qr_type='personnel', reference_id=personnel_id)
+                
+                # Validate QR code is active
+                is_valid, message = qr_code.is_valid_for_transaction()
+                if not is_valid:
+                    messages.error(request, f"Cannot lookup: {message}")
+                    return render(request, 'transactions/lookup_transactions.html', {})
+                
                 # Look up personnel transactions
                 try:
-                    personnel = Personnel.objects.get(id=qr_data)
-                    transactions = Transaction.objects.filter(personnel=personnel).select_related('item', 'personnel').order_by('-date_time')
+                    personnel = Personnel.objects.get(id=personnel_id)
+                    transaction_list = Transaction.objects.filter(personnel=personnel).select_related('item', 'personnel').order_by('-date_time')
                     lookup_type = 'personnel'
+                    badge_number = ''
+                    if personnel.user and hasattr(personnel.user, 'userprofile'):
+                        badge_number = personnel.user.userprofile.badge_number or ''
                     lookup_info = {
                         'name': personnel.get_full_name(),
                         'rank': personnel.rank,
-                        'badge_number': personnel.badge_number,
+                        'badge_number': badge_number,
+                        'serial': personnel.serial,
+                        'group': personnel.group,
                     }
+                    
+                    # Paginate results
+                    paginator = Paginator(transaction_list, 20)
+                    page = request.GET.get('page', 1)
+                    try:
+                        page_obj = paginator.page(page)
+                        transactions = page_obj.object_list
+                    except (EmptyPage, PageNotAnInteger):
+                        page_obj = paginator.page(1)
+                        transactions = page_obj.object_list
+                        
                 except Personnel.DoesNotExist:
                     messages.error(request, 'Personnel not found')
+                except Exception as e:
+                    messages.error(request, f'Error looking up personnel: {str(e)}')
                     
-            elif qr_code.qr_type == 'item':
+            elif item_id:
+                qr_code = QRCodeImage.objects.get(qr_type='item', reference_id=item_id)
+                
+                # Validate QR code is active
+                is_valid, message = qr_code.is_valid_for_transaction()
+                if not is_valid:
+                    messages.error(request, f"Cannot lookup: {message}")
+                    return render(request, 'transactions/lookup_transactions.html', {})
+                
                 # Look up item transactions
                 try:
-                    item = Item.objects.get(id=qr_data)
-                    transactions = Transaction.objects.filter(item=item).select_related('item', 'personnel').order_by('-date_time')
+                    item = Item.objects.get(id=item_id)
+                    transaction_list = Transaction.objects.filter(item=item).select_related('item', 'personnel').order_by('-date_time')
                     lookup_type = 'item'
                     lookup_info = {
                         'item_type': item.item_type,
@@ -208,8 +318,21 @@ def lookup_transactions(request):
                         'status': item.status,
                         'condition': item.condition,
                     }
+                    
+                    # Paginate results
+                    paginator = Paginator(transaction_list, 20)
+                    page = request.GET.get('page', 1)
+                    try:
+                        page_obj = paginator.page(page)
+                        transactions = page_obj.object_list
+                    except (EmptyPage, PageNotAnInteger):
+                        page_obj = paginator.page(1)
+                        transactions = page_obj.object_list
+                        
                 except Item.DoesNotExist:
                     messages.error(request, 'Item not found')
+                except Exception as e:
+                    messages.error(request, f'Error looking up item: {str(e)}')
             
         except QRCodeImage.DoesNotExist:
             messages.error(request, 'QR code not found in system')
@@ -219,6 +342,7 @@ def lookup_transactions(request):
         'lookup_type': lookup_type,
         'lookup_info': lookup_info,
         'qr_data': qr_data,
+        'page_obj': page_obj,
     }
     return render(request, 'transactions/lookup_transactions.html', context)
 

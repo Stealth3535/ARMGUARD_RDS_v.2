@@ -43,8 +43,8 @@ def validate_personnel_data(personnel):
     if not personnel.serial:
         errors.append("Serial number is required")
     
-    if not personnel.office:
-        errors.append("Office is required")
+    if not personnel.group:
+        errors.append("Group is required")
     
     if not personnel.tel:
         errors.append("Telephone is required")

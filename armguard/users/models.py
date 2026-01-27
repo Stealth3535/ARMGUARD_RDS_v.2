@@ -1,15 +1,29 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from django.core.validators import FileExtensionValidator
 
 
 class UserProfile(models.Model):
     """Extended user profile"""
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    phone_number = models.CharField(max_length=15, blank=True, null=True)
-    department = models.CharField(max_length=100, blank=True, null=True)
+    phone_number = models.CharField(
+        max_length=11, 
+        blank=True, 
+        null=True,
+        help_text="11-digit mobile number (e.g., 09171234567)"
+    )
+    GROUP_CHOICES = [
+        ('HAS', 'HAS'),
+        ('951st', '951st'),
+        ('952nd', '952nd'),
+        ('953rd', '953rd'),
+    ]
+    group = models.CharField(
+        max_length=10, 
+        choices=GROUP_CHOICES,
+        blank=True, 
+        null=True
+    )
     badge_number = models.CharField(max_length=50, blank=True, null=True, unique=True)
     is_armorer = models.BooleanField(default=False)
     profile_picture = models.ImageField(
@@ -30,15 +44,4 @@ class UserProfile(models.Model):
         verbose_name_plural = "User Profiles"
 
 
-@receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    """Create user profile when user is created"""
-    if created:
-        UserProfile.objects.create(user=instance)
-
-
-@receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    """Save user profile when user is saved"""
-    if hasattr(instance, 'userprofile'):
-        instance.userprofile.save()
+# Signal handlers moved to admin/signals.py for centralized management

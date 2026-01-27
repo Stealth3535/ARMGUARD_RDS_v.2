@@ -4,7 +4,7 @@ Complete guide for setting up Nginx web server and SSL/TLS certificates on Raspb
 
 ---
 
-## 📋 Overview
+##  Overview
 
 This guide covers:
 1. **Nginx Installation** - Web server and reverse proxy

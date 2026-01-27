@@ -25,14 +25,23 @@ urlpatterns = [
     path('users/<int:user_id>/toggle-status/', views.toggle_user_status, name='toggle_user_status'),
     path('users/link-personnel/', views.link_user_personnel, name='link_user_personnel'),
     
+    # Personnel Management
+    path('personnel/<str:personnel_id>/edit/', views.edit_personnel, name='edit_personnel'),
+    path('personnel/<str:personnel_id>/delete/', views.delete_personnel, name='delete_personnel'),
+    
     # Legacy Registration URLs (redirects to universal registration)
     path('users/create/', views.create_user, name='create_user'),
     path('register/armorer/', views.register_armorer, name='register_armorer'),
     path('register/personnel/', views.register_personnel, name='register_personnel'),
     
-    # Item Registration (separate from user/personnel)
+    # Item Management
     path('register/item/', views.register_item, name='register_item'),
+    path('items/<str:item_id>/edit/', views.edit_item, name='edit_item'),
+    path('items/<str:item_id>/delete/', views.delete_item, name='delete_item'),
     
     # System Settings
     path('settings/', views.system_settings, name='system_settings'),
+    
+    # Audit Logs
+    path('audit-logs/', views.audit_logs, name='audit_logs'),
 ]

@@ -21,6 +21,20 @@ def qr_upload_path(instance, filename):
         return f'qr_codes/{instance.qr_type}/{safe_filename}'
 
 
+class QRCodeManager(models.Manager):
+    """Custom manager to filter active QR codes by default"""
+    def get_queryset(self):
+        return super().get_queryset().filter(is_active=True)
+    
+    def with_inactive(self):
+        """Include inactive QR codes"""
+        return super().get_queryset()
+    
+    def inactive_only(self):
+        """Get only inactive QR codes"""
+        return super().get_queryset().filter(is_active=False)
+
+
 class QRCodeImage(models.Model):
     """QR Code storage model"""
     
@@ -39,9 +53,17 @@ class QRCodeImage(models.Model):
     qr_data = models.CharField(max_length=255, help_text="Data encoded in QR code")
     qr_image = models.ImageField(upload_to=qr_upload_path, blank=True, null=True)
     
+    # Status tracking
+    is_active = models.BooleanField(default=True, help_text="QR code is active and can be used for transactions")
+    deleted_at = models.DateTimeField(null=True, blank=True, help_text="When QR was deactivated (soft delete)")
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # Managers
+    objects = QRCodeManager()  # Default manager returns only active QR codes
+    all_objects = models.Manager()  # Access all including inactive
     
     class Meta:
         db_table = 'qr_codes'
@@ -69,4 +91,23 @@ class QRCodeImage(models.Model):
         if not self.qr_image:
             self.generate_qr_code()
         super().save(*args, **kwargs)
-
+    
+    def is_valid_for_transaction(self):
+        """Check if QR code can be used for transactions"""
+        if not self.is_active:
+            return False, "QR code is inactive (personnel/item has been deleted)"
+        if self.deleted_at:
+            return False, "QR code has been deactivated"
+        return True, "QR code is valid"
+    
+    def deactivate(self):
+        """Deactivate QR code (soft delete)"""
+        self.is_active = False
+        self.deleted_at = timezone.now()
+        self.save()
+    
+    def reactivate(self):
+        """Reactivate QR code"""
+        self.is_active = True
+        self.deleted_at = None
+        self.save()

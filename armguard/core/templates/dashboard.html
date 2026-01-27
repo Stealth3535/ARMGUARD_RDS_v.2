@@ -52,7 +52,7 @@
             <tbody>
                 {% for transaction in recent_transactions %}
                 <tr>
-                    <td>{{ transaction.date_time|date:"d/m/y H:i" }}</td>
+                    <td>{{ transaction.date_time|date:"d/m/y H:i:s" }}</td>
                     <td>{{ transaction.personnel.get_full_name }}</td>
                     <td>{{ transaction.item }}</td>
                     <td>{{ transaction.action }}</td>

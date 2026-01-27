@@ -6,3 +6,7 @@ class AdminConfig(AppConfig):
     name = 'admin'
     label = 'admin_app'  # Use admin_app to avoid conflicts with django.contrib.admin
     verbose_name = 'Custom Admin Panel'
+
+    def ready(self):
+        """Import signals when app is ready"""
+        import admin.signals

@@ -178,6 +178,49 @@
     .video-container.active {
         display: block;
     }
+    
+    /* Message styling */
+    .alert {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 350px;
+        max-width: 500px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        animation: slideIn 0.3s ease-out;
+        border-left: 4px solid;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    .alert-success {
+        background-color: #d4edda;
+        border-color: #28a745;
+        color: #155724;
+    }
+    
+    .alert-error,
+    .alert-danger {
+        background-color: #f8d7da;
+        border-color: #dc3545;
+        color: #721c24;
+    }
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        border-color: #17a2b8;
+        color: #0c5460;
+    }
 </style>
 {% endblock %}
 
@@ -189,7 +232,7 @@
     <!-- Messages -->
     {% if messages %}
         {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 350px; max-width: 500px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: slideIn 0.3s ease-out;">
             {{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
@@ -417,5 +460,23 @@ function selectAction(action) {
     // Enable submit button
     document.getElementById('submit-btn').disabled = false;
 }
+
+// Auto-dismiss alerts after 10 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 10000);
+    });
+});
+
+// Show loading state on form submit
+document.querySelector('form').addEventListener('submit', function(e) {
+    const submitBtn = document.getElementById('submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ Creating Transaction...';
+});
 </script>
 {% endblock %}

@@ -31,7 +31,7 @@
                 {% for transaction in transactions %}
                 <tr>
                     <td>{{ transaction.id }}</td>
-                    <td>{{ transaction.date_time|date:"d/m/Y H:i" }}</td>
+                    <td>{{ transaction.date_time|date:"d/m/Y H:i:s" }}</td>
                     <td>
                         <span class="action-badge {% if transaction.action == 'Take' %}action-take{% else %}action-return{% endif %}">
                             {{ transaction.action }}

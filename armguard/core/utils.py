@@ -90,7 +90,7 @@ def get_personnel_from_qr(qr_data):
                 'full_name': personnel.get_full_name(),
                 'rank': personnel.rank,
                 'serial': personnel.serial,
-                'office': personnel.office,
+                'group': personnel.group,
                 'status': personnel.status,
             },
             'error': None
@@ -161,7 +161,7 @@ def get_personnel_by_id(personnel_id):
                 'full_name': personnel.get_full_name(),
                 'rank': personnel.rank,
                 'serial': personnel.serial,
-                'office': personnel.office,
+                'group': personnel.group,
                 'status': personnel.status,
             },
             'error': None

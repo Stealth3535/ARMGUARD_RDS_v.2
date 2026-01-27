@@ -16,7 +16,13 @@
     <div class="page-header">
         <div>
             <h1 class="page-title">{{ personnel.get_full_name }}</h1>
-            <p class="page-subtitle">{{ personnel.rank }} | {{ personnel.office }}</p>
+            <p class="page-subtitle">
+            {% if personnel.classification == 'SUPERUSER' %}
+                SUPERUSER | {{ personnel.group }}
+            {% else %}
+                {{ personnel.rank }} | {{ personnel.group }}
+            {% endif %}
+            </p>
         </div>
     </div>
 
@@ -63,24 +69,32 @@
             
             <div class="detail-item mb-2">
                 <div class="detail-label">Rank</div>
-                <div class="detail-value">{{ personnel.rank }}</div>
+                <div class="detail-value">
+                {% if personnel.classification == 'SUPERUSER' %}
+                    <span class="badge badge-superuser">N/A - SUPERUSER</span>
+                {% else %}
+                    {{ personnel.rank }}
+                {% endif %}
+                </div>
             </div>
             
             <div class="detail-item mb-2">
                 <div class="detail-label">Serial Number</div>
-                <div class="detail-value">{{ personnel.serial }}</div>
+                <div class="detail-value">{{ personnel.get_serial_display }}</div>
             </div>
             
             <div class="detail-item mb-2">
-                <div class="detail-label">Office</div>
-                <div class="detail-value">{{ personnel.office }}</div>
+                <div class="detail-label">Group</div>
+                <div class="detail-value">{{ personnel.group }}</div>
             </div>
             
             <div class="detail-item mb-2">
                 <div class="detail-label">Classification</div>
                 <div class="detail-value">
-                    {% if personnel.is_officer %}
+                    {% if personnel.classification == 'OFFICER' %}
                     <span class="badge badge-officer">Officer</span>
+                    {% elif personnel.classification == 'SUPERUSER' %}
+                    <span class="badge badge-superuser">Superuser</span>
                     {% else %}
                     <span class="badge badge-enlisted">Enlisted Personnel</span>
                     {% endif %}

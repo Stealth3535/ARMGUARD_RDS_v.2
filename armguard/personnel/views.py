@@ -22,7 +22,7 @@ def personnel_profile_list(request):
         search_query = search_form.cleaned_data.get('search_query')
         status = search_form.cleaned_data.get('status')
         rank_type = search_form.cleaned_data.get('rank_type')
-        office = search_form.cleaned_data.get('office')
+        group = search_form.cleaned_data.get('group')
         
         if search_query:
             personnel_list = personnel_list.filter(
@@ -30,7 +30,7 @@ def personnel_profile_list(request):
                 Q(firstname__icontains=search_query) |
                 Q(rank__icontains=search_query) |
                 Q(serial__icontains=search_query) |
-                Q(office__icontains=search_query)
+                Q(group__icontains=search_query)
             )
         
         if status:
@@ -42,8 +42,8 @@ def personnel_profile_list(request):
             elif rank_type == 'enlisted':
                 personnel_list = personnel_list.filter(rank__in=[r[0] for r in Personnel.RANKS_ENLISTED])
         
-        if office:
-            personnel_list = personnel_list.filter(office=office)
+        if group:
+            personnel_list = personnel_list.filter(group=group)
     
     # Pagination
     paginator = Paginator(personnel_list, 20)

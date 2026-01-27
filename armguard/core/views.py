@@ -6,7 +6,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, logout
 from django.contrib import messages
 from django.db.models import Count
-from datetime import datetime, timedelta
+from datetime import timedelta
+from django.utils import timezone
 from personnel.models import Personnel
 from inventory.models import Item
 from transactions.models import Transaction
@@ -19,8 +20,9 @@ def dashboard(request):
     # Personnel Statistics
     total_personnel = Personnel.objects.count()
     active_personnel = Personnel.objects.filter(status='Active').count()
-    officers = Personnel.objects.filter(serial__startswith='O-').count()
-    enlisted = total_personnel - officers
+    # Count officers by classification field
+    officers = Personnel.objects.filter(classification='OFFICER').count()
+    enlisted = Personnel.objects.filter(classification='ENLISTED PERSONNEL').count()
     
     # Inventory Statistics
     total_items = Item.objects.count()
@@ -35,7 +37,7 @@ def dashboard(request):
     recent_transactions = Transaction.objects.select_related('personnel', 'item').order_by('-date_time')[:10]
     
     # Transactions this week
-    week_ago = datetime.now() - timedelta(days=7)
+    week_ago = timezone.now() - timedelta(days=7)
     transactions_this_week = Transaction.objects.filter(date_time__gte=week_ago).count()
     
     context = {
