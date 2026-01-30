@@ -14,6 +14,12 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Get script directory and source config
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/config.sh" ]; then
+    source "$SCRIPT_DIR/config.sh"
+fi
+
 ERRORS=0
 WARNINGS=0
 
@@ -179,15 +185,17 @@ else
     echo -e "${GREEN}✓ No previous service${NC}"
 fi
 
-# Test PyPI connectivity
+
+# Test PyPI connectivity using pip dry-run with a fake package (robust match)
 echo ""
-echo -e "${YELLOW}Testing PyPI connectivity...${NC}"
-if curl -s --head --max-time 5 https://pypi.org | head -n 1 | grep "HTTP/[12].[01] [23].." > /dev/null; then
-    echo -e "${GREEN}✓ Can reach PyPI${NC}"
+echo -e "${YELLOW}Testing PyPI connectivity with pip...${NC}"
+PYPI_TEST_OUTPUT=$(python3 -m pip install --dry-run --disable-pip-version-check --no-input --no-cache-dir definitely-not-a-real-package-xyz123 2>&1)
+if echo "$PYPI_TEST_OUTPUT" | grep -qE "Could not find a version that satisfies the requirement|No matching distribution found"; then
+    echo -e "${GREEN}✓ Can reach PyPI via pip${NC}"
 else
-    echo -e "${RED}✗ ERROR: Cannot reach PyPI (Python package repository)${NC}"
+    echo -e "${RED}✗ ERROR: Cannot reach PyPI via pip (Python package repository)${NC}"
     echo -e "${YELLOW}  This will cause pip install to fail${NC}"
-    echo -e "${YELLOW}  Fix: Check internet/firewall settings${NC}"
+    echo -e "${YELLOW}  Fix: Check internet/firewall settings, or pip configuration${NC}"
     ((ERRORS++))
 fi
 

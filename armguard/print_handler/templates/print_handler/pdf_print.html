@@ -19,11 +19,13 @@
         body {
             margin: 0;
             padding: 0;
+            overflow: hidden;
         }
         
-        embed, object {
+        iframe {
             width: 100%;
             height: 100vh;
+            border: none;
         }
         
         /* Print instructions overlay (hidden after print starts) */
@@ -78,7 +80,7 @@
         <p style="color: #d32f2f; font-weight: bold; margin-top: 10px;">⚠️ If using A4 paper, content will be cut off!</p>
     </div>
     
-    <embed id="pdfEmbed" src="{{ pdf_url }}" type="application/pdf" width="100%" height="100%">
+    <iframe id="pdfFrame" src="{{ pdf_url }}" type="application/pdf"></iframe>
     
     <script>
         let printAttempted = false;
@@ -97,7 +99,14 @@
             console.log('PDF ready - triggering print dialog...');
             
             try {
-                window.print();
+                // Try to print the iframe content directly
+                var iframe = document.getElementById('pdfFrame');
+                if (iframe.contentWindow) {
+                    iframe.contentWindow.print();
+                } else {
+                    // Fallback to window.print()
+                    window.print();
+                }
                 console.log('Print dialog triggered successfully');
                 
                 // Hide instructions after print dialog appears
@@ -109,16 +118,21 @@
                 }, 1000);
             } catch (e) {
                 console.error('Failed to trigger print:', e);
-                alert('Print failed. Please use Ctrl+P to print manually.');
+                // Try fallback
+                try {
+                    window.print();
+                } catch (e2) {
+                    alert('Print failed. Please use Ctrl+P to print manually.');
+                }
             }
         }
         
-        // Listen for PDF embed load event
-        var pdfEmbed = document.getElementById('pdfEmbed');
+        // Listen for iframe load event
+        var pdfFrame = document.getElementById('pdfFrame');
         
-        // Method 1: Listen for load event on embed
-        pdfEmbed.addEventListener('load', function() {
-            console.log('PDF embed loaded - ready to print');
+        // Method 1: Listen for load event on iframe
+        pdfFrame.addEventListener('load', function() {
+            console.log('PDF iframe loaded - ready to print');
             attemptPrint();
         });
         
@@ -126,7 +140,7 @@
         pdfLoadTimeout = setTimeout(function() {
             console.log('Fallback timeout reached - triggering print anyway');
             attemptPrint();
-        }, 3000);
+        }, 2000);
         
         // Close window after printing (optional)
         window.onafterprint = function() {

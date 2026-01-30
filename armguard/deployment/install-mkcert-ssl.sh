@@ -98,7 +98,7 @@ fi
 # Create HTTPS-enabled Nginx configuration
 cat > "/etc/nginx/sites-available/${APP_NAME}" << 'NGINX_SSL_CONFIG'
 upstream armguard_app {
-    server unix:/var/www/armguard/gunicorn.sock fail_timeout=0;
+    server unix:/run/gunicorn-armguard.sock fail_timeout=0;
 }
 
 # Redirect HTTP to HTTPS

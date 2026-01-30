@@ -74,14 +74,35 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
+def is_admin_or_armorer(user):
+    """Check if user is admin, superuser, or armorer - can modify items"""
+    return user.is_authenticated and (
+        user.is_superuser or 
+        user.groups.filter(name='Admin').exists() or 
+        user.groups.filter(name='Armorer').exists()
+    )
+
+
+from django.contrib.auth.decorators import user_passes_test
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 @login_required
+@user_passes_test(is_admin_or_armorer, login_url='/')
 def update_item_status(request, pk):
-    """Update item status (only for non-issued items)"""
+    """Update item status (only for non-issued items) - Admin/Armorer only"""
     if request.method != 'POST':
         return redirect('inventory:item_detail', pk=pk)
     
     item = get_object_or_404(Item, pk=pk)
-    new_status = request.POST.get('status')
+    new_status = request.POST.get('status', '').strip()
+    
+    # Input validation
+    if not new_status:
+        messages.error(request, 'Status is required.')
+        return redirect('inventory:item_detail', pk=pk)
     
     # Only allow status changes if item is not issued
     if item.status == Item.STATUS_ISSUED:
@@ -91,6 +112,7 @@ def update_item_status(request, pk):
     # Validate new status
     valid_statuses = [Item.STATUS_AVAILABLE, Item.STATUS_MAINTENANCE, Item.STATUS_RETIRED]
     if new_status not in valid_statuses:
+        logger.warning("Invalid status attempted: %s by user %s", new_status, request.user.username)
         messages.error(request, 'Invalid status selected.')
         return redirect('inventory:item_detail', pk=pk)
     
@@ -99,6 +121,7 @@ def update_item_status(request, pk):
     item.status = new_status
     item.save()
     
+    logger.info("Item %s status changed from %s to %s by %s", pk, old_status, new_status, request.user.username)
     messages.success(request, f'Item status changed from "{old_status}" to "{new_status}".')
     return redirect('inventory:item_detail', pk=pk)
 

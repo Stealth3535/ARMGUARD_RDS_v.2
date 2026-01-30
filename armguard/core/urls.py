@@ -6,6 +6,8 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django.views.generic import TemplateView
+from django.http import HttpResponse
 from decouple import config
 from . import views
 from . import api_views
@@ -13,7 +15,34 @@ from . import api_views
 # Admin URL obfuscation - use environment variable
 ADMIN_URL = config('DJANGO_ADMIN_URL', default='superadmin')
 
+
+def robots_txt(request):
+    """Serve robots.txt for search engine crawlers"""
+    content = """# ArmGuard Robots.txt
+User-agent: *
+Disallow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /media/
+Crawl-delay: 10
+"""
+    return HttpResponse(content, content_type='text/plain')
+
+
+def security_txt(request):
+    """Serve security.txt for security researchers (RFC 9116)"""
+    content = """Contact: mailto:security@armguard.local
+Preferred-Languages: en
+Expires: 2027-01-28T00:00:00.000Z
+"""
+    return HttpResponse(content, content_type='text/plain')
+
+
 urlpatterns = [
+    # Security files (LOW-4, LOW-5)
+    path('robots.txt', robots_txt, name='robots_txt'),
+    path('.well-known/security.txt', security_txt, name='security_txt'),
+    
     # Django Admin (Superuser only) - Obfuscated URL
     path(f'{ADMIN_URL}/', admin.site.urls),
     

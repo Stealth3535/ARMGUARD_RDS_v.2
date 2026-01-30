@@ -25,11 +25,17 @@ CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'
 NC='\033[0m' # No Color
 
-# Configuration
-PROJECT_DIR="/var/www/armguard"
-BACKUP_DIR="/var/www/armguard/backups"
-SERVICE_NAME="gunicorn-armguard"
-RUN_USER="www-data"
+# Get script directory and source config
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/config.sh" ]; then
+    source "$SCRIPT_DIR/config.sh"
+fi
+
+# Configuration (can be overridden by config.sh)
+PROJECT_DIR="${PROJECT_DIR:-/var/www/armguard}"
+BACKUP_DIR="${BACKUP_DIR:-/var/www/armguard/backups}"
+SERVICE_NAME="${SERVICE_NAME:-gunicorn-armguard}"
+RUN_USER="${RUN_USER:-www-data}"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 # Print banner
@@ -322,6 +328,36 @@ if [ "$HAS_DATABASE" = true ] && [ -f "$BACKUP_FILE" ]; then
     echo -e "${CYAN}Restore Backup (if needed):${NC}"
     echo -e "  ${YELLOW}sudo cp $BACKUP_FILE $PROJECT_DIR/db.sqlite3${NC}"
     echo -e "  ${YELLOW}sudo systemctl restart $SERVICE_NAME${NC}"
+fi
+
+# Step 10: Health Check (if available)
+if [ -f "$PROJECT_DIR/deployment/health-check.sh" ]; then
+    print_section "Step 10: Running Health Check"
+    
+    echo -e "${YELLOW}Verifying deployment health...${NC}"
+    
+    if bash "$PROJECT_DIR/deployment/health-check.sh"; then
+        echo -e "${GREEN}✓ All health checks passed${NC}"
+    else
+        echo -e "${RED}✗ Health check failed!${NC}"
+        echo ""
+        echo -e "${YELLOW}Would you like to rollback? (yes/no)${NC}"
+        read -p "> " rollback_choice
+        
+        if [ "$rollback_choice" = "yes" ]; then
+            echo -e "${YELLOW}Initiating automatic rollback...${NC}"
+            if [ -f "$PROJECT_DIR/deployment/rollback.sh" ] && [ -f "$BACKUP_FILE" ]; then
+                bash "$PROJECT_DIR/deployment/rollback.sh" "$BACKUP_FILE"
+                exit 1
+            else
+                echo -e "${RED}Automatic rollback not available${NC}"
+                echo -e "${YELLOW}Manual restore: sudo cp $BACKUP_FILE $PROJECT_DIR/db.sqlite3${NC}"
+                exit 1
+            fi
+        else
+            echo -e "${YELLOW}Continuing without rollback...${NC}"
+        fi
+    fi
 fi
 
 echo ""

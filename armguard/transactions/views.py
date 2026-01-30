@@ -179,19 +179,55 @@ def verify_qr_code(request):
 @user_passes_test(is_admin_or_armorer)
 def create_qr_transaction(request):
     """Create transaction from scanned QR codes - Admin and Armorer only"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     if request.method == 'POST':
-        personnel_id = request.POST.get('personnel_id')
-        item_id = request.POST.get('item_id')
-        action = request.POST.get('action')
-        mags = request.POST.get('mags', 0)
-        rounds = request.POST.get('rounds', 0)
-        duty_type = request.POST.get('duty_type', '')
-        notes = request.POST.get('notes', '')
+        # MEDIUM-3: Enhanced input validation
+        personnel_id = request.POST.get('personnel_id', '').strip()
+        item_id = request.POST.get('item_id', '').strip()
+        action = request.POST.get('action', '').strip()
+        duty_type = request.POST.get('duty_type', '').strip()
+        notes = request.POST.get('notes', '').strip()
         
-        # Validate inputs
+        # Validate required fields
         if not personnel_id or not item_id or not action:
-            messages.error(request, 'Missing required fields')
+            messages.error(request, 'Missing required fields: personnel_id, item_id, and action are required')
             return redirect('transactions:qr_scanner')
+        
+        # Validate action is one of allowed values
+        allowed_actions = ['Take', 'Return']
+        if action not in allowed_actions:
+            logger.warning("Invalid action attempted: %s by user %s", action, request.user.username)
+            messages.error(request, f'Invalid action. Must be one of: {", ".join(allowed_actions)}')
+            return redirect('transactions:qr_scanner')
+        
+        # Validate and sanitize numeric inputs
+        try:
+            mags_raw = request.POST.get('mags', '0').strip()
+            rounds_raw = request.POST.get('rounds', '0').strip()
+            mags = int(mags_raw) if mags_raw else 0
+            rounds = int(rounds_raw) if rounds_raw else 0
+            
+            # Validate non-negative values
+            if mags < 0 or rounds < 0:
+                messages.error(request, 'Magazines and rounds must be non-negative numbers')
+                return redirect('transactions:qr_scanner')
+            
+            # Validate reasonable limits
+            if mags > 100 or rounds > 10000:
+                logger.warning("Unusually high values: mags=%d, rounds=%d by user %s", mags, rounds, request.user.username)
+                messages.error(request, 'Invalid quantity: values exceed reasonable limits')
+                return redirect('transactions:qr_scanner')
+                
+        except (ValueError, TypeError) as e:
+            logger.warning("Invalid numeric input for transaction: %s", str(e))
+            messages.error(request, 'Invalid input: magazines and rounds must be valid numbers')
+            return redirect('transactions:qr_scanner')
+        
+        # Sanitize text inputs (limit length to prevent DoS)
+        duty_type = duty_type[:100] if duty_type else ''
+        notes = notes[:500] if notes else ''
         
         try:
             personnel = Personnel.objects.get(id=personnel_id)
@@ -202,24 +238,31 @@ def create_qr_transaction(request):
                 personnel=personnel,
                 item=item,
                 action=action,
-                mags=int(mags) if mags else 0,
-                rounds=int(rounds) if rounds else 0,
+                mags=mags,
+                rounds=rounds,
                 duty_type=duty_type,
                 notes=notes,
                 date_time=timezone.now(),
                 issued_by=request.user
             )
             
-            # Success message (PDF can be downloaded from transaction detail page)
+            logger.info("Transaction #%d created by %s: %s %s", transaction.id, request.user.username, action, item_id)
             messages.success(request, f'✓ Transaction #{transaction.id} created: {action} {item.item_type} - {item.serial} by {personnel.get_full_name()}')
             return redirect('transactions:qr_scanner')
             
         except Personnel.DoesNotExist:
+            logger.warning("Personnel not found: %s", personnel_id)
             messages.error(request, 'Personnel not found')
         except Item.DoesNotExist:
+            logger.warning("Item not found: %s", item_id)
             messages.error(request, 'Item not found')
+        except ValueError as e:
+            # Transaction validation errors (e.g., item already issued)
+            logger.warning("Transaction validation failed: %s", str(e))
+            messages.error(request, str(e))
         except Exception as e:
-            messages.error(request, f'Error creating transaction: {str(e)}')
+            logger.error("Unexpected error creating transaction: %s", str(e), exc_info=True)
+            messages.error(request, 'An error occurred while creating the transaction')
         
         return redirect('transactions:qr_scanner')
     

@@ -184,6 +184,9 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = config('DATA_UPLOAD_MAX_MEMORY_SIZE', default=5242
 # Session Security
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'  # or 'Strict' for higher security
+SESSION_COOKIE_AGE = config('SESSION_COOKIE_AGE', default=3600, cast=int)  # 1 hour default
+SESSION_SAVE_EVERY_REQUEST = True  # Reset timeout on each request
+SESSION_EXPIRE_AT_BROWSER_CLOSE = config('SESSION_EXPIRE_AT_BROWSER_CLOSE', default=False, cast=bool)
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Lax'
 
@@ -210,3 +213,7 @@ CACHES = {
 
 # Admin URL Configuration
 ADMIN_URL_PREFIX = config('DJANGO_ADMIN_URL', default='superadmin')
+
+# User Registration Configuration
+# SECURITY: Disabled by default for military systems - only admins can create accounts
+ALLOW_PUBLIC_REGISTRATION = config('ALLOW_PUBLIC_REGISTRATION', default=False, cast=bool)

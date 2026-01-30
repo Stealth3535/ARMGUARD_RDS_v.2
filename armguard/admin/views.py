@@ -156,8 +156,12 @@ def personnel_registration_success(request, pk):
     try:
         from qr_manager.models import QRCodeImage
         qr_code_obj = QRCodeImage.objects.get(qr_type=QRCodeImage.TYPE_PERSONNEL, reference_id=personnel.id)
-    except:
-        pass
+    except QRCodeImage.DoesNotExist:
+        qr_code_obj = None
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error("Error fetching QR code for personnel %s: %s", pk, str(e))
+        qr_code_obj = None
     
     context = {
         'personnel': personnel,
@@ -171,13 +175,15 @@ def personnel_registration_success(request, pk):
 @user_passes_test(is_admin_user)
 def universal_registration(request):
     """Universal registration view - The centralized registration system"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     if request.method == 'POST':
-        print(f"DEBUG: Registration POST data: {request.POST}")
-        print(f"DEBUG: Registration FILES data: {request.FILES}")
+        # Security: Log form submission without sensitive data
+        logger.debug("Registration form submitted by user: %s", request.user.username)
         form = UniversalForm(request.POST, request.FILES)
-        print(f"DEBUG: Registration form is_valid: {form.is_valid()}")
         if not form.is_valid():
-            print(f"DEBUG: Registration form errors: {form.errors}")
+            logger.debug("Registration form validation failed: %s", list(form.errors.keys()))
         if form.is_valid():
             try:
                 with transaction.atomic():
@@ -341,8 +347,10 @@ def edit_user(request, user_id):
         return redirect('armguard_admin:user_management')
     
     if request.method == 'POST':
-        print(f"DEBUG: POST data: {request.POST}")
-        print(f"DEBUG: FILES data: {request.FILES}")
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug("Edit user form submitted for user_id: %s by: %s", user_id, request.user.username)
+        
         # Set up data for UniversalForm edit operation
         data = request.POST.copy()
         # Check if user has linked personnel to determine operation type
@@ -360,9 +368,8 @@ def edit_user(request, user_id):
             form_kwargs['edit_personnel'] = edit_user_obj.personnel
         form = UniversalForm(data, request.FILES, **form_kwargs)
         
-        print(f"DEBUG: Form is_valid: {form.is_valid()}")
         if not form.is_valid():
-            print(f"DEBUG: Form errors: {form.errors}")
+            logger.debug("Edit user form validation failed: %s", list(form.errors.keys()))
         if form.is_valid():
             try:
                 with transaction.atomic():

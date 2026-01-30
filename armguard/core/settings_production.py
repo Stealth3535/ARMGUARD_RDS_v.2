@@ -90,7 +90,7 @@ else:
 
 # Static and Media Files (served by Nginx in production)
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = BASE_DIR / 'core' / 'media'  # Match development settings
 
 # Logging Configuration
 LOGGING = {
@@ -179,15 +179,29 @@ if config('EMAIL_BACKEND', default=''):
     ADMINS = [(config('ADMIN_NAME', default='Admin'), config('ADMIN_EMAIL', default=''))]
 
 # Cache Configuration (for rate limiting)
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'armguard-cache',
-        'OPTIONS': {
-            'MAX_ENTRIES': 1000
+# Use Redis in production for shared cache across workers
+if config('USE_REDIS_CACHE', default=False, cast=bool):
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'KEY_PREFIX': 'armguard',
         }
     }
-}
+else:
+    # Fallback to LocMemCache (WARNING: Not shared between workers)
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'armguard-cache',
+            'OPTIONS': {
+                'MAX_ENTRIES': 1000
+            }
+        }
+    }
 
 # Rate Limiting Configuration
 RATELIMIT_ENABLE = True
@@ -206,13 +220,29 @@ AXES_ONLY_ADMIN_SITE = False  # Protect all login views
 AXES_ENABLE_ACCESS_FAILURE_LOG = True
 AXES_FAILURE_LOG_LEVEL = 'warning'
 
-# Content Security Policy (basic - adjust for your needs)
-CSP_DEFAULT_SRC = ("'self'",)
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'")  # Remove unsafe-inline in strict production
-CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
-CSP_IMG_SRC = ("'self'", "data:", "https:")
-CSP_FONT_SRC = ("'self'",)
-CSP_CONNECT_SRC = ("'self'",)
+# Content Security Policy (CSP) Configuration
+# For strict mode, set CSP_STRICT_MODE=True in environment and implement nonces in templates
+if config('CSP_STRICT_MODE', default=False, cast=bool):
+    # Strict CSP - requires nonce implementation in templates
+    CSP_DEFAULT_SRC = ("'self'",)
+    CSP_SCRIPT_SRC = ("'self'",)  # Add "'nonce-{nonce}'" when implementing CSP nonces
+    CSP_STYLE_SRC = ("'self'",)   # Add "'nonce-{nonce}'" when implementing CSP nonces
+    CSP_IMG_SRC = ("'self'", "data:")
+    CSP_FONT_SRC = ("'self'",)
+    CSP_CONNECT_SRC = ("'self'",)
+    CSP_FRAME_ANCESTORS = ("'none'",)
+    CSP_FORM_ACTION = ("'self'",)
+    CSP_BASE_URI = ("'self'",)
+else:
+    # Relaxed CSP (allows inline for compatibility)
+    CSP_DEFAULT_SRC = ("'self'",)
+    CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'")  # TODO: Remove unsafe-inline
+    CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")   # TODO: Remove unsafe-inline
+    CSP_IMG_SRC = ("'self'", "data:", "https:")
+    CSP_FONT_SRC = ("'self'",)
+    CSP_CONNECT_SRC = ("'self'",)
+    CSP_FRAME_ANCESTORS = ("'self'",)
+    CSP_FORM_ACTION = ("'self'",)
 
 # Admin Site Customization
 ADMIN_SITE_HEADER = config('ADMIN_SITE_HEADER', default='ArmGuard Administration')

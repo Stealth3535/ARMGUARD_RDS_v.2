@@ -98,8 +98,12 @@ class UniversalForm(forms.Form):
             try:
                 profile = self.edit_user.userprofile
                 self.initial.update({'group': profile.group or '', 'phone_number': profile.phone_number or ''})
-            except:
+            except AttributeError:
+                # User doesn't have a profile yet
                 pass
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning("Error accessing user profile: %s", str(e))
         
         if self.edit_personnel:
             self.initial.update({

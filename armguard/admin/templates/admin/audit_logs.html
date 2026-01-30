@@ -386,7 +386,7 @@
         // Store deleted records data for modal
         const deletedRecordsData = {
             {% for record in deleted_records %}
-            {{ record.id }}: {{ record.record_data|safe }},
+            {{ record.id }}: JSON.parse('{{ record.record_data|escapejs }}'),
             {% endfor %}
         };
         

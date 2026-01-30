@@ -668,17 +668,34 @@ async function submitTransaction() {
             if (data.action === 'Take' && data.transaction_id) {
                 console.log('Auto-print triggered for transaction', data.transaction_id);
                 
-                // Open print page in new window
-                const printUrl = `/print/transaction/${data.transaction_id}/print/`;
-                const printWindow = window.open(printUrl, 'PrintWindow', 'width=900,height=700,menubar=no,toolbar=no,location=no');
+                // Open PDF directly - browser will use built-in PDF viewer
+                const pdfUrl = `/print/transaction/${data.transaction_id}/pdf/`;
+                const printWindow = window.open(pdfUrl, 'PrintWindow', 'width=900,height=700');
                 
                 if (!printWindow) {
                     console.error('Print window blocked! Please allow pop-ups for this site.');
                     showNotification('Print blocked! Please allow pop-ups for: ' + window.location.host, 'error');
+                } else {
+                    // Give Edge PDF viewer 3 seconds to fully render, then trigger print
+                    setTimeout(function() {
+                        try {
+                            if (!printWindow.closed) {
+                                console.log('Triggering print dialog...');
+                                printWindow.focus();  // Ensure window has focus
+                                printWindow.print();
+                                console.log('Print command sent successfully');
+                            } else {
+                                console.warn('Print window was closed before print could trigger');
+                            }
+                        } catch (e) {
+                            console.error('Print trigger failed:', e);
+                            showNotification('Unable to auto-print. Press Ctrl+P in the PDF window to print manually.', 'error');
+                        }
+                    }, 3000);  // Increased to 3 seconds for reliable PDF rendering
                 }
                 
-                // Reload page after 5 seconds to allow time for printing
-                setTimeout(() => location.reload(), 5000);
+                // Reload page after 6 seconds to allow time for printing
+                setTimeout(() => location.reload(), 6000);
             } else {
                 // For Return transactions, reload immediately
                 setTimeout(() => location.reload(), 800);

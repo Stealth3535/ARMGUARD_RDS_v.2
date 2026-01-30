@@ -94,8 +94,12 @@ def personnel_profile_detail(request, pk):
             qr_type=QRCodeImage.TYPE_PERSONNEL,
             reference_id=personnel.id
         )
-    except:
-        pass
+    except QRCodeImage.DoesNotExist:
+        qr_code_obj = None
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Error fetching QR code for personnel %s: %s", pk, str(e))
+        qr_code_obj = None
     
     context = {
         'personnel': personnel,

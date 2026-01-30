@@ -1,0 +1,386 @@
+# ArmGuard Testing Environment - Docker Compose
+# Version 2.0 - Complete testing infrastructure
+#
+# Services:
+#   - armguard-app: Django application (staging/production modes)
+#   - armguard-db: PostgreSQL database
+#   - armguard-redis: Redis for caching and rate limiting
+#   - nginx: Reverse proxy with SSL termination
+#   - prometheus: Metrics collection
+#   - grafana: Metrics visualization
+#   - alertmanager: Alert handling
+#   - loki: Log aggregation
+#   - promtail: Log collection
+#   - zap: OWASP ZAP security scanner
+#   - locust: Load testing
+#
+# Usage:
+#   Development: docker-compose up -d
+#   Testing:     docker-compose --profile testing up -d
+#   Full Stack:  docker-compose --profile testing --profile monitoring up -d
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # CORE APPLICATION SERVICES
+  # ==========================================================================
+  
+  armguard-app:
+    build:
+      context: ..
+      dockerfile: testing_environment/Dockerfile
+    container_name: armguard-app
+    hostname: armguard-app
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings_production
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-testing-secret-key-change-in-production}
+      - DJANGO_DEBUG=False
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,armguard.local,armguard-app,nginx
+      - CSRF_TRUSTED_ORIGINS=https://localhost,https://armguard.local
+      - USE_POSTGRESQL=True
+      - DB_NAME=armguard_db
+      - DB_USER=armguard_user
+      - DB_PASSWORD=${DB_PASSWORD:-armguard_secure_password}
+      - DB_HOST=armguard-db
+      - DB_PORT=5432
+      - USE_REDIS_CACHE=True
+      - REDIS_URL=redis://armguard-redis:6379/1
+      - SESSION_COOKIE_AGE=3600
+      - ALLOW_PUBLIC_REGISTRATION=False
+    volumes:
+      - app_static:/app/staticfiles
+      - app_media:/app/core/media
+      - app_logs:/app/logs
+    depends_on:
+      armguard-db:
+        condition: service_healthy
+      armguard-redis:
+        condition: service_healthy
+    networks:
+      - armguard-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=8000"
+      - "prometheus.path=/metrics/"
+
+  armguard-db:
+    image: postgres:15-alpine
+    container_name: armguard-db
+    hostname: armguard-db
+    environment:
+      - POSTGRES_DB=armguard_db
+      - POSTGRES_USER=armguard_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-armguard_secure_password}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - armguard-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U armguard_user -d armguard_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  armguard-redis:
+    image: redis:7-alpine
+    container_name: armguard-redis
+    hostname: armguard-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - armguard-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ==========================================================================
+  # REVERSE PROXY & SSL
+  # ==========================================================================
+  
+  nginx:
+    image: nginx:alpine
+    container_name: armguard-nginx
+    hostname: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - app_static:/var/www/armguard/staticfiles:ro
+      - app_media:/var/www/armguard/media:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - armguard-app
+    networks:
+      - armguard-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ==========================================================================
+  # MONITORING STACK
+  # ==========================================================================
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: armguard-prometheus
+    hostname: prometheus
+    profiles:
+      - monitoring
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=15d'
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - armguard-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: armguard-grafana
+    hostname: grafana
+    profiles:
+      - monitoring
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-armguard_grafana}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-piechart-panel
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - armguard-network
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: armguard-alertmanager
+    hostname: alertmanager
+    profiles:
+      - monitoring
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - armguard-network
+    restart: unless-stopped
+
+  # Log Aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: armguard-loki
+    hostname: loki
+    profiles:
+      - monitoring
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - armguard-network
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: armguard-promtail
+    hostname: promtail
+    profiles:
+      - monitoring
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - app_logs:/var/log/armguard:ro
+      - nginx_logs:/var/log/nginx:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    networks:
+      - armguard-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # TESTING SERVICES
+  # ==========================================================================
+  
+  # OWASP ZAP Security Scanner
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: armguard-zap
+    hostname: zap
+    profiles:
+      - testing
+    command: zap.sh -daemon -host 0.0.0.0 -port 8080 -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true -config api.disablekey=true
+    volumes:
+      - ./security_tests/zap:/zap/wrk:rw
+    ports:
+      - "8081:8080"
+    networks:
+      - armguard-network
+    depends_on:
+      - armguard-app
+
+  # Load Testing with Locust
+  locust-master:
+    image: locustio/locust:latest
+    container_name: armguard-locust-master
+    hostname: locust-master
+    profiles:
+      - testing
+    command: -f /locust/locustfile.py --master -H http://nginx
+    volumes:
+      - ./performance_tests:/locust:ro
+    ports:
+      - "8089:8089"
+    networks:
+      - armguard-network
+    depends_on:
+      - nginx
+
+  locust-worker:
+    image: locustio/locust:latest
+    profiles:
+      - testing
+    command: -f /locust/locustfile.py --worker --master-host locust-master
+    volumes:
+      - ./performance_tests:/locust:ro
+    networks:
+      - armguard-network
+    depends_on:
+      - locust-master
+    deploy:
+      replicas: 4
+
+  # Functional Test Runner
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.test-runner
+    container_name: armguard-test-runner
+    hostname: test-runner
+    profiles:
+      - testing
+    environment:
+      - TEST_BASE_URL=https://nginx
+      - SELENIUM_HUB_URL=http://selenium-hub:4444/wd/hub
+    volumes:
+      - ./functional_tests:/tests:ro
+      - ./test_results:/results:rw
+    networks:
+      - armguard-network
+    depends_on:
+      - nginx
+      - selenium-hub
+
+  # Selenium Grid for Browser Testing
+  selenium-hub:
+    image: selenium/hub:latest
+    container_name: armguard-selenium-hub
+    hostname: selenium-hub
+    profiles:
+      - testing
+    ports:
+      - "4444:4444"
+    networks:
+      - armguard-network
+
+  selenium-chrome:
+    image: selenium/node-chrome:latest
+    profiles:
+      - testing
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    depends_on:
+      - selenium-hub
+    networks:
+      - armguard-network
+    deploy:
+      replicas: 2
+
+  selenium-firefox:
+    image: selenium/node-firefox:latest
+    profiles:
+      - testing
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    depends_on:
+      - selenium-hub
+    networks:
+      - armguard-network
+
+# ==========================================================================
+# NETWORKS & VOLUMES
+# ==========================================================================
+
+networks:
+  armguard-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  postgres_data:
+    name: armguard_postgres_data
+  redis_data:
+    name: armguard_redis_data
+  app_static:
+    name: armguard_static
+  app_media:
+    name: armguard_media
+  app_logs:
+    name: armguard_logs
+  nginx_logs:
+    name: armguard_nginx_logs
+  prometheus_data:
+    name: armguard_prometheus_data
+  grafana_data:
+    name: armguard_grafana_data
+  alertmanager_data:
+    name: armguard_alertmanager_data
+  loki_data:
+    name: armguard_loki_data

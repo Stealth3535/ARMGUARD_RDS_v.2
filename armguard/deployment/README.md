@@ -2,20 +2,135 @@
 
 This directory contains deployment and management scripts for ArmGuard on Ubuntu/Raspberry Pi.
 
+**🆕 Version 2.1** - Unified architecture with centralized configuration and hybrid network support!
+
+---
+
+## 🏗️ Architecture Overview
+
+All scripts now share a centralized configuration through `config.sh`:
+
+```
+deployment/
+├── config.sh                    # 🔧 Central configuration (source this!)
+├── master-deploy.sh             # 🚀 One-command deployment orchestrator
+├── deploy-armguard.sh           # Initial deployment (legacy)
+├── update-armguard.sh           # Safe update with backup
+├── rollback.sh                  # Restore from backup
+├── health-check.sh              # System verification
+├── pre-check.sh                 # Pre-deployment validation
+├── detect-environment.sh        # Hardware detection
+├── install-gunicorn-service.sh  # Service installer
+├── install-nginx.sh             # Basic Nginx setup
+├── install-nginx-enhanced.sh    # Nginx with rate limiting
+├── install-mkcert-ssl.sh        # LAN SSL certificates
+├── setup-logrotate.sh           # Log rotation
+├── gunicorn-armguard.service    # Systemd service template
+└── network_setup/               # 🌐 Hybrid network configs
+    ├── nginx-lan.conf           # LAN Nginx (port 8443)
+    ├── nginx-wan.conf           # WAN Nginx (port 443)
+    ├── configure-firewall.sh    # Hybrid firewall rules
+    ├── setup-lan-network.sh     # LAN setup (mkcert)
+    ├── setup-wan-network.sh     # WAN setup (ACME)
+    └── verify-network.sh        # Network verification
+```
+
+---
+
+## 🚀 Quick Start (Recommended)
+
+### One-Command Deployment
+
+```bash
+# Clone and deploy
+sudo mkdir -p /var/www && cd /var/www
+sudo git clone https://github.com/Stealth3535/armguard.git
+cd armguard
+
+# Run master deployment (handles everything)
+sudo bash deployment/master-deploy.sh --network-type lan
+```
+
+**Network options:**
+- `--network-type lan` - Internal network only (mkcert SSL)
+- `--network-type wan` - Public internet only (ACME SSL)
+- `--network-type hybrid` - Both networks (recommended for production)
+
 ---
 
 ## 📋 Available Scripts
 
-### 🚀 Initial Deployment
-**`deploy-armguard.sh`** - Complete automated first-time deployment
+### 🆕 New Features (v2.1)
+
+**`master-deploy.sh`** - Orchestrated deployment ⭐ **NEW**
 ```bash
-sudo bash deployment/deploy-armguard.sh
+sudo bash deployment/master-deploy.sh [--network-type <lan|wan|hybrid>]
 ```
-- Fresh installation
-- Creates database
-- Configures services
-- Sets up Python environment
-- Installs dependencies
+- 10-phase deployment process
+- Automatic error handling
+- Health verification
+- Configurable network type
+
+**`config.sh`** - Centralized configuration ⭐ **UPDATED**
+```bash
+# Used by all scripts automatically
+# Customize via environment variables:
+export ARMGUARD_DOMAIN="myarmguard.local"
+export ARMGUARD_WORKERS=4
+export LAN_INTERFACE="eth1"
+```
+
+**`health-check.sh`** - Comprehensive system health verification
+```bash
+sudo bash deployment/health-check.sh
+```
+- Checks system resources (CPU, memory, disk)
+- Verifies service status
+- Tests network connectivity
+- Validates application files
+- Scans for recent errors
+- Security configuration audit
+
+**`rollback.sh`** - Safely restore from backup
+```bash
+sudo bash deployment/rollback.sh
+```
+- Interactive backup selection
+- Automatic safety backup before rollback
+- Service restart and verification
+- Integrated health check after restore
+
+**`detect-environment.sh`** - Hardware and platform detection
+```bash
+bash deployment/detect-environment.sh
+```
+- Detects CPU architecture (x86, ARM64, etc.)
+- Identifies platform (Raspberry Pi, VM, Docker, WSL)
+- Provides optimization recommendations
+- Memory and CPU analysis
+
+**`setup-logrotate.sh`** - Automated log rotation
+```bash
+sudo bash deployment/setup-logrotate.sh
+```
+- Configures automatic log rotation
+- Manages disk space
+- Keeps 14 days of logs
+- Daily rotation with compression
+
+**`install-nginx-enhanced.sh`** - Enhanced Nginx with security
+```bash
+sudo bash deployment/install-nginx-enhanced.sh [domain]
+```
+- Rate limiting (general, login, API)
+- Connection limiting (10 per IP)
+- Advanced security headers
+- Common exploit blocking
+- Strict admin panel protection
+
+---
+
+## 📋 Core Scripts
 
 ### ✅ Safe Update (Preserves Data)
 **`update-armguard.sh`** - Update code without losing data ⭐ **RECOMMENDED**
@@ -28,13 +143,19 @@ sudo bash deployment/update-armguard.sh
 - ✅ Installs new dependencies
 - ✅ Runs migrations safely
 - ✅ Restarts services
-- ✅ Verifies deployment
+- ✅ Runs health check after update
+- ✅ Automatic rollback on failure
 
-**Use this for:**
-- Pulling security fixes
-- Getting new features
-- Bug fixes
-- Regular updates
+### 🚀 Initial Deployment (Legacy)
+**`deploy-armguard.sh`** - Complete automated first-time deployment
+```bash
+sudo bash deployment/deploy-armguard.sh
+```
+- Fresh installation
+- Creates database
+- Configures services
+- Sets up Python environment
+- Installs dependencies
 
 ### ♻️ Complete Reinstall
 **`cleanup-and-deploy.sh`** - Remove everything and start fresh
@@ -91,40 +212,90 @@ sudo bash deployment/install-mkcert-ssl.sh [domain]
 - Enables HTTP → HTTPS redirect
 - Adds SSL security headers
 
-**Example with custom domain:**
+---
+
+## 🌐 Hybrid Network Setup
+
+For environments requiring both LAN (internal armory operations) and WAN (public personnel portal):
+
 ```bash
-sudo bash deployment/install-mkcert-ssl.sh armguard.local
+# Full hybrid setup
+cd /var/www/armguard/deployment/network_setup
+
+# 1. Configure LAN (internal network with mkcert)
+sudo bash setup-lan-network.sh
+
+# 2. Configure WAN (public with ZeroSSL/Let's Encrypt)
+sudo bash setup-wan-network.sh
+
+# 3. Configure firewall (isolates LAN from internet)
+sudo bash configure-firewall.sh
+
+# 4. Verify everything
+sudo bash verify-network.sh
 ```
 
-**⚠️ Note:** For production servers accessible from the internet, use Let's Encrypt instead (see [NGINX_SSL_GUIDE.md](NGINX_SSL_GUIDE.md))
+See [network_setup/HYBRID_NETWORK_GUIDE.md](network_setup/HYBRID_NETWORK_GUIDE.md) for detailed instructions.
 
 ---
 
-## 🎯 Quick Usage Guide
+## 🎯 Deployment Scenarios
 
-### First Time Setup
+### Scenario 1: Simple LAN Deployment (Recommended for Most Users)
 ```bash
-# On your Raspberry Pi 5 / Ubuntu Server
-# Create directory and clone repository
-sudo mkdir -p /var/www
-cd /var/www
-sudo git clone https://github.com/Stealth3535/armguard.git
-cd armguard
-
-# Optional: Validate environment first
-sudo bash deployment/pre-check.sh
-
-# Deploy application
-sudo bash deployment/deploy-armguard.sh
-
-# Install web server (Nginx)
-sudo bash deployment/install-nginx.sh
-
-# Optional: Install SSL/HTTPS
-sudo bash deployment/install-mkcert-ssl.sh
+sudo bash deployment/master-deploy.sh --network-type lan
 ```
 
-### Regular Updates (With Data)
+### Scenario 2: Public Internet Deployment
+```bash
+export ARMGUARD_DOMAIN="login.yourdomain.com"
+sudo bash deployment/master-deploy.sh --network-type wan
+```
+
+### Scenario 3: Hybrid Enterprise Deployment
+```bash
+export LAN_INTERFACE="eth1"
+export WAN_INTERFACE="eth0"
+export SERVER_LAN_IP="192.168.10.1"
+export ARMORY_PC_IP="192.168.10.2"
+sudo bash deployment/master-deploy.sh --network-type hybrid
+```
+
+---
+
+## ⚙️ Configuration Reference
+
+### Environment Variables
+
+All scripts respect these environment variables (set in shell or config.sh):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ARMGUARD_PROJECT_DIR` | `/var/www/armguard` | Installation directory |
+| `ARMGUARD_DOMAIN` | `armguard.local` | Primary domain name |
+| `ARMGUARD_WORKERS` | `auto` | Gunicorn worker count |
+| `ARMGUARD_TIMEOUT` | `60` | Request timeout (seconds) |
+| `LAN_INTERFACE` | `eth1` | LAN network interface |
+| `WAN_INTERFACE` | `eth0` | WAN network interface |
+| `SERVER_LAN_IP` | `192.168.10.1` | Server LAN IP address |
+| `ARMORY_PC_IP` | `192.168.10.2` | Armory PC IP address |
+| `ARMGUARD_RUN_USER` | `www-data` | Service user |
+| `ARMGUARD_RUN_GROUP` | `www-data` | Service group |
+
+### Customizing config.sh
+
+```bash
+# Create override file
+sudo nano /var/www/armguard/deployment/config.local.sh
+
+# Add your customizations
+export ARMGUARD_WORKERS=4
+export ARMGUARD_DOMAIN="myarmguard.local"
+```
+
+---
+
+## 🔧 Regular Updates
 ```bash
 cd /var/www/armguard
 sudo bash deployment/update-armguard.sh    # One command - done!
@@ -134,6 +305,28 @@ sudo bash deployment/update-armguard.sh    # One command - done!
 - Backs up your database
 - Updates code
 - Installs dependencies
+- Runs migrations
+- Restarts services
+- **🆕 Runs health check**
+- **🆕 Auto-rollback on failure**
+
+### Quick Maintenance Commands
+```bash
+# Check system health
+sudo bash deployment/health-check.sh
+
+# View available backups
+ls -lh /var/www/armguard/backups/
+
+# Rollback if needed
+sudo bash deployment/rollback.sh
+
+# Check platform info
+bash deployment/detect-environment.sh
+
+# View logs
+sudo tail -f /var/log/armguard/error.log
+```
 - Runs migrations
 - Restarts services
 

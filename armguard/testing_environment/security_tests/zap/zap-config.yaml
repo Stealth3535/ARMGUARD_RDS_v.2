@@ -1,0 +1,87 @@
+# OWASP ZAP Custom Scan Configuration for ArmGuard
+# Context and policy settings for thorough security testing
+
+env:
+  contexts:
+    - name: "ArmGuard"
+      urls:
+        - "https://nginx/"
+      includePaths:
+        - "https://nginx/.*"
+      excludePaths:
+        - "https://nginx/static/.*"
+        - "https://nginx/media/.*"
+      authentication:
+        method: "form"
+        parameters:
+          loginUrl: "https://nginx/login/"
+          loginRequestData: "username={%username%}&password={%password%}&csrfmiddlewaretoken={%csrf%}"
+        verification:
+          method: "response"
+          loggedInIndicator: "\\Qdashboard\\E"
+          loggedOutIndicator: "\\QPlease enter your credentials\\E"
+      users:
+        - name: "admin"
+          credentials:
+            username: "testadmin"
+            password: "TestAdmin123!"
+        - name: "armorer"
+          credentials:
+            username: "testarmorer"
+            password: "TestArmorer123!"
+      sessionManagement:
+        method: "cookie"
+        parameters: {}
+
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  - type: spider
+    parameters:
+      context: "ArmGuard"
+      user: "admin"
+      maxDuration: 5
+      maxDepth: 10
+      maxChildren: 20
+
+  - type: spiderAjax
+    parameters:
+      context: "ArmGuard"
+      user: "admin"
+      maxDuration: 5
+      maxCrawlDepth: 10
+      numberOfBrowsers: 2
+
+  - type: passiveScan-config
+    parameters:
+      maxAlertsPerRule: 10
+      scanOnlyInScope: true
+      maxBodySizeInBytesToScan: 10000
+
+  - type: activeScan
+    parameters:
+      context: "ArmGuard"
+      user: "admin"
+      policy: "ArmGuard-Policy"
+      maxRuleDurationInMins: 5
+      maxScanDurationInMins: 60
+
+  - type: report
+    parameters:
+      template: "traditional-html"
+      reportDir: "/zap/wrk"
+      reportFile: "zap_scan_report"
+    risks:
+      - high
+      - medium
+      - low
+      - info
+
+  - type: report
+    parameters:
+      template: "traditional-json"
+      reportDir: "/zap/wrk"
+      reportFile: "zap_scan_results"
