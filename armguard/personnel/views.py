@@ -9,11 +9,13 @@ from django.core.paginator import Paginator
 from django.http import JsonResponse
 from .models import Personnel
 from .forms import PersonnelSearchForm
+from core.network_decorators import lan_required, read_only_on_wan
 
 
 @login_required
+@read_only_on_wan
 def personnel_profile_list(request):
-    """Display list of all personnel with search functionality"""
+    """Display list of all personnel with search functionality - WAN read-only"""
     personnel_list = Personnel.objects.all().order_by('rank', 'surname', 'firstname')
     search_form = PersonnelSearchForm(request.GET)
     
@@ -65,8 +67,9 @@ def personnel_profile_list(request):
 
 
 @login_required
+@read_only_on_wan
 def personnel_profile_detail(request, pk):
-    """Display detailed view of a single personnel record"""
+    """Display detailed view of a single personnel record - WAN read-only"""
     personnel = get_object_or_404(Personnel, id=pk)
     
     # Get related user information if linked

@@ -13,6 +13,7 @@ from inventory.models import Item
 from personnel.models import Personnel
 from qr_manager.models import QRCodeImage
 from django.utils import timezone
+from core.network_decorators import lan_required, read_only_on_wan, network_aware_permission_required
 
 
 def is_admin_or_armorer(user):
@@ -74,6 +75,7 @@ def item_transactions(request):
 
 
 @login_required
+@lan_required  # NEW: Transaction creation requires LAN access for security
 @user_passes_test(is_admin_or_armorer)
 def qr_transaction_scanner(request):
     """QR Scanner page for creating transactions - Admin and Armorer only"""
@@ -176,6 +178,8 @@ def verify_qr_code(request):
 
 
 @login_required
+@login_required
+@lan_required  # NEW: Transaction creation requires LAN access for security
 @user_passes_test(is_admin_or_armorer)
 def create_qr_transaction(request):
     """Create transaction from scanned QR codes - Admin and Armorer only"""

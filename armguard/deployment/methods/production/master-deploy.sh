@@ -16,8 +16,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$SCRIPT_DIR/config.sh" ]; then
     source "$SCRIPT_DIR/config.sh"
 else
-    echo "ERROR: config.sh not found"
-    exit 1
+    echo "ERROR: config.sh not found in $SCRIPT_DIR"
+    echo "Trying to source master config from parent directory..."
+    if [ -f "$SCRIPT_DIR/../../master-config.sh" ]; then
+        source "$SCRIPT_DIR/../../master-config.sh"
+        echo "Using master configuration"
+    else
+        echo "ERROR: No configuration file found"
+        exit 1
+    fi
 fi
 
 # Deployment options

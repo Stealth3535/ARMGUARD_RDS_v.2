@@ -1,878 +1,345 @@
-# ArmGuard Deployment Scripts
+# ArmGuard Unified Deployment System
 
-This directory contains deployment and management scripts for ArmGuard on Ubuntu/Raspberry Pi.
+**Version:** 3.0.0  
+**Last Updated:** February 1, 2026  
+**Architecture:** Unified multi-environment deployment system
 
-**🆕 Version 2.1** - Unified architecture with centralized configuration and hybrid network support!
+Complete deployment automation for the ArmGuard military inventory management system across all environments.
 
----
+## 🎯 Overview
 
-## 🏗️ Architecture Overview
+This unified deployment system provides automated setup for multiple deployment scenarios with consistent configuration and seamless integration:
 
-All scripts now share a centralized configuration through `config.sh`:
+- **🖥️ VM Test Environment**: VMware VM with shared folders for development
+- **🛠️ Basic Server Setup**: Simple production deployment with essential features  
+- **🏢 Enterprise Production**: Full production deployment with all enterprise features
+- **🐳 Docker Testing**: Containerized testing environment with monitoring stack
+
+## 🚀 Quick Start
+
+### 1. Choose Your Deployment Method
+```bash
+cd armguard/deployment
+./deploy-master.sh list
+```
+
+### 2. Deploy to Your Environment
+
+**For VM Testing (Development):**
+```bash
+./deploy-master.sh vm-test
+```
+
+**For Production Server:**
+```bash
+./deploy-master.sh production
+```
+
+**For Docker Testing:**
+```bash
+./deploy-master.sh docker-test
+```
+
+**For Basic Server Setup:**
+```bash
+./deploy-master.sh basic-setup
+```
+
+### 3. Check Status
+```bash
+./deploy-master.sh status
+```
+
+## 📁 Architecture
 
 ```
 deployment/
-├── config.sh                    # 🔧 Central configuration (source this!)
-├── master-deploy.sh             # 🚀 One-command deployment orchestrator
-├── deploy-armguard.sh           # Initial deployment (legacy)
-├── update-armguard.sh           # Safe update with backup
-├── rollback.sh                  # Restore from backup
-├── health-check.sh              # System verification
-├── pre-check.sh                 # Pre-deployment validation
-├── detect-environment.sh        # Hardware detection
-├── install-gunicorn-service.sh  # Service installer
-├── install-nginx.sh             # Basic Nginx setup
-├── install-nginx-enhanced.sh    # Nginx with rate limiting
-├── install-mkcert-ssl.sh        # LAN SSL certificates
-├── setup-logrotate.sh           # Log rotation
-├── gunicorn-armguard.service    # Systemd service template
-└── network_setup/               # 🌐 Hybrid network configs
-    ├── nginx-lan.conf           # LAN Nginx (port 8443)
-    ├── nginx-wan.conf           # WAN Nginx (port 443)
-    ├── configure-firewall.sh    # Hybrid firewall rules
-    ├── setup-lan-network.sh     # LAN setup (mkcert)
-    ├── setup-wan-network.sh     # WAN setup (ACME)
-    └── verify-network.sh        # Network verification
+├── deploy-master.sh              # 🎯 Master deployment orchestrator
+├── master-config.sh              # ⚙️ Unified configuration for all methods
+├── methods/                      # 📂 Deployment method implementations
+│   ├── vmware-setup/            # 🖥️ VM test environment
+│   │   ├── vm-deploy.sh
+│   │   └── README.md
+│   ├── basic-setup/             # 🛠️ Simple server setup
+│   │   ├── serversetup.sh
+│   │   └── vmsetup.sh
+│   ├── production/              # 🏢 Enterprise production
+│   │   ├── master-deploy.sh
+│   │   ├── config.sh
+│   │   ├── deploy-armguard.sh
+│   │   ├── update-armguard.sh
+│   │   ├── rollback.sh
+│   │   ├── health-check.sh
+│   │   ├── secure-backup.sh
+│   │   ├── setup-database.sh
+│   │   ├── secrets-manager.sh
+│   │   ├── registry-manager.sh
+│   │   └── network_setup/
+│   └── docker-testing/          # 🐳 Container testing environment
+│       ├── docker-compose.yml
+│       ├── run_all_tests.sh
+│       ├── registry-manager.sh
+│       └── monitoring/
+└── README.md                     # 📚 This file
 ```
 
----
+## 🎛️ Deployment Methods
 
-## 🚀 Quick Start (Recommended)
+### 1. VM Test Environment (`vm-test`)
+- **Target**: VMware VM with shared folders
+- **Use Case**: Development and testing
+- **Features**: Basic setup, test database, development tools
+- **Path**: `/mnt/hgfs/Armguard/armguard`
+- **Database**: PostgreSQL test instance
+- **Access**: `http://{VM_IP}/` (admin/admin123)
+- **SSL**: Disabled (HTTP only)
+- **Documentation**: [methods/vmware-setup/README.md](methods/vmware-setup/README.md)
 
-### One-Command Deployment
+### 2. Basic Server Setup (`basic-setup`)
+- **Target**: Basic Linux server
+- **Use Case**: Simple production deployment
+- **Features**: Essential services only
+- **Path**: `/var/www/armguard`
+- **Database**: SQLite or PostgreSQL
+- **Access**: Configured domain or IP
+- **SSL**: Optional
+- **Documentation**: Legacy serversetup.sh
 
-```bash
-# Clone and deploy
-sudo mkdir -p /var/www && cd /var/www
-sudo git clone https://github.com/Stealth3535/armguard.git
-cd armguard
+### 3. Enterprise Production (`production`)
+- **Target**: Production server
+- **Use Case**: Full production deployment
+- **Features**: All enterprise features, monitoring, backups
+- **Path**: `/opt/armguard`
+- **Database**: PostgreSQL with connection pooling
+- **Access**: HTTPS with SSL certificates
+- **SSL**: Required with automated certificates
+- **Documentation**: [methods/production/README.md](methods/production/README.md)
 
-# Run master deployment (handles everything)
-sudo bash deployment/master-deploy.sh --network-type lan
-```
+### 4. Docker Testing (`docker-test`)
+- **Target**: Docker environment
+- **Use Case**: Comprehensive testing and CI/CD
+- **Features**: Full testing suite, monitoring stack
+- **Path**: Container volumes
+- **Database**: PostgreSQL container
+- **Access**: `http://localhost` with monitoring dashboards
+- **SSL**: Container-managed
+- **Documentation**: [methods/docker-testing/README.md](methods/docker-testing/README.md)
 
-**Network options:**
-- `--network-type lan` - Internal network only (mkcert SSL)
-- `--network-type wan` - Public internet only (ACME SSL)
-- `--network-type hybrid` - Both networks (recommended for production)
+## 🔧 Configuration System
 
----
+### Master Configuration (`master-config.sh`)
+Unified configuration that automatically detects environment and sets appropriate defaults:
 
-## 📋 Available Scripts
-
-### 🆕 New Features (v2.1)
-
-**`master-deploy.sh`** - Orchestrated deployment ⭐ **NEW**
-```bash
-sudo bash deployment/master-deploy.sh [--network-type <lan|wan|hybrid>]
-```
-- 10-phase deployment process
-- Automatic error handling
-- Health verification
-- Configurable network type
-
-**`config.sh`** - Centralized configuration ⭐ **UPDATED**
-```bash
-# Used by all scripts automatically
-# Customize via environment variables:
-export ARMGUARD_DOMAIN="myarmguard.local"
-export ARMGUARD_WORKERS=4
-export LAN_INTERFACE="eth1"
-```
-
-**`health-check.sh`** - Comprehensive system health verification
-```bash
-sudo bash deployment/health-check.sh
-```
-- Checks system resources (CPU, memory, disk)
-- Verifies service status
-- Tests network connectivity
-- Validates application files
-- Scans for recent errors
-- Security configuration audit
-
-**`rollback.sh`** - Safely restore from backup
-```bash
-sudo bash deployment/rollback.sh
-```
-- Interactive backup selection
-- Automatic safety backup before rollback
-- Service restart and verification
-- Integrated health check after restore
-
-**`detect-environment.sh`** - Hardware and platform detection
-```bash
-bash deployment/detect-environment.sh
-```
-- Detects CPU architecture (x86, ARM64, etc.)
-- Identifies platform (Raspberry Pi, VM, Docker, WSL)
-- Provides optimization recommendations
-- Memory and CPU analysis
-
-**`setup-logrotate.sh`** - Automated log rotation
-```bash
-sudo bash deployment/setup-logrotate.sh
-```
-- Configures automatic log rotation
-- Manages disk space
-- Keeps 14 days of logs
-- Daily rotation with compression
-
-**`install-nginx-enhanced.sh`** - Enhanced Nginx with security
-```bash
-sudo bash deployment/install-nginx-enhanced.sh [domain]
-```
-- Rate limiting (general, login, API)
-- Connection limiting (10 per IP)
-- Advanced security headers
-- Common exploit blocking
-- Strict admin panel protection
-
----
-
-## 📋 Core Scripts
-
-### ✅ Safe Update (Preserves Data)
-**`update-armguard.sh`** - Update code without losing data ⭐ **RECOMMENDED**
-```bash
-sudo bash deployment/update-armguard.sh
-```
-- ✅ **Automatically backs up database**
-- ✅ **Preserves all your data**
-- ✅ Updates code from GitHub
-- ✅ Installs new dependencies
-- ✅ Runs migrations safely
-- ✅ Restarts services
-- ✅ Runs health check after update
-- ✅ Automatic rollback on failure
-
-### 🚀 Initial Deployment (Legacy)
-**`deploy-armguard.sh`** - Complete automated first-time deployment
-```bash
-sudo bash deployment/deploy-armguard.sh
-```
-- Fresh installation
-- Creates database
-- Configures services
-- Sets up Python environment
-- Installs dependencies
-
-### ♻️ Complete Reinstall
-**`cleanup-and-deploy.sh`** - Remove everything and start fresh
-```bash
-sudo bash deployment/cleanup-and-deploy.sh
-```
-- ⚠️ **DELETES all data**
-- Removes database
-- Fresh installation
-- **Only use for testing or major issues!**
-
-### ✔️ Pre-Deployment Check
-**`pre-check.sh`** - Validate environment before deployment
-```bash
-sudo bash deployment/pre-check.sh
-```
-- Checks internet connectivity
-- Validates Python installation
-- Verifies disk space
-- Tests port availability
-
-### 🔧 Service Installer
-**`install-gunicorn-service.sh`** - Install/update Gunicorn service only
-```bash
-sudo bash deployment/install-gunicorn-service.sh
-```
-- Updates systemd service
-- Doesn't touch code or data
-
-### 🌐 Web Server Setup
-**`install-nginx.sh`** - Install and configure Nginx
-```bash
-sudo bash deployment/install-nginx.sh [domain]
-```
-- Installs Nginx web server
-- Configures reverse proxy to Gunicorn
-- Sets up static/media file serving
-- Adds security headers
-- Configures firewall (UFW)
-
-**Example with custom domain:**
-```bash
-sudo bash deployment/install-nginx.sh armguard.local
-```
-
-### 🔐 SSL/HTTPS Setup
-**`install-mkcert-ssl.sh`** - Install SSL certificates (local development)
-```bash
-sudo bash deployment/install-mkcert-ssl.sh [domain]
-```
-- Installs mkcert (supports ARM64 for Raspberry Pi)
-- Generates self-signed SSL certificates
-- Configures Nginx for HTTPS
-- Enables HTTP → HTTPS redirect
-- Adds SSL security headers
-
----
-
-## 🌐 Hybrid Network Setup
-
-For environments requiring both LAN (internal armory operations) and WAN (public personnel portal):
-
-```bash
-# Full hybrid setup
-cd /var/www/armguard/deployment/network_setup
-
-# 1. Configure LAN (internal network with mkcert)
-sudo bash setup-lan-network.sh
-
-# 2. Configure WAN (public with ZeroSSL/Let's Encrypt)
-sudo bash setup-wan-network.sh
-
-# 3. Configure firewall (isolates LAN from internet)
-sudo bash configure-firewall.sh
-
-# 4. Verify everything
-sudo bash verify-network.sh
-```
-
-See [network_setup/HYBRID_NETWORK_GUIDE.md](network_setup/HYBRID_NETWORK_GUIDE.md) for detailed instructions.
-
----
-
-## 🎯 Deployment Scenarios
-
-### Scenario 1: Simple LAN Deployment (Recommended for Most Users)
-```bash
-sudo bash deployment/master-deploy.sh --network-type lan
-```
-
-### Scenario 2: Public Internet Deployment
-```bash
-export ARMGUARD_DOMAIN="login.yourdomain.com"
-sudo bash deployment/master-deploy.sh --network-type wan
-```
-
-### Scenario 3: Hybrid Enterprise Deployment
-```bash
-export LAN_INTERFACE="eth1"
-export WAN_INTERFACE="eth0"
-export SERVER_LAN_IP="192.168.10.1"
-export ARMORY_PC_IP="192.168.10.2"
-sudo bash deployment/master-deploy.sh --network-type hybrid
-```
-
----
-
-## ⚙️ Configuration Reference
+- **Environment Detection**: Automatic detection of VM, Docker, or production
+- **Path Management**: Consistent paths across all deployment methods
+- **Database Configuration**: Environment-specific database settings
+- **Security Settings**: Appropriate security for each environment
+- **Feature Flags**: Enable/disable features based on environment
 
 ### Environment Variables
-
-All scripts respect these environment variables (set in shell or config.sh):
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ARMGUARD_PROJECT_DIR` | `/var/www/armguard` | Installation directory |
-| `ARMGUARD_DOMAIN` | `armguard.local` | Primary domain name |
-| `ARMGUARD_WORKERS` | `auto` | Gunicorn worker count |
-| `ARMGUARD_TIMEOUT` | `60` | Request timeout (seconds) |
-| `LAN_INTERFACE` | `eth1` | LAN network interface |
-| `WAN_INTERFACE` | `eth0` | WAN network interface |
-| `SERVER_LAN_IP` | `192.168.10.1` | Server LAN IP address |
-| `ARMORY_PC_IP` | `192.168.10.2` | Armory PC IP address |
-| `ARMGUARD_RUN_USER` | `www-data` | Service user |
-| `ARMGUARD_RUN_GROUP` | `www-data` | Service group |
-
-### Customizing config.sh
+The system automatically configures environment variables based on the detected deployment method:
 
 ```bash
-# Create override file
-sudo nano /var/www/armguard/deployment/config.local.sh
+# Test VM Environment
+ENVIRONMENT=test-vm
+PROJECT_DIR=/mnt/hgfs/Armguard/armguard
+DEBUG=true
+DB_NAME=armguard_test
 
-# Add your customizations
-export ARMGUARD_WORKERS=4
-export ARMGUARD_DOMAIN="myarmguard.local"
+# Production Environment  
+ENVIRONMENT=production
+PROJECT_DIR=/opt/armguard/armguard
+DEBUG=false
+DB_NAME=armguard_prod
+SSL_ENABLED=true
 ```
+
+## 🛡️ Security Features
+
+### Environment-Specific Security
+
+**Test Environments** (vm-test, docker-test):
+- ✅ Basic authentication
+- ✅ Session security
+- ❌ SSL/TLS (HTTP only)
+- ❌ Production security headers
+- ❌ Rate limiting
+- ✅ Debug tools enabled
+
+**Production Environment**:
+- ✅ SSL/TLS with automated certificates
+- ✅ Production security headers
+- ✅ Rate limiting and DDoS protection
+- ✅ Encrypted backups
+- ✅ Secrets management (Vault/AWS/Azure)
+- ✅ Network firewall rules
+- ❌ Debug tools (disabled)
+
+## 🔍 System Requirements
+
+### Minimum Requirements (All Methods)
+- **OS**: Ubuntu 20.04+, Debian 11+, or Raspberry Pi OS
+- **RAM**: 2GB (4GB recommended for production)
+- **Storage**: 10GB free space
+- **Network**: Internet connection for packages
+
+### Additional Requirements by Method
+
+**VM Test Environment**:
+- VMware Workstation/Player with VMware Tools
+- Shared folder configured and mounted
+
+**Production Environment**:
+- Domain name (for SSL certificates)
+- Email address (for ACME certificates)
+- Firewall access (ports 80, 443)
+
+**Docker Testing Environment**:
+- Docker 20.10+ and Docker Compose
+- 4GB RAM recommended for monitoring stack
+
+## 🚀 Usage Examples
+
+### Basic Deployment
+```bash
+# Deploy to current environment (auto-detected)
+./deploy-master.sh vm-test
+
+# Check deployment status
+./deploy-master.sh status
+
+# View current configuration
+./deploy-master.sh --config
+```
+
+### Advanced Options
+```bash
+# Dry run (preview without executing)
+./deploy-master.sh production --dry-run
+
+# Force deployment (skip environment checks)
+./deploy-master.sh docker-test --force
+
+# Verbose output for debugging
+./deploy-master.sh vm-test --verbose
+```
+
+### Environment Management
+```bash
+# List all available methods
+./deploy-master.sh list
+
+# Check system status
+./deploy-master.sh status
+
+# Get help for specific method
+./deploy-master.sh production --help
+```
+
+## 🧪 Testing Integration
+
+All deployment methods are designed to work with the comprehensive testing suite:
+
+### Test Environment Integration
+- **VM Testing**: Direct access to shared folder code changes
+- **Docker Testing**: Full containerized test suite with monitoring
+- **Production Testing**: Health checks and automated verification
+
+### Cross-Method Compatibility
+- **Consistent Database Schema**: All methods use same Django models
+- **Shared Test Data**: Test fixtures work across all environments
+- **Unified Configuration**: Same environment variables and settings
+
+## 📊 Monitoring and Observability
+
+### Production Environment
+- **Prometheus**: Metrics collection
+- **Grafana**: Visualization dashboards  
+- **Alertmanager**: Alert routing
+- **Loki**: Log aggregation
+- **Health Checks**: Automated system monitoring
+
+### Docker Testing Environment
+- **Full Monitoring Stack**: Complete observability setup
+- **Performance Testing**: Load testing with Locust
+- **Security Scanning**: OWASP ZAP integration
+- **Test Reporting**: Automated test reports
+
+## 🔄 Migration Between Environments
+
+### From VM Test to Production
+```bash
+# Export VM test data
+./deploy-master.sh vm-test --backup
+
+# Deploy to production
+./deploy-master.sh production
+
+# Import test data (optional)
+./methods/production/restore-backup.sh vm-test-backup.sql
+```
+
+### From Basic Setup to Production
+```bash
+# Backup current deployment
+./methods/basic-setup/backup.sh
+
+# Deploy production environment
+./deploy-master.sh production
+
+# Migrate data
+./methods/production/migrate-from-basic.sh
+```
+
+## 🆘 Troubleshooting
+
+### Common Issues
+
+**1. Environment Detection Failed**
+```bash
+# Manually specify environment
+export ENVIRONMENT=production
+./deploy-master.sh production
+```
+
+**2. Configuration Conflicts**
+```bash
+# Reset configuration
+rm -f ~/.armguard-config
+./deploy-master.sh --config
+```
+
+**3. Service Start Failed**
+```bash
+# Check service status
+./deploy-master.sh status
+
+# View service logs
+journalctl -u armguard -f
+```
+
+### Getting Help
+- Check method-specific README files in `methods/*/README.md`
+- Use `--help` flag with any command
+- View logs in `/var/log/armguard/` (production) or project directory (test)
+
+## 🗓️ Version History
+
+- **v3.0.0** (Feb 2026) - Unified deployment system with method separation
+- **v2.1.1** (Feb 2026) - Enhanced security, backup encryption, multi-database support
+- **v2.1.0** (Jan 2026) - Unified architecture with centralized configuration
+- **v2.0.0** (Dec 2025) - Major rewrite with health checks and rollback capability
+- **v1.x** (2025) - Initial deployment scripts
+
+## 📚 Additional Documentation
+
+- [VM Test Setup Guide](methods/vmware-setup/README.md)
+- [Production Deployment Guide](methods/production/README.md)
+- [Docker Testing Guide](methods/docker-testing/README.md)
+- [Configuration Reference](master-config.sh)
+- [Security Guidelines](SECURITY.md)
+- [Troubleshooting Guide](TROUBLESHOOTING.md)
 
 ---
 
-## 🔧 Regular Updates
-```bash
-cd /var/www/armguard
-sudo bash deployment/update-armguard.sh    # One command - done!
-```
-
-**That's it!** The update script handles everything automatically:
-- Backs up your database
-- Updates code
-- Installs dependencies
-- Runs migrations
-- Restarts services
-- **🆕 Runs health check**
-- **🆕 Auto-rollback on failure**
-
-### Quick Maintenance Commands
-```bash
-# Check system health
-sudo bash deployment/health-check.sh
-
-# View available backups
-ls -lh /var/www/armguard/backups/
-
-# Rollback if needed
-sudo bash deployment/rollback.sh
-
-# Check platform info
-bash deployment/detect-environment.sh
-
-# View logs
-sudo tail -f /var/log/armguard/error.log
-```
-- Runs migrations
-- Restarts services
-
----
-
-## 🌐 Web Server & SSL Setup
-
-### Nginx Installation
-After deploying ArmGuard, install Nginx to serve your application:
-
-```bash
-cd /var/www/armguard
-sudo bash deployment/install-nginx.sh
-```
-
-**Access your application:**
-- HTTP: `http://your-server-ip`
-- Or with custom domain: `http://armguard.local`
-
-### SSL/HTTPS Setup (Optional)
-
-**For local development/testing:**
-```bash
-sudo bash deployment/install-mkcert-ssl.sh
-```
-
-**For production (internet-accessible):**
-```bash
-# Install Certbot
-sudo apt install -y certbot python3-certbot-nginx
-
-# Generate Let's Encrypt certificate
-sudo certbot --nginx -d yourdomain.com
-```
-
-**Access with HTTPS:**
-- `https://your-server-ip`
-- Or: `https://yourdomain.com`
-
-**📖 Complete Nginx & SSL Guide:** [NGINX_SSL_GUIDE.md](NGINX_SSL_GUIDE.md)
-
----
-
-## Quick Setup (Manual Method)
-
-### 1. Install Gunicorn (if not already in venv)
-```bash
-cd /var/www/armguard
-source .venv/bin/activate
-pip install gunicorn
-```
-
-### 2. Copy Service File
-```bash
-sudo cp deployment/gunicorn-armguard.service /etc/systemd/system/
-```
-
-### 3. Update Service File Paths
-Edit `/etc/systemd/system/gunicorn-armguard.service` and adjust:
-- `User` and `Group` (default: www-data)
-- `WorkingDirectory` (your project path)
-- `--workers` count (formula: 2 × CPU cores + 1)
-
-### 4. Create Log Directory
-```bash
-sudo mkdir -p /var/log/armguard
-sudo chown www-data:www-data /var/log/armguard
-```
-
-### 5. Set Permissions
-```bash
-sudo chown -R www-data:www-data /var/www/armguard
-sudo chmod 600 /var/www/armguard/.env
-```
-
-### 6. Start Service
-```bash
-sudo systemctl daemon-reload
-sudo systemctl start gunicorn-armguard
-sudo systemctl enable gunicorn-armguard
-```
-
----
-
-## Service Management Commands
-
-### Check Status
-```bash
-sudo systemctl status gunicorn-armguard
-```
-
-### Start Service
-```bash
-sudo systemctl start gunicorn-armguard
-```
-
-### Stop Service
-```bash
-sudo systemctl stop gunicorn-armguard
-```
-
-### Restart Service
-```bash
-sudo systemctl restart gunicorn-armguard
-```
-
-### Reload Configuration (graceful restart)
-```bash
-sudo systemctl reload gunicorn-armguard
-```
-
-### Enable Auto-Start on Boot
-```bash
-sudo systemctl enable gunicorn-armguard
-```
-
-### Disable Auto-Start
-```bash
-sudo systemctl disable gunicorn-armguard
-```
-
----
-
-## View Logs
-
-### Real-time Logs (Follow)
-```bash
-# Systemd journal
-sudo journalctl -u gunicorn-armguard -f
-
-# Access logs
-sudo tail -f /var/log/armguard/access.log
-
-# Error logs
-sudo tail -f /var/log/armguard/error.log
-```
-
-### Recent Logs (Last 50 lines)
-```bash
-sudo journalctl -u gunicorn-armguard -n 50
-```
-
-### Logs Since Boot
-```bash
-sudo journalctl -u gunicorn-armguard -b
-```
-
-### Logs for Specific Time Period
-```bash
-# Today
-sudo journalctl -u gunicorn-armguard --since today
-
-# Last hour
-sudo journalctl -u gunicorn-armguard --since "1 hour ago"
-
-# Between dates
-sudo journalctl -u gunicorn-armguard --since "2025-11-01" --until "2025-11-08"
-```
-
----
-
-## Worker Configuration
-
-### Calculate Optimal Workers
-Formula: `(2 × CPU cores) + 1`
-
-**Check CPU cores:**
-```bash
-nproc
-```
-
-**Examples:**
-- 1 CPU core: 3 workers
-- 2 CPU cores: 5 workers
-- 4 CPU cores: 9 workers
-- 8 CPU cores: 17 workers
-
-**Edit worker count in service file:**
-```bash
-sudo nano /etc/systemd/system/gunicorn-armguard.service
-```
-
-Change line:
-```
---workers 3 \
-```
-
-Then reload:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart gunicorn-armguard
-```
-
----
-
-## Troubleshooting
-
-### Service Won't Start
-1. **Check logs:**
-   ```bash
-   sudo journalctl -u gunicorn-armguard -n 50
-   ```
-
-2. **Test Gunicorn manually:**
-   ```bash
-   cd /var/www/armguard
-   source .venv/bin/activate
-   gunicorn --bind 127.0.0.1:8000 core.wsgi:application
-   ```
-
-3. **Check permissions:**
-   ```bash
-   sudo ls -la /var/www/armguard
-   sudo ls -la /var/www/armguard/.env
-   ```
-
-4. **Verify socket directory:**
-   ```bash
-   sudo ls -la /run/ | grep gunicorn
-   ```
-
-### Socket File Not Created
-1. **Check if directory exists:**
-   ```bash
-   ls -ld /run
-   ```
-
-2. **Try different socket location:**
-   Edit service file to use `/tmp/gunicorn-armguard.sock`
-
-### Permission Denied Errors
-```bash
-# Fix ownership
-sudo chown -R www-data:www-data /var/www/armguard
-
-# Fix .env permissions
-sudo chmod 600 /var/www/armguard/.env
-sudo chown www-data:www-data /var/www/armguard/.env
-
-# Fix database permissions (if using SQLite)
-sudo chmod 664 /var/www/armguard/db.sqlite3
-sudo chown www-data:www-data /var/www/armguard/db.sqlite3
-```
-
-### High Memory Usage
-1. **Reduce worker count**
-2. **Add `--max-requests` to restart workers:**
-   ```
-   --max-requests 1000 \
-   --max-requests-jitter 50 \
-   ```
-
-### Slow Response Times
-1. **Increase workers**
-2. **Increase timeout:**
-   ```
-   --timeout 120 \
-   ```
-
----
-
-## Performance Tuning
-
-### Recommended Settings
-
-**For Production Server (2GB RAM, 2 CPU):**
-```
---workers 5
---worker-class sync
---timeout 60
---max-requests 1000
---max-requests-jitter 50
-```
-
-**For High Traffic (4GB+ RAM, 4+ CPU):**
-```
---workers 9
---worker-class gthread
---threads 2
---timeout 60
---max-requests 1000
---max-requests-jitter 50
-```
-
-**For Low Memory Server (Raspberry Pi, <2GB):**
-```
---workers 3
---worker-class sync
---timeout 60
---max-requests 500
-```
-
-### Edit Service File
-```bash
-sudo nano /etc/systemd/system/gunicorn-armguard.service
-```
-
-After changes:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart gunicorn-armguard
-```
-
----
-
-## Security Enhancements
-
-### 1. Run as Non-Privileged User
-Service file already configured with:
-```
-User=www-data
-Group=www-data
-```
-
-### 2. Private /tmp Directory
-```
-PrivateTmp=true
-```
-
-### 3. Prevent Privilege Escalation
-```
-NoNewPrivileges=true
-```
-
-### 4. Restrict File Access (Optional)
-Add to service file:
-```
-ReadWritePaths=/var/www/armguard/media
-ReadWritePaths=/var/log/armguard
-ReadOnlyPaths=/var/www/armguard
-ProtectSystem=strict
-ProtectHome=true
-```
-
----
-
-## Monitoring & Health Checks
-
-### Check if Gunicorn is Running
-```bash
-ps aux | grep gunicorn
-```
-
-### Check Socket File
-```bash
-sudo ls -la /run/gunicorn-armguard.sock
-```
-
-### Test Socket Connection
-```bash
-curl --unix-socket /run/gunicorn-armguard.sock http://localhost/
-```
-
-### Monitor Resource Usage
-```bash
-# Install htop
-sudo apt install htop
-
-# Run
-htop
-# Filter: F4 > gunicorn
-```
-
-### Check Open Connections
-```bash
-sudo ss -tulpn | grep gunicorn
-```
-
----
-
-## Backup Service File
-
-Before making changes:
-```bash
-sudo cp /etc/systemd/system/gunicorn-armguard.service \
-       /etc/systemd/system/gunicorn-armguard.service.backup
-```
-
----
-
-## Multiple Apps on Same Server
-
-### For Second App
-1. **Copy and rename service file:**
-   ```bash
-   sudo cp /etc/systemd/system/gunicorn-armguard.service \
-          /etc/systemd/system/gunicorn-webapp2.service
-   ```
-
-2. **Edit new service file:**
-   - Change `Description`
-   - Change `WorkingDirectory`
-   - Change socket path: `/run/gunicorn-webapp2.sock`
-   - Update log paths
-
-3. **Start second service:**
-   ```bash
-   sudo systemctl daemon-reload
-   sudo systemctl start gunicorn-webapp2
-   sudo systemctl enable gunicorn-webapp2
-   ```
-
----
-
-## Integration with Nginx
-
-Nginx should proxy to the Gunicorn socket. See `UBUNTU_MKCERT_SSL_SETUP.md` for complete Nginx configuration.
-
-**Quick Nginx config snippet:**
-```nginx
-location / {
-    proxy_pass http://unix:/run/gunicorn-armguard.sock;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
-```
-
----
-
-## Auto-Restart on Failure
-
-Service file already configured with:
-```
-Restart=always
-RestartSec=3
-```
-
-This means:
-- Gunicorn auto-restarts if it crashes
-- Waits 3 seconds before restarting
-- No manual intervention needed
-
----
-
-## Summary
-
-**Service File Location:** `/etc/systemd/system/gunicorn-armguard.service`
-
-**Socket Location:** `/run/gunicorn-armguard.sock`
-
-**Log Locations:**
-- Access: `/var/log/armguard/access.log`
-- Error: `/var/log/armguard/error.log`
-- Systemd: `journalctl -u gunicorn-armguard`
-
-**Common Commands:**
-```bash
-# Status
-sudo systemctl status gunicorn-armguard
-
-# Restart
-sudo systemctl restart gunicorn-armguard
-
-# Logs
-sudo journalctl -u gunicorn-armguard -f
-```
-
----
-
-## 📚 Documentation Index
-
-| Document | Description |
-|----------|-------------|
-| [README.md](README.md) | This file - deployment scripts guide |
-| [NGINX_SSL_GUIDE.md](NGINX_SSL_GUIDE.md) | Complete Nginx & SSL setup guide |
-| [QUICK_DEPLOY.md](QUICK_DEPLOY.md) | Quick deployment reference |
-| [../DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md) | Complete deployment guide |
-| [../ADMIN_GUIDE.md](../ADMIN_GUIDE.md) | Administrator operations guide |
-| [../TESTING_GUIDE.md](../TESTING_GUIDE.md) | Testing procedures |
-| [../FINAL_TEST_REPORT.md](../FINAL_TEST_REPORT.md) | Comprehensive test results |
-| [../DEPLOYMENT_READY.md](../DEPLOYMENT_READY.md) | Final deployment summary |
-
----
-
-## 🎯 Quick Command Reference
-
-```bash
-# Application Management
-sudo systemctl status gunicorn-armguard    # Check status
-sudo systemctl restart gunicorn-armguard   # Restart app
-sudo systemctl stop gunicorn-armguard      # Stop app
-sudo systemctl start gunicorn-armguard     # Start app
-
-# Web Server Management
-sudo systemctl status nginx                # Check Nginx
-sudo systemctl restart nginx               # Restart Nginx
-sudo nginx -t                              # Test config
-
-# Updates (Preserves Data)
-sudo bash deployment/update-armguard.sh    # Safe update
-
-# Logs
-sudo journalctl -u gunicorn-armguard -f   # App logs
-sudo tail -f /var/log/nginx/armguard_access.log  # Access logs
-sudo tail -f /var/log/nginx/armguard_error.log   # Error logs
-
-# Database Backup (Manual)
-sudo cp /var/www/armguard/db.sqlite3 \
-        /var/www/armguard/db.sqlite3.backup_$(date +%Y%m%d_%H%M%S)
-```
-
----
-
-## ✅ Post-Installation Checklist
-
-After deployment, verify:
-
-- [ ] Application accessible via HTTP
-- [ ] Can login with superuser credentials
-- [ ] Dashboard loads correctly
-- [ ] Static files (CSS/JS) loading
-- [ ] Media files (images/QR codes) loading
-- [ ] Can create personnel records
-- [ ] Can create inventory items
-- [ ] QR codes generate automatically
-- [ ] Transactions can be created
-- [ ] Gunicorn service running
-- [ ] Nginx service running (if installed)
-- [ ] SSL certificate working (if installed)
-- [ ] Automatic backup working
-
----
-
-## 🆘 Need Help?
-
-1. **Check logs first:**
-   ```bash
-   sudo journalctl -u gunicorn-armguard -n 50
-   sudo tail -f /var/log/nginx/armguard_error.log
-   ```
-
-2. **Review documentation:**
-   - Troubleshooting sections in guides
-   - Error messages in logs
-   - Django debug output (if DEBUG=True)
-
-3. **Common issues:**
-   - 502 Bad Gateway → Gunicorn not running
-   - Static files not loading → Run collectstatic
-   - Permission denied → Check file ownership
-   - Database locked → Check permissions on db.sqlite3
-
----
-
-**Created:** November 8, 2025  
-**Last Updated:** November 8, 2025  
-**Version:** 2.0
+**Need help?** Run `./deploy-master.sh help` or check the method-specific documentation in the `methods/` directory.

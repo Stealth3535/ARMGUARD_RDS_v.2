@@ -1,6 +1,17 @@
 # ArmGuard Testing Environment
 
+**Version:** 2.0.1  
+**Last Updated:** February 1, 2026  
+**Docker Compose Version:** 3.8+  
+**Minimum Docker:** 24.0+
+
 A comprehensive Docker-based testing environment for the ArmGuard military armory management system. This environment simulates real-world conditions and enables testing of functionality, security, and operational resilience.
+
+## 📋 Version History
+
+- **v2.0.1** (Feb 2026) - Added container registry support, enhanced secrets management
+- **v2.0.0** (Jan 2026) - Complete testing infrastructure with monitoring stack
+- **v1.x** (2025) - Basic Docker testing environment
 
 ## 🏗️ Architecture Overview
 

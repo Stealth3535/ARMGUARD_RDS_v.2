@@ -65,6 +65,9 @@ MIDDLEWARE = [
     'core.middleware.RateLimitMiddleware',  # Rate limiting
     'core.middleware.SecurityHeadersMiddleware',  # Additional security headers
     'core.middleware.StripSensitiveHeadersMiddleware',  # Remove sensitive headers
+    # Network-based Access Control
+    'core.network_middleware.NetworkBasedAccessMiddleware',  # LAN/WAN access control
+    'core.network_middleware.UserRoleNetworkMiddleware',  # User role network restrictions
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -79,6 +82,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.network_context.network_context',  # Network access context
             ],
         },
     },
@@ -126,12 +130,57 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 
+# Network-based Security Settings
+# LAN/WAN hybrid architecture configuration
+
+# Port configuration for network detection
+NETWORK_PORTS = {
+    'lan': 8443,  # Secure LAN operations
+    'wan': 443,   # WAN status checking
+}
+
+# LAN-only paths (sensitive operations)
+LAN_ONLY_PATHS = [
+    '/admin/',
+    '/admin',
+    '/transactions/qr-scanner/',
+    '/transactions/create/',
+    '/transactions/edit/',
+    '/transactions/delete/',
+    '/inventory/add/',
+    '/inventory/edit/',
+    '/inventory/delete/',
+    '/users/register/',
+]
+
+# WAN read-only paths (status checking)
+WAN_READ_ONLY_PATHS = [
+    '/personnel/',
+    '/inventory/',
+    '/reports/',
+    '/transactions/history/',
+    '/status/',
+]
+
+# Network access by user role
+ROLE_NETWORK_RESTRICTIONS = {
+    'admin': {'lan': True, 'wan': False},  # Admins need LAN access
+    'staff': {'lan': True, 'wan': True},   # Staff can use both
+    'user': {'lan': False, 'wan': True},   # Users only via WAN
+}
+
+# Session timeout by network type (minutes)
+SESSION_TIMEOUT = {
+    'lan': 120,  # 2 hours for LAN
+    'wan': 30,   # 30 minutes for WAN
+}
+
 # Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
+# https://docs.djangoproject.com/en/5.1/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'Asia/Manila'
+TIME_ZONE = 'UTC'
 
 USE_I18N = True
 

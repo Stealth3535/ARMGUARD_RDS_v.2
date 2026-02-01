@@ -7,14 +7,20 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import Item
+from core.network_decorators import lan_required, read_only_on_wan
 
 
 class ItemListView(LoginRequiredMixin, ListView):
-    """List all items"""
+    """List all items - Read-only on WAN, full access on LAN"""
     model = Item
     template_name = 'inventory/item_list.html'
     context_object_name = 'items'
     paginate_by = 100
+
+    @read_only_on_wan
+    def dispatch(self, request, *args, **kwargs):
+        """Override dispatch to apply network restrictions"""
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -40,10 +46,15 @@ class ItemListView(LoginRequiredMixin, ListView):
 
 
 class ItemDetailView(LoginRequiredMixin, DetailView):
-    """View item details"""
+    """View item details - Read-only on WAN, full access on LAN"""
     model = Item
     template_name = 'inventory/item_detail.html'
     context_object_name = 'item'
+    
+    @read_only_on_wan
+    def dispatch(self, request, *args, **kwargs):
+        """Override dispatch to apply network restrictions"""
+        return super().dispatch(request, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
         """Add QR code object and last take transaction to context"""

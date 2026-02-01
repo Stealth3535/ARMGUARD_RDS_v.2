@@ -13,6 +13,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from django.core.exceptions import PermissionDenied
 from .forms import UserRegistrationForm, UserProfileForm
+from core.network_decorators import lan_required, read_only_on_wan
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +50,9 @@ class UserRegistrationView(CreateView):
     template_name = 'users/register.html'
     success_url = reverse_lazy('users:login')
     
+    @lan_required
     def dispatch(self, request, *args, **kwargs):
-        """Restrict registration to admin users only"""
+        """Restrict registration to admin users only and require LAN access"""
         # Check if public registration is enabled via settings
         from django.conf import settings
         allow_public_registration = getattr(settings, 'ALLOW_PUBLIC_REGISTRATION', False)

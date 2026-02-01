@@ -16,6 +16,7 @@ from personnel.models import Personnel
 from transactions.models import Transaction
 from users.models import UserProfile
 from .models import AuditLog, DeletedRecord
+from core.network_decorators import lan_required, read_only_on_wan
 import qrcode
 from io import BytesIO
 import base64
@@ -173,8 +174,9 @@ def personnel_registration_success(request, pk):
 
 @login_required
 @user_passes_test(is_admin_user)
+@lan_required
 def universal_registration(request):
-    """Universal registration view - The centralized registration system"""
+    """Universal registration view - The centralized registration system (LAN only)"""
     import logging
     logger = logging.getLogger(__name__)
     

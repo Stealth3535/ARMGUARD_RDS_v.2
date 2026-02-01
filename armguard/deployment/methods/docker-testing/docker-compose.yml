@@ -18,8 +18,13 @@
 #   Development: docker-compose up -d
 #   Testing:     docker-compose --profile testing up -d
 #   Full Stack:  docker-compose --profile testing --profile monitoring up -d
+#   Private Registry: REGISTRY=your-registry.com docker-compose up -d
 
 version: '3.8'
+
+# Default registry configuration
+x-registry: &default-registry
+  image: ${REGISTRY:-}${REGISTRY:+/}armguard
 
 services:
   # ==========================================================================
@@ -30,6 +35,7 @@ services:
     build:
       context: ..
       dockerfile: testing_environment/Dockerfile
+    image: ${REGISTRY:-}${REGISTRY:+/}armguard:${IMAGE_TAG:-latest}
     container_name: armguard-app
     hostname: armguard-app
     environment:
