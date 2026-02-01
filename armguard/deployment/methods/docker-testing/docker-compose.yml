@@ -43,7 +43,11 @@ services:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-testing-secret-key-change-in-production}
       - DJANGO_DEBUG=False
       - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,armguard.local,armguard-app,nginx
-      - CSRF_TRUSTED_ORIGINS=https://localhost,https://armguard.local
+      - CSRF_TRUSTED_ORIGINS=https://localhost,https://armguard.local,https://localhost:8443,https://armguard.local:8443
+      - NETWORK_SECURITY_ENABLED=True
+      - LAN_PORT=8443
+      - WAN_PORT=443
+      - FORCE_NETWORK_SECURITY=True
       - USE_POSTGRESQL=True
       - DB_NAME=armguard_db
       - DB_USER=armguard_user
@@ -123,8 +127,9 @@ services:
     container_name: armguard-nginx
     hostname: nginx
     ports:
-      - "80:80"
-      - "443:443"
+      - "80:80"       # HTTP redirect
+      - "443:443"     # WAN HTTPS (Status checking only)
+      - "8443:8443"   # LAN HTTPS (Full access including transactions)
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
