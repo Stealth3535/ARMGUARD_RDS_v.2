@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     'transactions',
     'qr_manager',
     'print_handler',
+    # VPN Integration
+    'vpn_integration',
 ]
 
 MIDDLEWARE = [
@@ -67,6 +69,7 @@ MIDDLEWARE = [
     'core.middleware.StripSensitiveHeadersMiddleware',  # Remove sensitive headers
     # Network-based Access Control
     'core.network_middleware.NetworkBasedAccessMiddleware',  # LAN/WAN access control
+    'vpn_integration.core_integration.vpn_middleware.VPNAwareNetworkMiddleware',  # VPN integration
     'core.network_middleware.UserRoleNetworkMiddleware',  # User role network restrictions
 ]
 
@@ -83,6 +86,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.network_context.network_context',  # Network access context
+                'vpn_integration.core_integration.vpn_context.vpn_context',  # VPN access context
             ],
         },
     },
@@ -96,8 +100,15 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DB_NAME', default='armguard'),
+        'USER': config('DB_USER', default='armguard_user'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432', cast=int),
+        'OPTIONS': {
+            'connect_timeout': 20,
+        },
     }
 }
 
@@ -262,6 +273,59 @@ CACHES = {
 
 # Admin URL Configuration
 ADMIN_URL_PREFIX = config('DJANGO_ADMIN_URL', default='superadmin')
+
+# =============================================================================
+# VPN INTEGRATION SETTINGS
+# =============================================================================
+
+# Enable/disable VPN integration
+WIREGUARD_ENABLED = config('WIREGUARD_ENABLED', default=False, cast=bool)
+WIREGUARD_INTERFACE = config('WIREGUARD_INTERFACE', default='wg0')
+WIREGUARD_NETWORK = config('WIREGUARD_NETWORK', default='10.0.0.0/24')
+WIREGUARD_PORT = config('WIREGUARD_PORT', default=51820, cast=int)
+
+# VPN Role-based access configuration
+VPN_ROLE_RANGES = {
+    'commander': {
+        'ip_range': ('10.0.0.10', '10.0.0.19'),
+        'access_level': 'VPN_INVENTORY_VIEW',
+        'session_timeout': 7200,  # 2 hours
+        'description': 'Commander remote inventory access'
+    },
+    'armorer': {
+        'ip_range': ('10.0.0.20', '10.0.0.39'),
+        'access_level': 'VPN_INVENTORY_VIEW',
+        'session_timeout': 3600,  # 1 hour
+        'description': 'Armorer remote inventory access'
+    },
+    'emergency': {
+        'ip_range': ('10.0.0.40', '10.0.0.49'),
+        'access_level': 'VPN_INVENTORY_LIMITED',
+        'session_timeout': 1800,  # 30 minutes
+        'description': 'Emergency limited inventory access'
+    },
+    'personnel': {
+        'ip_range': ('10.0.0.50', '10.0.0.199'),
+        'access_level': 'VPN_STATUS_ONLY',
+        'session_timeout': 900,  # 15 minutes
+        'description': 'Personnel status checking only'
+    }
+}
+
+# VPN rate limiting (requests per minute by role)
+VPN_RATE_LIMITS = {
+    'commander': 100,
+    'armorer': 50,
+    'emergency': 200,
+    'personnel': 30
+}
+
+# VPN Email alerts
+VPN_EMAIL_ALERTS_ENABLED = config('VPN_EMAIL_ALERTS_ENABLED', default=False, cast=bool)
+VPN_ALERT_EMAILS = config('VPN_ALERT_EMAILS', default='', cast=Csv())
+
+# VPN Maximum concurrent connections
+VPN_MAX_CONCURRENT_CONNECTIONS = config('VPN_MAX_CONCURRENT_CONNECTIONS', default=50, cast=int)
 
 # User Registration Configuration
 # SECURITY: Disabled by default for military systems - only admins can create accounts
