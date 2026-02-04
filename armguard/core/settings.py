@@ -129,6 +129,11 @@ MIDDLEWARE = [
     # Django Core Security (Must be first)
     'django.middleware.security.SecurityMiddleware',
     
+    # Performance Optimizations (Early in stack)
+    'core.middleware.performance.PerformanceOptimizationMiddleware',  # Response caching & compression
+    'core.middleware.performance.DatabaseQueryOptimizationMiddleware',  # Query monitoring
+    'core.middleware.performance.StaticFileOptimizationMiddleware',  # Static file optimization
+    
     # Enhanced Security Headers (Early in the stack)
     'core.middleware.SecurityHeadersMiddleware',  # Enhanced CSP and security headers
     
@@ -186,7 +191,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Enhanced Database Configuration with PostgreSQL support
+# Enhanced Database Configuration with PostgreSQL support and Performance Optimizations
 DATABASES = {
     'default': {
         'ENGINE': config('DB_ENGINE', default='django.db.backends.postgresql'),
@@ -198,8 +203,12 @@ DATABASES = {
         'OPTIONS': {
             'connect_timeout': 20,
             'sslmode': config('DB_SSL_MODE', default='prefer'),  # SSL connection security
+            # Performance Optimizations
+            'MAX_CONNS': config('DB_MAX_CONNS', default=100, cast=int),  # Connection pooling
+            'cursor_factory': 'psycopg2.extras.RealDictCursor',  # Faster query results
+            'isolation_level': 'psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED',
         },
-        'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=300, cast=int),  # Connection pooling
+        'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=600, cast=int),  # Extended connection pooling
         'CONN_HEALTH_CHECKS': True,  # Connection health checks
     }
 }
@@ -303,16 +312,166 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
+# Static files (CSS, JavaScript, Images) with Performance Optimizations
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'core' / 'static']
 
+# Static files optimization
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
+
+# Advanced static file configuration for A+ performance
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+WHITENOISE_USE_FINDERS = True
+WHITENOISE_AUTOREFRESH = DEBUG
+WHITENOISE_MAX_AGE = 31536000 if not DEBUG else 0  # 1 year cache in production
+WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 'xz', 'br']
+
+# Static file compression
+COMPRESS_ENABLED = not DEBUG
+COMPRESS_OFFLINE = not DEBUG
+COMPRESS_CSS_FILTERS = [
+    'compressor.filters.css_default.CssAbsoluteFilter',
+    'compressor.filters.cssmin.rCSSMinFilter',
+]
+COMPRESS_JS_FILTERS = [
+    'compressor.filters.jsmin.JSMinFilter',
+]
+
 # Media files (User uploads - Pictures, QR Codes)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'core', 'media')
+
+# Performance Optimization: Advanced Multi-Level Caching Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'PARSER_CLASS': 'redis.connection.HiredisParser',
+            'PICKLE_VERSION': 2,
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': config('REDIS_MAX_CONNECTIONS', default=50, cast=int),
+                'health_check_interval': 30,
+                'retry_on_timeout': True,
+            },
+            'IGNORE_EXCEPTIONS': True,  # Graceful fallback
+        },
+        'KEY_PREFIX': 'armguard',
+        'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),  # 5 minutes default
+        'VERSION': 1,
+    },
+    'sessions': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/2'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'IGNORE_EXCEPTIONS': True,
+        },
+        'KEY_PREFIX': 'armguard_sessions',
+        'TIMEOUT': 86400,  # 24 hours for sessions
+    },
+    'query_cache': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/3'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'IGNORE_EXCEPTIONS': True,
+        },
+        'KEY_PREFIX': 'armguard_queries',
+        'TIMEOUT': 600,  # 10 minutes for queries
+    },
+    'template_cache': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/4'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'IGNORE_EXCEPTIONS': True,
+        },
+        'KEY_PREFIX': 'armguard_templates',
+        'TIMEOUT': 3600,  # 1 hour for templates
+    }
+}
+
+# Fallback to local memory cache if Redis is unavailable
+try:
+    import redis
+    redis.Redis(host='localhost', port=6379, db=1).ping()
+    REDIS_AVAILABLE = True
+except:
+    REDIS_AVAILABLE = False
+    
+if not REDIS_AVAILABLE or not config('REDIS_URL', default=''):
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'armguard-default',
+            'TIMEOUT': 300,
+            'OPTIONS': {
+                'MAX_ENTRIES': 1000,
+            }
+        },
+        'sessions': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'armguard-sessions',
+            'TIMEOUT': 86400,
+            'OPTIONS': {
+                'MAX_ENTRIES': 500,
+            }
+        },
+        'query_cache': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'armguard-queries',
+            'TIMEOUT': 600,
+            'OPTIONS': {
+                'MAX_ENTRIES': 2000,
+            }
+        },
+        'template_cache': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'armguard-templates',
+            'TIMEOUT': 3600,
+            'OPTIONS': {
+                'MAX_ENTRIES': 300,
+            }
+        }
+    }
+
+# Session Configuration with Performance Optimization
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'sessions'  # Use dedicated sessions cache
+SESSION_COOKIE_AGE = config('SESSION_COOKIE_AGE', default=3600, cast=int)  # 1 hour
+SESSION_SAVE_EVERY_REQUEST = False  # Performance: only save when changed
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = config('SESSION_SECURE', default=False, cast=bool)
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+# Performance: Template Caching
+if not DEBUG:
+    TEMPLATES[0]['OPTIONS']['loaders'] = [
+        ('django.template.loaders.cached.Loader', [
+            'django.template.loaders.filesystem.Loader',
+            'django.template.loaders.app_directories.Loader',
+        ]),
+    ]
+
+# Performance: Email optimization
+EMAIL_TIMEOUT = 10  # 10 second timeout for SMTP
+EMAIL_USE_CONNECTION_POOL = True
+
+# Performance: Disable unnecessary features in production
+if not DEBUG:
+    # Disable admin documentation
+    INSTALLED_APPS = [app for app in INSTALLED_APPS if app != 'django.contrib.admindocs']
+    
+    # Optimize select_related for auth queries
+    AUTH_USER_MODEL = 'auth.User'  # Explicit to avoid queries
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -393,13 +552,8 @@ AXES_RESET_ON_SUCCESS = True
 AXES_ONLY_ADMIN_SITE = False  # Protect all login views
 AXES_ENABLE_ACCESS_FAILURE_LOG = True
 
-# Cache Configuration (for rate limiting and Axes)
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'armguard-cache',
-    }
-}
+# Note: Cache Configuration is defined earlier with performance optimizations
+# This section kept for reference but not overriding
 
 # Admin URL Configuration
 ADMIN_URL_PREFIX = config('DJANGO_ADMIN_URL', default='superadmin')
@@ -458,12 +612,7 @@ VPN_ALERT_EMAILS = config('VPN_ALERT_EMAILS', default='', cast=Csv())
 VPN_MAX_CONCURRENT_CONNECTIONS = config('VPN_MAX_CONCURRENT_CONNECTIONS', default=50, cast=int)
 
 # Cache Configuration (for rate limiting and security)
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'armguard-cache',
-    }
-}
+# Note: Cache configuration already defined with performance optimizations above
 
 # Security Logging Configuration
 LOGGING = {
@@ -517,6 +666,15 @@ LOGGING = {
         },
     },
 }
+
+# Performance: Query optimization and monitoring (after LOGGING is defined)
+if DEBUG:
+    # Enable query logging in development
+    LOGGING['loggers']['django.db.backends'] = {
+        'level': 'DEBUG',
+        'handlers': ['console'],
+        'propagate': False,
+    }
 
 # ============================================================================
 # Raspberry Pi 4B Specific Optimizations
