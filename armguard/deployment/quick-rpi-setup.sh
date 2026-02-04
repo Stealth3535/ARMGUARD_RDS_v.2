@@ -58,7 +58,7 @@ deploy_armguard() {
     # Download the deployment script
     log "📥 Downloading deployment script from GitHub..."
     wget -O deploy-rpi-test.sh \
-        "https://raw.githubusercontent.com/Stealth3535/ARMGUARD_RDS/v2.1.0-aplus/armguard/deployment/deploy-rpi-test.sh"
+        "https://raw.githubusercontent.com/Stealth3535/ARMGUARD_RDS/main/armguard/deployment/deploy-rpi-test.sh"
     
     # Make executable and run
     chmod +x deploy-rpi-test.sh
