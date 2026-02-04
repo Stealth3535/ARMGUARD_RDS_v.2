@@ -19,7 +19,7 @@ qrcode[pil]==7.4.2           # ARM64 compatible with Pillow
 # PDF generation and form filling (ARM64 Compatible)
 reportlab==4.2.5             # ARM64 native support
 PyPDF2==3.0.1               # ARM64 compatible
-# PyMuPDF==1.26.5            # ARM64: May need compilation - commented out, using fallback
+PyMuPDF==1.24.5             # ARM64: Stable version for Python 3.13/ARM64
 # ARM64 Alternative: Use reportlab for PDF operations instead of PyMuPDF
 
 # Enhanced Security packages (ARM64 Ready)
@@ -32,7 +32,7 @@ django-security==0.12.0      # ARM64 compatible (latest available version)
 redis==5.0.1                 # ARM64 native support
 django-redis==5.4.0          # ARM64 compatible
 
-# System monitoring (Optional for enhanced RPi features)
+# System monitoring (Optional for enhanced RPi features)  
 # Uncomment for RPi deployment: psutil==5.9.8  # ARM64 system monitoring
 
 # ARM64-specific dependencies
@@ -41,6 +41,11 @@ setuptools>=65.0.0           # Required for ARM64 compilation
 
 # Development dependencies (ARM64 compatible)
 ipython==8.18.0              # ARM64 ready REPL
+
+# Additional ARM64 compatibility packages
+six>=1.16.0                  # Python 2/3 compatibility
+packaging>=23.0              # Version parsing and requirements
+urllib3>=2.0.0               # HTTP client with ARM64 support
 
 # Note: The following are installed system-wide on the server (not via pip):
 # - Nginx (via apt install nginx) - reverse proxy for all apps

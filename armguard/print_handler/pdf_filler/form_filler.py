@@ -3,7 +3,14 @@ PDF Form Filler for Temp_Rec.pdf
 Fills transaction forms with actual data during normal transactions
 Uses PyMuPDF to overlay text on the PDF template
 """
-import fitz  # PyMuPDF
+try:
+    import fitz  # PyMuPDF
+    PYMUPDF_AVAILABLE = True
+except ImportError:
+    PYMUPDF_AVAILABLE = False
+    import warnings
+    warnings.warn("PyMuPDF not available. PDF form filling will be limited.")
+    
 from io import BytesIO
 import os
 from django.conf import settings
@@ -35,6 +42,19 @@ class TransactionFormFiller:
         Returns:
             BytesIO: Filled PDF as bytes
         """
+        if not PYMUPDF_AVAILABLE:
+            # Fallback to basic PDF handling without form filling
+            import warnings
+            warnings.warn("PyMuPDF not available - returning template without form data")
+            
+            try:
+                with open(self.template_path, 'rb') as f:
+                    pdf_bytes = BytesIO(f.read())
+                return pdf_bytes
+            except FileNotFoundError:
+                # Return empty BytesIO if template not found
+                return BytesIO()
+        
         # Open the PDF template
         template_doc = fitz.open(self.template_path)
         
