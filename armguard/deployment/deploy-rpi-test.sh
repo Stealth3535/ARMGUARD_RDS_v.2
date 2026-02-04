@@ -109,11 +109,31 @@ configure_rpi_optimizations() {
     
     # Swap file optimization
     if [ $TOTAL_MEMORY_MB -lt 4096 ]; then
-        sudo dphys-swapfile swapoff
-        sudo sh -c 'echo "CONF_SWAPSIZE=1024" > /etc/dphys-swapfile'
-        sudo dphys-swapfile setup
-        sudo dphys-swapfile swapon
-        log "✅ Swap file optimized for ArmGuard"
+        if command -v dphys-swapfile >/dev/null 2>&1; then
+            # Raspberry Pi OS method
+            sudo dphys-swapfile swapoff
+            sudo sh -c 'echo "CONF_SWAPSIZE=1024" > /etc/dphys-swapfile'
+            sudo dphys-swapfile setup
+            sudo dphys-swapfile swapon
+            log "✅ Swap file optimized for ArmGuard (RPi OS)"
+        else
+            # Ubuntu method
+            # Turn off existing swap
+            sudo swapoff -a 2>/dev/null || true
+            # Create 1GB swap file if it doesn't exist
+            if [ ! -f /swapfile ]; then
+                sudo fallocate -l 1G /swapfile
+                sudo chmod 600 /swapfile
+                sudo mkswap /swapfile
+            fi
+            # Enable swap
+            sudo swapon /swapfile
+            # Make sure it's in fstab for persistence
+            if ! grep -q '/swapfile' /etc/fstab; then
+                echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+            fi
+            log "✅ Swap file optimized for ArmGuard (Ubuntu)"
+        fi
     fi
     
     # I/O scheduler optimization for SD card
