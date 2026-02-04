@@ -8,7 +8,20 @@ set -e
 sudo apt update && sudo apt upgrade -y
 
 # 2. Install required system packages
+echo "[*] Installing system packages..."
+sudo apt update && sudo apt upgrade -y
 sudo apt install -y python3 python3-pip python3-venv git nginx postgresql postgresql-contrib libjpeg-dev zlib1g-dev
+
+# Detect architecture for specific optimizations
+ARCH=$(uname -m)
+if [[ "$ARCH" =~ ^(aarch64|arm64)$ ]]; then
+    echo "[*] ARM64 architecture detected - installing ARM64 build tools..."
+    sudo apt install -y build-essential gcc g++ make libffi-dev libssl-dev
+    if grep -q "Raspberry Pi" /proc/device-tree/model 2>/dev/null; then
+        echo "[*] 🥧 Raspberry Pi detected - installing RPi-specific tools..."
+        sudo apt install -y libraspberrypi-dev
+    fi
+fi
 
 # 3. Create project directory and clone repo (edit URL as needed)
 PROJECT_DIR="/var/www/armguard"
@@ -23,8 +36,30 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 # 5. Install Python dependencies
+echo "[*] Installing Python dependencies..."
 pip install --upgrade pip
-pip install -r requirements.txt
+
+# Detect environment and install appropriate requirements
+if grep -q "Raspberry Pi" /proc/device-tree/model 2>/dev/null; then
+    echo "[*] 🥧 Raspberry Pi detected - installing RPi optimized requirements..."
+    if [ -f "requirements-rpi.txt" ]; then
+        pip install -r requirements-rpi.txt
+        echo "[+] RPi enhanced features enabled (psutil monitoring, thermal protection)"
+    else
+        pip install -r requirements.txt
+        pip install psutil==5.9.8
+        echo "[+] RPi optimizations applied with enhanced monitoring"
+    fi
+elif [[ $(uname -m) =~ ^(aarch64|arm64)$ ]]; then
+    echo "[*] ARM64 architecture detected - installing ARM64 optimized requirements..."
+    pip install -r requirements.txt
+    pip install psutil==5.9.8
+    echo "[+] ARM64 optimizations applied"
+else
+    echo "[*] Installing base requirements..."
+    pip install -r requirements.txt
+    echo "[*] Note: Some monitoring features will use fallbacks (psutil not required)"
+fi
 
 # 6. Set up environment variables
 if [ ! -f .env ]; then

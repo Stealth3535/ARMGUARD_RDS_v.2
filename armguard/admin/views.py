@@ -24,6 +24,7 @@ import base64
 from .forms import (
     UniversalForm, ItemRegistrationForm, SystemSettingsForm
 )
+from .permissions import unrestricted_admin_required, check_restricted_admin
 
 def is_admin_user(user):
     """Check if user is admin or superuser - only they can register users"""
@@ -305,12 +306,38 @@ def user_management(request):
             Q(email__icontains=search_query)
         )
     
-    # Get all personnel records (without user accounts)
-    personnel = Personnel.objects.filter(user__isnull=True).order_by('surname', 'firstname')
-    
+    # Personnel search and sorting
+    personnel_search = request.GET.get('personnel_search', '').strip()
+    personnel_search_by = request.GET.get('personnel_search_by', 'name')
+    personnel_qs = Personnel.objects.filter(user__isnull=True)
+    if personnel_search:
+        if personnel_search_by == 'name':
+            personnel_qs = personnel_qs.filter(
+                Q(firstname__icontains=personnel_search) |
+                Q(surname__icontains=personnel_search) |
+                Q(middle_initial__icontains=personnel_search)
+            )
+        elif personnel_search_by == 'id':
+            personnel_qs = personnel_qs.filter(id__icontains=personnel_search)
+        elif personnel_search_by == 'serial':
+            personnel_qs = personnel_qs.filter(serial__icontains=personnel_search)
+        elif personnel_search_by == 'group':
+            personnel_qs = personnel_qs.filter(group__icontains=personnel_search)
+    # Auto-sort by search type
+    if personnel_search_by == 'name':
+        personnel_qs = personnel_qs.order_by('surname', 'firstname')
+    elif personnel_search_by == 'id':
+        personnel_qs = personnel_qs.order_by('id')
+    elif personnel_search_by == 'serial':
+        personnel_qs = personnel_qs.order_by('serial')
+    elif personnel_search_by == 'group':
+        personnel_qs = personnel_qs.order_by('group', 'surname')
+    else:
+        personnel_qs = personnel_qs.order_by('surname', 'firstname')
+
     # Check if current user can edit personnel (Admin or Superuser)
     can_edit_personnel = request.user.is_superuser or request.user.groups.filter(name='Admin').exists()
-    
+
     context = {
         'users': admin_users,  # Admin users (Superuser, Admin, Armorer)
         'personnel_users': personnel_users,  # Personnel users with accounts
@@ -320,8 +347,8 @@ def user_management(request):
         'armorer_count': admin_users.filter(groups__name='Armorer').count(),
         'superuser_count': admin_users.filter(is_superuser=True).count(),
         'active_count': admin_users.filter(is_active=True).count(),
-        'personnel': personnel,  # Personnel without user accounts
-        'unlinked_personnel': personnel,
+        'personnel': personnel_qs,  # Personnel without user accounts (filtered)
+        'unlinked_personnel': personnel_qs,
         'role_filter': role_filter,
         'search_query': search_query,
         'can_edit_personnel': can_edit_personnel,
@@ -339,6 +366,7 @@ def create_user(request):
 
 @login_required
 @user_passes_test(is_admin_user)
+@unrestricted_admin_required
 def edit_user(request, user_id):
     """Edit existing user"""
     edit_user_obj = get_object_or_404(User, id=user_id)
@@ -410,6 +438,7 @@ def edit_user(request, user_id):
 
 @login_required
 @user_passes_test(is_admin_user)
+@unrestricted_admin_required
 def edit_personnel(request, personnel_id):
     """Edit personnel record - Admin and Superuser can edit"""
     from personnel.models import Personnel
@@ -469,6 +498,7 @@ def edit_personnel(request, personnel_id):
 
 @login_required
 @user_passes_test(is_superuser)
+@unrestricted_admin_required
 def delete_personnel(request, personnel_id):
     """Delete personnel record - Only Superuser can delete"""
     from personnel.models import Personnel
@@ -618,6 +648,7 @@ def system_settings(request):
 
 @login_required
 @user_passes_test(is_superuser)
+@unrestricted_admin_required
 def delete_user(request, user_id):
     """Delete user with audit logging (Superuser only)"""
     from .models import AuditLog, DeletedRecord
@@ -793,6 +824,7 @@ def link_user_personnel(request):
 
 @login_required
 @user_passes_test(is_admin_or_armorer)
+@unrestricted_admin_required
 def registration(request):
     """Main registration form - uses UniversalForm"""
     # Check if user is armorer (limited permissions)
@@ -914,6 +946,7 @@ def audit_logs(request):
 
 @login_required
 @user_passes_test(is_admin_user)
+@unrestricted_admin_required
 def edit_item(request, item_id):
     """Edit inventory item details - Admin only"""
     from .forms import ItemEditForm

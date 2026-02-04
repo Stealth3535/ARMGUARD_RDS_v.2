@@ -1,17 +1,19 @@
 #!/bin/bash
 
 ################################################################################
-# ArmGuard Complete Deployment Automation Script
+# ArmGuard Complete Deployment Automation Script - Enhanced Security Edition
 # 
-# This script automates the entire deployment process:
+# This script automates the entire deployment process with enhanced security:
 # - System updates and package installation
 # - Python environment setup
 # - Database configuration (SQLite or PostgreSQL)
 # - Gunicorn service installation
-# - Nginx configuration
+# - Nginx configuration with security headers
 # - SSL setup (mkcert for LAN or Let's Encrypt for public)
 # - Firewall configuration
-# - Security hardening
+# - Security hardening and rate limiting
+# - Admin restriction system setup
+# - Security logging configuration
 #
 # Usage: sudo bash deployment/deploy-armguard.sh
 ################################################################################
@@ -41,9 +43,12 @@ print_banner() {
     clear
     echo -e "${GREEN}"
     echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║         ArmGuard Complete Deployment Automation           ║"
+    echo "║      ArmGuard Enhanced Security Deployment Automation     ║"
     echo "║                                                            ║"
     echo "║  This script will automatically deploy ArmGuard with:     ║"
+    echo "║  • Enhanced security middleware and headers               ║"
+    echo "║  • Rate limiting and brute force protection              ║"
+    echo "║  • Admin restriction system                              ║"
     echo "║  • System packages and dependencies                       ║"
     echo "║  • Python virtual environment                             ║"
     echo "║  • Database (SQLite or PostgreSQL)                        ║"
@@ -258,7 +263,31 @@ setup_python_environment() {
     
     echo -e "${YELLOW}Installing Python packages...${NC}"
     .venv/bin/pip install --upgrade pip -q
-    .venv/bin/pip install -r requirements.txt -q
+    
+    # Detect environment and install appropriate requirements
+    if [ -f /proc/device-tree/model ] && grep -q "Raspberry Pi" /proc/device-tree/model 2>/dev/null; then
+        echo -e "${GREEN}🥧 Raspberry Pi detected - installing full RPi requirements${NC}"
+        if [ -f "requirements-rpi.txt" ]; then
+            .venv/bin/pip install -r requirements-rpi.txt -q
+        else
+            # Fallback to base requirements + psutil for RPi
+            .venv/bin/pip install -r requirements.txt -q
+            echo -e "${YELLOW}Installing psutil for enhanced RPi monitoring...${NC}"
+            .venv/bin/pip install psutil==5.9.8 -q
+        fi
+    elif [[ $(uname -m) =~ ^(aarch64|arm64)$ ]]; then
+        echo -e "${GREEN}🏗️ ARM64 architecture detected - installing ARM64 optimized requirements${NC}"
+        if [ -f "requirements-rpi.txt" ]; then
+            .venv/bin/pip install -r requirements-rpi.txt -q
+        else
+            .venv/bin/pip install -r requirements.txt -q
+            .venv/bin/pip install psutil==5.9.8 -q
+        fi
+    else
+        echo -e "${BLUE}💻 Standard environment detected - installing base requirements${NC}"
+        .venv/bin/pip install -r requirements.txt -q
+        echo -e "${YELLOW}📝 Note: psutil not installed - some monitoring features will use fallbacks${NC}"
+    fi
     
     echo -e "${GREEN}✓ Python environment ready${NC}"
 }
@@ -292,12 +321,21 @@ SECURE_SSL_REDIRECT=True
 SESSION_COOKIE_SECURE=True
 CSRF_COOKIE_SECURE=True
 SECURE_HSTS_SECONDS=31536000
+# Security - Enhanced Features
 RATELIMIT_ENABLE=True
 RATELIMIT_REQUESTS_PER_MINUTE=60
 AXES_ENABLED=True
 AXES_FAILURE_LIMIT=5
 AXES_COOLOFF_TIME=1
 SESSION_COOKIE_AGE=3600
+
+# Enhanced Security Middleware
+SECURITY_HEADERS_ENABLED=True
+REQUEST_LOGGING_ENABLED=True
+SINGLE_SESSION_ENFORCEMENT=True
+
+# Admin Restrictions
+ADMIN_RESTRICTION_SYSTEM_ENABLED=True
 
 # File Upload
 FILE_UPLOAD_MAX_MEMORY_SIZE=5242880
@@ -325,10 +363,11 @@ EOF
     
     cat >> .env <<EOF
 
-# Logging
+# Logging - Enhanced Security Logging
 SECURITY_LOG_PATH=${PROJECT_DIR}/logs/security.log
 ERROR_LOG_PATH=${PROJECT_DIR}/logs/errors.log
 DJANGO_LOG_PATH=${PROJECT_DIR}/logs/django.log
+ADMIN_RESTRICTION_LOG_PATH=${PROJECT_DIR}/logs/admin_restrictions.log
 EOF
     
     chmod 600 .env

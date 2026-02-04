@@ -62,6 +62,18 @@ class UniversalForm(forms.Form):
     ROLE_CHOICES = [('personnel', 'Personnel'), ('armorer', 'Armorer'), ('admin', 'Administrator')]
     role = forms.ChoiceField(choices=ROLE_CHOICES, initial='personnel', required=False, widget=forms.Select(attrs={'class': 'form-control'}))
     
+    # === ADMIN RESTRICTION ===
+    ADMIN_RESTRICTION_CHOICES = [
+        ('no_restriction', 'No Restriction'),
+        ('with_restriction', 'With Restriction (View Only)')
+    ]
+    admin_restriction = forms.ChoiceField(
+        choices=ADMIN_RESTRICTION_CHOICES, 
+        initial='no_restriction', 
+        required=False, 
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
     # === USER PROFILE FIELDS ===
     GROUP_CHOICES = [('', 'Select Group'), ('HAS', 'HAS'), ('951st', '951st'), ('952nd', '952nd'), ('953rd', '953rd')]
     group = forms.ChoiceField(choices=GROUP_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
@@ -97,13 +109,18 @@ class UniversalForm(forms.Form):
             })
             try:
                 profile = self.edit_user.userprofile
-                self.initial.update({'group': profile.group or '', 'phone_number': profile.phone_number or ''})
+                self.initial.update({
+                    'group': profile.group or '', 
+                    'phone_number': profile.phone_number or '',
+                    'admin_restriction': 'with_restriction' if profile.is_restricted_admin else 'no_restriction'
+                })
             except AttributeError:
                 # User doesn't have a profile yet
-                pass
+                self.initial.update({'admin_restriction': 'no_restriction'})
             except Exception as e:
                 import logging
                 logging.getLogger(__name__).warning("Error accessing user profile: %s", str(e))
+                self.initial.update({'admin_restriction': 'no_restriction'})
         
         if self.edit_personnel:
             self.initial.update({
@@ -246,6 +263,12 @@ class UniversalForm(forms.Form):
             profile.group = self.cleaned_data.get('group', 'HAS')
             profile.phone_number = self.cleaned_data.get('phone_number', '')
             profile.is_armorer = (role == 'armorer')
+            # Handle admin restriction
+            if role == 'admin':
+                admin_restriction = self.cleaned_data.get('admin_restriction', 'no_restriction')
+                profile.is_restricted_admin = (admin_restriction == 'with_restriction')
+            else:
+                profile.is_restricted_admin = False
             if self.cleaned_data.get('profile_picture'):
                 profile.profile_picture = self.cleaned_data['profile_picture']
             profile.save()
@@ -285,6 +308,12 @@ class UniversalForm(forms.Form):
             profile.group = self.cleaned_data.get('group', 'HAS')
             profile.phone_number = self.cleaned_data.get('phone_number', '')
             profile.is_armorer = (role == 'armorer')
+            # Handle admin restriction for edit operations
+            if role == 'admin':
+                admin_restriction = self.cleaned_data.get('admin_restriction', 'no_restriction')
+                profile.is_restricted_admin = (admin_restriction == 'with_restriction')
+            else:
+                profile.is_restricted_admin = False
             if self.cleaned_data.get('profile_picture'):
                 profile.profile_picture = self.cleaned_data['profile_picture']
             profile.save()

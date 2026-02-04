@@ -17,10 +17,18 @@
         <div>
             <h1 class="page-title">{{ personnel.get_full_name }}</h1>
             <p class="page-subtitle">
-            {% if personnel.classification == 'SUPERUSER' %}
-                SUPERUSER | {{ personnel.group }}
+            {% if personnel.user %}
+                {% if personnel.user.is_superuser %}
+                    Superuser
+                {% elif personnel.user.userprofile.is_armorer %}
+                    Armorer
+                {% elif personnel.user.groups.all|length > 0 and personnel.user.groups.all.0.name == 'Admin' %}
+                    Administrator
+                {% else %}
+                    Personnel
+                {% endif %}
             {% else %}
-                {{ personnel.rank }} | {{ personnel.group }}
+                Personnel
             {% endif %}
             </p>
         </div>

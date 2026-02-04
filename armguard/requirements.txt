@@ -5,23 +5,43 @@ python-decouple==3.8
 # WSGI HTTP server for production
 gunicorn==21.2.0
 
-# Image processing and QR code generation
-Pillow==10.4.0
-qrcode==7.4.2
+# Enhanced Database Support (ARM64 Compatible)
+psycopg2-binary==2.9.10      # PostgreSQL adapter (ARM64 ready)
+psycopg2==2.9.9              # Fallback PostgreSQL adapter
 
-# PDF generation and form filling
-reportlab==4.2.5
-PyPDF2==3.0.1
-PyMuPDF==1.26.5
+# System monitoring (Optional - enables enhanced RPi monitoring)
+# Install for production RPi deployment: pip install psutil==5.9.8
+# psutil==5.9.8               # ARM64 system monitoring (optional)
 
-# Security packages (production-ready)
-django-ratelimit==4.1.0      # Rate limiting for views
-django-axes==8.0.0           # Failed login attempt tracking and blocking
-psycopg2-binary==2.9.10      # PostgreSQL adapter (for production database)
+# Image processing and QR code generation (ARM64 Optimized)
+Pillow==10.4.0               # ARM64: Install libjpeg-dev zlib1g-dev first
+qrcode[pil]==7.4.2           # ARM64 compatible with Pillow
 
-# Cache backends (production-ready)
-redis==5.0.1                 # Redis client for caching (optional but recommended)
-django-redis==5.4.0          # Django Redis cache backend (optional but recommended)
+# PDF generation and form filling (ARM64 Compatible)
+reportlab==4.2.5             # ARM64 native support
+PyPDF2==3.0.1               # ARM64 compatible
+# PyMuPDF==1.26.5            # ARM64: May need compilation - commented out, using fallback
+# ARM64 Alternative: Use reportlab for PDF operations instead of PyMuPDF
+
+# Enhanced Security packages (ARM64 Ready)
+django-ratelimit==4.1.0      # ARM64 compatible
+django-axes==8.0.0           # ARM64 compatible
+django-csp==3.8              # ARM64 compatible
+django-security==0.16.0      # ARM64 compatible
+
+# Cache backends (ARM64 Optimized)
+redis==5.0.1                 # ARM64 native support
+django-redis==5.4.0          # ARM64 compatible
+
+# System monitoring (Optional for enhanced RPi features)
+# Uncomment for RPi deployment: psutil==5.9.8  # ARM64 system monitoring
+
+# ARM64-specific dependencies
+wheel>=0.37.0                # Ensure proper wheel support for ARM64
+setuptools>=65.0.0           # Required for ARM64 compilation
+
+# Development dependencies (ARM64 compatible)
+ipython==8.18.0              # ARM64 ready REPL
 
 # Note: The following are installed system-wide on the server (not via pip):
 # - Nginx (via apt install nginx) - reverse proxy for all apps

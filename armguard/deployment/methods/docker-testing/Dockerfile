@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies
 COPY requirements.txt .
+COPY requirements-rpi.txt* ./
 RUN pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir \
     gunicorn \
@@ -28,7 +29,8 @@ RUN pip install --no-cache-dir -r requirements.txt && \
     redis \
     django-redis \
     prometheus-client \
-    django-prometheus
+    django-prometheus \
+    psutil
 
 # Copy application code
 COPY . .

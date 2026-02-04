@@ -155,6 +155,9 @@
 </style>
 {% endblock %}
 
+{% block extra_js %}
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <h1>👥 User Management</h1>
@@ -208,11 +211,14 @@
                 <td>{{ user_item.date_joined|date:"M d, Y" }}</td>
                 <td>
                     <div class="action-links">
-                        {% if not user_item.is_superuser or user.is_superuser %}
+                        {% if can_edit and not user_item.is_superuser or user.is_superuser %}
                         <a href="{% url 'armguard_admin:edit_user' user_item.id %}">Edit</a>
                         {% endif %}
-                        {% if user.is_superuser and user_item != user %}
+                        {% if can_edit and user.is_superuser and user_item != user %}
                         <a href="{% url 'armguard_admin:delete_user' user_item.id %}" class="delete">Delete</a>
+                        {% endif %}
+                        {% if is_restricted_admin %}
+                        <span style="color: #666; font-size: 0.9em;">View Only</span>
                         {% endif %}
                     </div>
                 </td>
@@ -229,71 +235,15 @@
 </div>
 </div>
 
-<!-- Personnel Users Section -->
-<div class="section-divider">
-    <div class="section-header">
-        <h2>👤 Personnel with User Accounts</h2>
-        <span style="color: #666; font-size: 0.9rem;">Personnel who have login accounts</span>
-    </div>
-    
-<div class="user-table">
-    <table>
-        <thead>
-            <tr>
-                <th>Username</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Date Joined</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for user_item in personnel_users %}
-            <tr>
-                <td><strong>{{ user_item.username }}</strong></td>
-                <td>{{ user_item.first_name }} {{ user_item.last_name }}</td>
-                <td>{{ user_item.email|default:"—" }}</td>
-                <td>
-                    <span class="badge badge-user">Personnel</span>
-                </td>
-                <td>
-                    {% if user_item.is_active %}
-                    <span class="badge badge-active">Active</span>
-                    {% else %}
-                    <span class="badge badge-inactive">Inactive</span>
-                    {% endif %}
-                </td>
-                <td>{{ user_item.date_joined|date:"M d, Y" }}</td>
-                <td>
-                    <div class="action-links">
-                        <a href="{% url 'armguard_admin:edit_user' user_item.id %}">Edit</a>
-                        {% if user.is_superuser %}
-                        <a href="{% url 'armguard_admin:delete_user' user_item.id %}" class="delete">Delete</a>
-                        {% endif %}
-                    </div>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="7" style="text-align: center; padding: 2rem; color: #666;">
-                    No personnel with user accounts found.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-</div>
+<!-- Removed Personnel with User Accounts section as requested -->
 
 <!-- Personnel Management Section -->
 <div class="section-divider">
     <div class="section-header">
-        <h2>👤 Personnel Management</h2>
+        <h2>👤 Personnel Records</h2>
         <span style="color: #666; font-size: 0.9rem;">All personnel records (with or without user accounts)</span>
     </div>
-    
+
     <div class="user-table">
         <table>
             <thead>
@@ -330,11 +280,14 @@
                     </td>
                     <td>
                         <div class="action-links">
-                            {% if can_edit_personnel %}
+                            {% if can_edit and can_edit_personnel %}
                             <a href="{% url 'armguard_admin:edit_personnel' person.id %}">Edit</a>
                             {% endif %}
-                            {% if request.user.is_superuser %}
+                            {% if can_edit and request.user.is_superuser %}
                             <a href="{% url 'armguard_admin:delete_personnel' person.id %}" class="delete">Delete</a>
+                            {% endif %}
+                            {% if is_restricted_admin %}
+                            <span style="color: #666; font-size: 0.9em;">View Only</span>
                             {% endif %}
                         </div>
                     </td>

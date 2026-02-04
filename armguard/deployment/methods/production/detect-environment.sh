@@ -251,6 +251,66 @@ fi
 
 # Generate configuration snippet
 echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo -e "${BLUE}ArmGuard Cross-Compatibility Analysis${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo ""
+
+# Determine optimal requirements file and features
+REQUIREMENTS_FILE="requirements.txt"
+ENHANCED_FEATURES="false"
+PSUTIL_REQUIRED="false"
+
+if [[ "$PLATFORM" == *"Raspberry Pi"* ]]; then
+    echo -e "${GREEN}🥧 Raspberry Pi detected - Full RPi optimizations available${NC}"
+    REQUIREMENTS_FILE="requirements-rpi.txt"
+    ENHANCED_FEATURES="true"
+    PSUTIL_REQUIRED="true"
+    echo -e "  • Thermal monitoring: ${GREEN}✓ Available${NC}"
+    echo -e "  • GPIO control: ${GREEN}✓ Available${NC}"
+    echo -e "  • ARM64 optimizations: ${GREEN}✓ Enabled${NC}"
+elif [[ "$ARCH_SHORT" == "arm64" ]]; then
+    echo -e "${YELLOW}🏗️ ARM64 architecture detected - ARM optimizations available${NC}"
+    ENHANCED_FEATURES="true"
+    PSUTIL_REQUIRED="true"
+    echo -e "  • ARM64 optimizations: ${GREEN}✓ Enabled${NC}"
+    echo -e "  • Enhanced monitoring: ${GREEN}✓ Available${NC}"
+else
+    echo -e "${BLUE}💻 Standard x86_64 environment - Base features available${NC}"
+    echo -e "  • Cross-platform compatibility: ${GREEN}✓ Enabled${NC}"
+    echo -e "  • Fallback monitoring: ${GREEN}✓ Available${NC}"
+fi
+
+echo ""
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo -e "${BLUE}Deployment Recommendations${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+echo ""
+
+echo -e "${CYAN}Python Requirements:${NC}"
+echo -e "  Primary: ${YELLOW}$REQUIREMENTS_FILE${NC}"
+if [ "$PSUTIL_REQUIRED" = "true" ]; then
+    echo -e "  Enhanced: ${GREEN}psutil for system monitoring${NC}"
+else
+    echo -e "  Enhanced: ${YELLOW}psutil optional (fallbacks available)${NC}"
+fi
+
+echo ""
+echo -e "${CYAN}Installation Commands:${NC}"
+if [ "$REQUIREMENTS_FILE" = "requirements-rpi.txt" ]; then
+    echo -e "${GREEN}# Raspberry Pi optimized installation${NC}"
+    echo -e "pip install -r requirements-rpi.txt"
+elif [ "$ARCH_SHORT" = "arm64" ]; then
+    echo -e "${GREEN}# ARM64 optimized installation${NC}"
+    echo -e "pip install -r requirements.txt"
+    echo -e "pip install psutil==5.9.8  # Enhanced monitoring"
+else
+    echo -e "${GREEN}# Standard installation${NC}"
+    echo -e "pip install -r requirements.txt"
+    echo -e "pip install psutil==5.9.8  # Optional for enhanced monitoring"
+fi
+
+echo ""
+echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
 echo -e "${BLUE}Suggested Configuration${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
 echo ""
@@ -262,6 +322,8 @@ echo "export ARMGUARD_WORKERS=$RECOMMENDED_WORKERS"
 echo "export ARMGUARD_TIMEOUT=60"
 echo "export ARMGUARD_PLATFORM=\"$PLATFORM\""
 echo "export ARMGUARD_ARCH=\"$ARCH_SHORT\""
+echo "export ARMGUARD_REQUIREMENTS=\"$REQUIREMENTS_FILE\""
+echo "export ARMGUARD_ENHANCED_FEATURES=\"$ENHANCED_FEATURES\""
 echo -e "${NC}"
 
 # Save to file option

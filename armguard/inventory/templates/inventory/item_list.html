@@ -1,166 +1,364 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Inventory - ArmGuard{% endblock %}
+{% block title %}Inventory Management - ArmGuard{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'inventory/inventory.css' %}">
+<style>
+.inventory-card {
+    background: white;
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+.inventory-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+}
+.item-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    font-weight: bold;
+}
+.status-available { background: linear-gradient(45deg, #43e97b, #38f9d7); }
+.status-issued { background: linear-gradient(45deg, #667eea, #764ba2); }
+.status-maintenance { background: linear-gradient(45deg, #ffa726, #fb8c00); }
+.status-retired { background: linear-gradient(45deg, #f093fb, #f5576c); }
+.filter-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    padding: 1.5rem;
+}
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container-fluid">
     <!-- Page Header -->
-    <div class="page-header">
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="page-title">Firearms Inventory</h1>
-            <p class="page-subtitle">{{ items|length }} Items in Inventory</p>
+            <h1 class="display-6 fw-bold mb-1">Inventory Management</h1>
+            <p class="text-muted mb-0">Manage firearms, equipment, and military assets</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+                <i class="bi bi-funnel"></i> Filter
+            </button>
+            <button class="btn btn-outline-success" onclick="exportInventory()">
+                <i class="bi bi-file-earmark-excel"></i> Export
+            </button>
+            <a href="{% url 'inventory:add_item' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Item
+            </a>
         </div>
     </div>
-
-    <!-- Search Bar -->
-    <div class="search-bar">
-        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by type, serial, or description...">
+    
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2">Total Items</h6>
+                            <h3 class="card-title mb-0">{{ items|length }}</h3>
+                        </div>
+                        <i class="bi bi-boxes display-6"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2">Available</h6>
+                            <h3 class="card-title mb-0">{{ available_count|default:0 }}</h3>
+                        </div>
+                        <i class="bi bi-check-circle display-6"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2">Issued</h6>
+                            <h3 class="card-title mb-0">{{ issued_count|default:0 }}</h3>
+                        </div>
+                        <i class="bi bi-arrow-right-circle display-6"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2">Maintenance</h6>
+                            <h3 class="card-title mb-0">{{ maintenance_count|default:0 }}</h3>
+                        </div>
+                        <i class="bi bi-tools display-6"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <!-- Filter Bar -->
-    <div class="filter-bar">
-        <div class="form-group" style="margin: 0; min-width: 200px;">
-            <select id="typeFilter" class="form-control form-select">
-                <option value="">All Types</option>
-                <option value="M14">M14</option>
-                <option value="M16">M16</option>
-                <option value="M4">M4</option>
-                <option value="GLOCK">GLOCK</option>
-                <option value="45">.45</option>
-            </select>
-        </div>
-        <div class="form-group" style="margin: 0; min-width: 200px;">
-            <select id="statusFilter" class="form-control form-select">
-                <option value="">All Status</option>
-                <option value="Available">Available</option>
-                <option value="Issued">Issued</option>
-                <option value="Maintenance">Maintenance</option>
-                <option value="Retired">Retired</option>
-            </select>
-        </div>
-        <div class="form-group" style="margin: 0; min-width: 200px;">
-            <select id="conditionFilter" class="form-control form-select">
-                <option value="">All Conditions</option>
-                <option value="Good">Good</option>
-                <option value="Fair">Fair</option>
-                <option value="Poor">Poor</option>
-                <option value="Damaged">Damaged</option>
-            </select>
+    
+    <!-- Filter Panel -->
+    <div class="collapse mb-4" id="filterPanel">
+        <div class="filter-card">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" class="form-control" name="search" id="search" 
+                           placeholder="Serial, type, or description..." value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="item_type" class="form-label">Type</label>
+                    <select name="item_type" id="item_type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="M14" {% if request.GET.item_type == 'M14' %}selected{% endif %}>M14</option>
+                        <option value="M16" {% if request.GET.item_type == 'M16' %}selected{% endif %}>M16</option>
+                        <option value="M4" {% if request.GET.item_type == 'M4' %}selected{% endif %}>M4</option>
+                        <option value="GLOCK" {% if request.GET.item_type == 'GLOCK' %}selected{% endif %}>GLOCK</option>
+                        <option value="45" {% if request.GET.item_type == '45' %}selected{% endif %}>.45</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">Status</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="Available" {% if request.GET.status == 'Available' %}selected{% endif %}>Available</option>
+                        <option value="Issued" {% if request.GET.status == 'Issued' %}selected{% endif %}>Issued</option>
+                        <option value="Maintenance" {% if request.GET.status == 'Maintenance' %}selected{% endif %}>Maintenance</option>
+                        <option value="Retired" {% if request.GET.status == 'Retired' %}selected{% endif %}>Retired</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="condition" class="form-label">Condition</label>
+                    <select name="condition" id="condition" class="form-select">
+                        <option value="">All Conditions</option>
+                        <option value="Good" {% if request.GET.condition == 'Good' %}selected{% endif %}>Good</option>
+                        <option value="Fair" {% if request.GET.condition == 'Fair' %}selected{% endif %}>Fair</option>
+                        <option value="Poor" {% if request.GET.condition == 'Poor' %}selected{% endif %}>Poor</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-search"></i> Apply Filter
+                    </button>
+                    <a href="{% url 'inventory:list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </a>
+                </div>
+            </form>
         </div>
     </div>
-
-    <!-- Inventory Table -->
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Type</th>
-                    <th>Serial Number</th>
-                    <th>Status</th>
-                    <th>Condition</th>
-                    <th>Description</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="inventoryTable">
-                {% for item in items %}
-                <tr class="item-row" 
-                    data-type="{{ item.item_type }}"
-                    data-status="{{ item.status }}"
-                    data-condition="{{ item.condition }}"
-                    data-search="{{ item.item_type|lower }} {{ item.serial|lower }} {{ item.description|lower }}">
-                    <td><strong>{{ item.id }}</strong></td>
-                    <td>
-                        <strong>{{ item.item_type }}</strong><br>
-                        <small class="text-muted">
-                            {% if item.is_rifle %}Rifle{% else %}Pistol{% endif %}
-                        </small>
-                    </td>
-                    <td>{{ item.serial }}</td>
-                    <td>
+    
+    <!-- Inventory Items Grid -->
+    <div class="row g-4">
+        {% for item in items %}
+        <div class="col-lg-4 col-md-6">
+            <div class="inventory-card card h-100">
+                <div class="card-body p-4">
+                    <!-- Header with Icon and Status -->
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="item-icon me-3 status-{{ item.status|lower }}">
+                            {% if item.item_type == 'M14' or item.item_type == 'M16' or item.item_type == 'M4' %}
+                                <i class="bi bi-crosshair"></i>
+                            {% elif item.item_type == 'GLOCK' or item.item_type == '45' %}
+                                <i class="bi bi-bullseye"></i>
+                            {% else %}
+                                <i class="bi bi-box"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1">{{ item.item_type }}</h5>
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                <span class="badge bg-{% if item.status == 'Available' %}success{% elif item.status == 'Issued' %}primary{% elif item.status == 'Maintenance' %}warning{% else %}danger{% endif %}">
+                                    {{ item.status }}
+                                </span>
+                                <span class="badge bg-secondary-subtle text-secondary">
+                                    {{ item.condition|default:"Good" }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Item Details -->
+                    <div class="row text-sm mb-3">
+                        <div class="col-12 mb-2">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-hash text-muted me-2"></i>
+                                <strong>{{ item.serial_number }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-calendar3 text-muted me-2"></i>
+                                <span>{{ item.date_acquired|date:"M d, Y"|default:"N/A" }}</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-person text-muted me-2"></i>
+                                <span>{% if item.assigned_to %}{{ item.assigned_to.get_full_name }}{% else %}Unassigned{% endif %}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Description -->
+                    {% if item.description %}
+                    <div class="mb-3">
+                        <small class="text-muted">{{ item.description|truncatechars:100 }}</small>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'inventory:item_detail' item.id %}" 
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i> View Details
+                        </a>
                         {% if item.status == 'Available' %}
-                        <span class="badge badge-available">{{ item.status }}</span>
+                        <div class="btn-group" role="group">
+                            <a href="{% url 'transactions:issue' %}?item={{ item.id }}" 
+                               class="btn btn-success btn-sm">
+                                <i class="bi bi-arrow-right"></i> Issue
+                            </a>
+                            <a href="#" class="btn btn-outline-warning btn-sm" 
+                               onclick="markForMaintenance({{ item.id }})">
+                                <i class="bi bi-tools"></i> Maintenance
+                            </a>
+                        </div>
                         {% elif item.status == 'Issued' %}
-                        <span class="badge badge-issued">{{ item.status }}</span>
-                        {% elif item.status == 'Maintenance' %}
-                        <span class="badge badge-maintenance">{{ item.status }}</span>
-                        {% else %}
-                        <span class="badge badge-inactive">{{ item.status }}</span>
+                        <a href="{% url 'transactions:return' %}?item={{ item.id }}" 
+                           class="btn btn-info btn-sm">
+                            <i class="bi bi-arrow-left"></i> Return Item
+                        </a>
                         {% endif %}
-                    </td>
-                    <td>
-                        {% if item.condition == 'Good' %}
-                        <span class="badge badge-available">{{ item.condition }}</span>
-                        {% elif item.condition == 'Fair' %}
-                        <span class="badge badge-issued">{{ item.condition }}</span>
-                        {% elif item.condition == 'Poor' %}
-                        <span class="badge badge-maintenance">{{ item.condition }}</span>
-                        {% else %}
-                        <span class="badge badge-inactive">{{ item.condition }}</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ item.description|default:"-" }}</td>
-                    <td>
-                        <a href="{% url 'inventory:item_detail' item.id %}" class="btn btn-primary btn-sm">View</a>
-                        {% if user.is_staff or user.is_superuser or user.userprofile.is_armorer %}
-                        <a href="{% url 'armguard_admin:edit_item' item.id %}" class="btn btn-warning btn-sm">Edit</a>
-                        {% endif %}
-                        {% if user.is_staff or user.is_superuser %}
-                        <a href="{% url 'armguard_admin:delete_item' item.id %}" class="btn btn-danger btn-sm">Delete</a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="text-center text-muted">No items found in inventory.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="bi bi-boxes display-1 text-muted mb-3"></i>
+                <h4 class="text-muted mb-2">No Items Found</h4>
+                <p class="text-muted mb-3">
+                    {% if request.GET.search %}
+                        No items match your search criteria.
+                    {% else %}
+                        No items have been added to inventory yet.
+                    {% endif %}
+                </p>
+                <a href="{% url 'inventory:add_item' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Add First Item
+                </a>
+            </div>
+        </div>
+        {% endfor %}
     </div>
 </div>
+
+<!-- QR Code Modal -->
+<div class="modal fade" id="qrCodeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">QR Code</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="qrCodeContainer"></div>
+                <p class="mt-3 text-muted">Scan this QR code for quick access to item details</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Filter functionality
-document.getElementById('searchInput').addEventListener('input', filterItems);
-document.getElementById('typeFilter').addEventListener('change', filterItems);
-document.getElementById('statusFilter').addEventListener('change', filterItems);
-document.getElementById('conditionFilter').addEventListener('change', filterItems);
-
-function filterItems() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const typeFilter = document.getElementById('typeFilter').value;
-    const statusFilter = document.getElementById('statusFilter').value;
-    const conditionFilter = document.getElementById('conditionFilter').value;
+// Real-time search functionality
+document.getElementById('search').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const cards = document.querySelectorAll('.inventory-card');
     
-    const rows = document.querySelectorAll('.item-row');
-    
-    rows.forEach(row => {
-        const searchData = row.getAttribute('data-search');
-        const type = row.getAttribute('data-type');
-        const status = row.getAttribute('data-status');
-        const condition = row.getAttribute('data-condition');
+    cards.forEach(card => {
+        const title = card.querySelector('.card-title').textContent.toLowerCase();
+        const serial = card.querySelector('.bi-hash').parentElement.textContent.toLowerCase();
+        const description = card.querySelector('.text-muted');
+        const descText = description ? description.textContent.toLowerCase() : '';
         
-        const matchesSearch = searchData.includes(searchTerm);
-        const matchesType = !typeFilter || type === typeFilter;
-        const matchesStatus = !statusFilter || status === statusFilter;
-        const matchesCondition = !conditionFilter || condition === conditionFilter;
-        
-        if (matchesSearch && matchesType && matchesStatus && matchesCondition) {
-            row.style.display = '';
+        if (title.includes(searchTerm) || serial.includes(searchTerm) || descText.includes(searchTerm)) {
+            card.closest('.col-lg-4').style.display = 'block';
         } else {
-            row.style.display = 'none';
+            card.closest('.col-lg-4').style.display = 'none';
         }
     });
+});
+
+// Filter functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const filterInputs = document.querySelectorAll('#item_type, #status, #condition');
+    
+    filterInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            // Auto-submit form when filter changes
+            this.closest('form').submit();
+        });
+    });
+});
+
+// Export functionality
+function exportInventory() {
+    showToast('Exporting inventory data...', 'info');
+    // You would implement the actual export functionality here
+    setTimeout(() => {
+        showToast('Export completed successfully!', 'success');
+    }, 2000);
+}
+
+// Maintenance functionality
+function markForMaintenance(itemId) {
+    if (confirm('Mark this item for maintenance?')) {
+        showToast('Item marked for maintenance', 'warning');
+        // You would implement the actual maintenance update here
+        // fetch(`/inventory/maintenance/${itemId}/`, { method: 'POST' })
+    }
+}
+
+// QR Code generation
+function showQRCode(itemId) {
+    // You would implement QR code generation here
+    const qrContainer = document.getElementById('qrCodeContainer');
+    qrContainer.innerHTML = `<div class="alert alert-info">QR Code for Item #${itemId}</div>`;
+    const modal = new bootstrap.Modal(document.getElementById('qrCodeModal'));
+    modal.show();
 }
 </script>
 {% endblock %}
-

@@ -1,0 +1,14 @@
+# ArmGuard - Raspberry Pi 4B Production Requirements
+# Install with: pip install -r requirements-rpi.txt
+
+# Include base requirements
+-r requirements.txt
+
+# RPi-specific enhanced monitoring
+psutil==5.9.8                # System monitoring and thermal detection
+
+# Optional RPi GPIO support (install if hardware integration needed)
+# RPi.GPIO==0.7.1            # Uncomment for GPIO hardware control
+
+# Additional RPi performance packages
+redis==5.0.0                 # For enhanced caching on 4GB+ systems

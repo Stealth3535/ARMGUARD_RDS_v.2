@@ -166,12 +166,31 @@ document.addEventListener('DOMContentLoaded', function() {
     const userTypeSelect = document.getElementById('user_type');
     const accountSection = document.getElementById('account-section');
     const personnelSection = document.getElementById('personnel-section');
+    const adminRestrictionRow = document.getElementById('admin-restriction-row');
     const usernameField = document.querySelector('input[name="username"]');
     const emailField = document.querySelector('input[name="email"]');
     const passwordFields = document.querySelectorAll('input[type="password"]');
     
+    // Debug: Check if elements exist
+    console.log('Elements found:', {
+        userTypeSelect: !!userTypeSelect,
+        accountSection: !!accountSection,
+        personnelSection: !!personnelSection,
+        adminRestrictionRow: !!adminRestrictionRow
+    });
+    
     function updateFormFields() {
         const userType = userTypeSelect.value;
+        console.log('User type changed to:', userType); // Debug log
+        
+        // Show/hide admin restriction dropdown
+        if (userType === 'admin') {
+            console.log('Showing admin restriction row'); // Debug log
+            adminRestrictionRow.style.display = 'block';
+        } else {
+            console.log('Hiding admin restriction row'); // Debug log
+            adminRestrictionRow.style.display = 'none';
+        }
         
         if (userType === 'personnel') {
             // Personnel only - hide account fields, show personnel fields
@@ -230,6 +249,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         <option value="personnel">Personnel Only (No Login)</option>
                     </select>
                     <div class="help-text">Choose the type of user account to create</div>
+                </div>
+            </div>
+
+            <div class="form-row single" id="admin-restriction-row" style="display: block;">
+                <div class="form-group">
+                    <label for="admin_restriction">Administrator Access Level <span class="required">*</span></label>
+                    <select id="admin_restriction" name="admin_restriction" class="form-control">
+                        <option value="no_restriction">No Restriction - Full authorized activities</option>
+                        <option value="with_restriction">With Restriction - View only, no transactions/edit/delete</option>
+                    </select>
+                    <div class="help-text">Choose the access level for Administrator accounts</div>
                 </div>
             </div>
         </div>

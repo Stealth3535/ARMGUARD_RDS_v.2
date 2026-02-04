@@ -6,7 +6,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, RedirectView
 from django.http import HttpResponse
 from decouple import config
 from . import views
@@ -43,8 +43,9 @@ urlpatterns = [
     path('robots.txt', robots_txt, name='robots_txt'),
     path('.well-known/security.txt', security_txt, name='security_txt'),
     
-    # Django Admin (Superuser only) - Obfuscated URL
-    path(f'{ADMIN_URL}/', admin.site.urls),
+    # Django Admin Routes
+    path(f'{ADMIN_URL}/', admin.site.urls),     # Obfuscated URL from .env
+    path('superadmin/', RedirectView.as_view(url=f'/{ADMIN_URL}/', permanent=True)),  # Redirect to obfuscated admin
     
     # Custom Admin (Staff users)
     path('admin/', include('admin.urls', namespace='armguard_admin')),

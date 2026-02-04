@@ -1,11 +1,14 @@
 """
-Custom security middleware for ArmGuard
+ArmGuard Middleware Package
 """
 from django.core.cache import cache
 from django.http import HttpResponseForbidden, HttpResponse
 from django.utils.deprecation import MiddlewareMixin
 from django.conf import settings
 import time
+
+# Import device authorization middleware
+from .device_authorization import DeviceAuthorizationMiddleware
 
 
 class RateLimitMiddleware(MiddlewareMixin):
@@ -146,3 +149,91 @@ class StripSensitiveHeadersMiddleware(MiddlewareMixin):
                 del response[header]
         
         return response
+
+
+class SecurityHeadersMiddleware(MiddlewareMixin):
+    """
+    Enhanced security headers middleware
+    """
+    
+    def process_response(self, request, response):
+        # Security headers
+        response['X-Content-Type-Options'] = 'nosniff'
+        response['X-Frame-Options'] = 'DENY'
+        response['X-XSS-Protection'] = '1; mode=block'
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        
+        # Content Security Policy
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; "
+            "font-src 'self'"
+        )
+        response['Content-Security-Policy'] = csp
+        
+        return response
+
+
+class SingleSessionMiddleware(MiddlewareMixin):
+    """
+    Single session enforcement middleware
+    """
+    
+    def process_request(self, request):
+        # Skip if single session enforcement is disabled
+        if not getattr(settings, 'SINGLE_SESSION_ENFORCEMENT', False):
+            return None
+        
+        if request.user.is_authenticated:
+            current_session_key = request.session.session_key
+            user_session_key = getattr(request.user, 'current_session_key', None)
+            
+            if user_session_key and user_session_key != current_session_key:
+                # Force logout
+                from django.contrib.auth import logout
+                logout(request)
+                return HttpResponseForbidden(
+                    '<h1>Session Conflict</h1>'
+                    '<p>Another session detected. Please log in again.</p>',
+                    content_type='text/html'
+                )
+            
+            # Update user's current session
+            request.user.current_session_key = current_session_key
+            request.user.save()
+        
+        return None
+
+
+class RequestLoggingMiddleware(MiddlewareMixin):
+    """
+    Security request logging middleware
+    """
+    
+    def process_request(self, request):
+        # Skip if request logging is disabled
+        if not getattr(settings, 'REQUEST_LOGGING_ENABLED', False):
+            return None
+        
+        # Log suspicious requests
+        import logging
+        logger = logging.getLogger('security')
+        
+        # Log admin access attempts
+        admin_url = getattr(settings, 'ADMIN_URL_PREFIX', 'admin')
+        if request.path.startswith(f'/{admin_url}/'):
+            ip = self.get_client_ip(request)
+            logger.info(f"Admin access attempt from {ip} to {request.path}")
+        
+        return None
+    
+    def get_client_ip(self, request):
+        """Get real client IP (handle proxies)"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0].strip()
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip

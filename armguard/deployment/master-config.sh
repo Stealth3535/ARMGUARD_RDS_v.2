@@ -14,6 +14,45 @@ export DEPLOYMENT_USER=$(whoami)
 # Environment Detection
 # =============================================================================
 
+# Cross-platform detection
+detect_platform() {
+    export ARCH=$(uname -m)
+    export IS_ARM64=false
+    export IS_RPI=false
+    export PLATFORM_NAME="Standard"
+    export REQUIREMENTS_FILE="requirements.txt"
+    export ENHANCED_FEATURES=false
+    
+    # Architecture detection
+    case "$ARCH" in
+        aarch64|arm64)
+            export IS_ARM64=true
+            export PLATFORM_NAME="ARM64"
+            export ENHANCED_FEATURES=true
+            ;;
+        x86_64)
+            export PLATFORM_NAME="x86_64"
+            ;;
+    esac
+    
+    # Raspberry Pi detection
+    if [ -f /proc/device-tree/model ] && grep -q "Raspberry Pi" /proc/device-tree/model 2>/dev/null; then
+        export IS_RPI=true
+        export PLATFORM_NAME="Raspberry Pi"
+        export REQUIREMENTS_FILE="requirements-rpi.txt"
+        export ENHANCED_FEATURES=true
+        MODEL=$(tr -d '\0' < /proc/device-tree/model 2>/dev/null)
+        echo "🥧 $MODEL detected"
+    elif [ "$IS_ARM64" = true ]; then
+        echo "🏗️  ARM64 architecture detected"
+    fi
+    
+    echo "Platform: $PLATFORM_NAME ($ARCH)"
+}
+
+# Run platform detection
+detect_platform
+
 # Detect environment type
 if [ -d "/mnt/hgfs" ] || [ "$VM_ENVIRONMENT" = "true" ]; then
     export ENVIRONMENT="test-vm"
@@ -184,8 +223,22 @@ case $ENVIRONMENT in
 esac
 
 # =============================================================================
-# Security Configuration
+# Security Configuration (Enhanced)
 # =============================================================================
+
+# Enhanced security middleware settings
+export SECURITY_HEADERS_ENABLED="${SECURITY_HEADERS_ENABLED:-true}"
+export REQUEST_LOGGING_ENABLED="${REQUEST_LOGGING_ENABLED:-true}"
+export SINGLE_SESSION_ENFORCEMENT="${SINGLE_SESSION_ENFORCEMENT:-true}"
+export RATE_LIMITING_ENABLED="${RATE_LIMITING_ENABLED:-true}"
+
+# Admin system settings
+export ADMIN_RESTRICTION_SYSTEM_ENABLED="${ADMIN_RESTRICTION_SYSTEM_ENABLED:-true}"
+export ADMIN_SESSION_TIMEOUT="${ADMIN_SESSION_TIMEOUT:-3600}"
+
+# API security settings
+export API_RATE_LIMIT="${API_RATE_LIMIT:-100}"
+export API_BURST_LIMIT="${API_BURST_LIMIT:-20}"
 
 case $ENVIRONMENT in
     "test-vm")
@@ -193,6 +246,9 @@ case $ENVIRONMENT in
         export SECRET_KEY="test-secret-key-for-vm-development-only"
         export ALLOWED_HOSTS="localhost,127.0.0.1,*"
         export CORS_ALLOWED_ORIGINS="http://localhost:3000,http://127.0.0.1:3000"
+        # Relaxed security for testing
+        export SINGLE_SESSION_ENFORCEMENT="false"
+        export REQUEST_LOGGING_ENABLED="false"
         ;;
     
     "docker-testing")
@@ -207,6 +263,12 @@ case $ENVIRONMENT in
         export SECRET_KEY="${SECRET_KEY:-$(openssl rand -base64 50)}"
         export ALLOWED_HOSTS="${DOMAIN},www.${DOMAIN}"
         export CORS_ALLOWED_ORIGINS="https://${DOMAIN},https://www.${DOMAIN}"
+        # Maximum security for production
+        export SECURITY_HEADERS_ENABLED="true"
+        export REQUEST_LOGGING_ENABLED="true"
+        export SINGLE_SESSION_ENFORCEMENT="true"
+        export RATE_LIMITING_ENABLED="true"
+        export ADMIN_RESTRICTION_SYSTEM_ENABLED="true"
         ;;
     
     *)

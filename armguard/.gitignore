@@ -67,6 +67,16 @@ core/media/qr_codes/*
 *.backup
 *~
 
+# Test reports and temporary files
+test_report_*.json
+*.tmp
+*.temp
+
+# Documentation drafts and summaries (keep only final docs)
+*_SUMMARY.md
+*_REPORT.md
+*_FIXES*.md
+
 # OS
 Thumbs.db
 .DS_Store

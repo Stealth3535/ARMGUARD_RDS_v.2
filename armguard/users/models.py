@@ -26,6 +26,16 @@ class UserProfile(models.Model):
     )
     badge_number = models.CharField(max_length=50, blank=True, null=True, unique=True)
     is_armorer = models.BooleanField(default=False)
+    is_restricted_admin = models.BooleanField(
+        default=False,
+        help_text="If True, administrator can only view but not edit/delete/create"
+    )
+    last_session_key = models.CharField(
+        max_length=40,
+        blank=True,
+        null=True,
+        help_text="Track last session for single session enforcement"
+    )
     profile_picture = models.ImageField(
         upload_to='users/profile_pictures/', 
         blank=True, 

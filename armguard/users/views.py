@@ -12,7 +12,9 @@ from django.contrib import messages
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from django.core.exceptions import PermissionDenied
+from django.utils.decorators import method_decorator
 from .forms import UserRegistrationForm, UserProfileForm
+from core.rate_limiting import login_rate_limit
 from core.network_decorators import lan_required, read_only_on_wan
 
 logger = logging.getLogger(__name__)
@@ -23,8 +25,9 @@ def is_admin_user(user):
     return user.is_authenticated and (user.is_superuser or user.groups.filter(name='Admin').exists())
 
 
+@method_decorator(login_rate_limit, name='post')
 class CustomLoginView(LoginView):
-    """Custom login view"""
+    """Custom login view with rate limiting"""
     template_name = 'users/login.html'
     redirect_authenticated_user = True
     

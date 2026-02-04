@@ -45,7 +45,21 @@ echo "[*] Working directory: $(pwd)"
 # 5. Install/update dependencies
 echo "[*] Installing Python dependencies..."
 pip install --upgrade pip
+
+# Install base requirements (cross-compatible)
+echo "[*] Installing base requirements (VM compatible)..."
 pip install -r requirements.txt
+
+# Check if user wants enhanced monitoring features
+echo ""
+read -p "Install psutil for enhanced system monitoring? [y/N]: " install_psutil
+if [[ "$install_psutil" =~ ^[Yy] ]]; then
+    echo "[*] Installing psutil for enhanced monitoring..."
+    pip install psutil==5.9.8
+    echo "[+] Enhanced monitoring features enabled"
+else
+    echo "[*] Using fallback monitoring (psutil not installed)"
+fi
 
 # 6. Run migrations
 echo "[*] Running database migrations..."

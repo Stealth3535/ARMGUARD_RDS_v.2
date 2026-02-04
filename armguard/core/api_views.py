@@ -13,6 +13,8 @@ from .utils import (
     get_transaction_autofill_data,
     validate_transaction_action
 )
+from .api_forms import TransactionCreateForm, PersonnelLookupForm, ItemLookupForm
+from .rate_limiting import api_rate_limit
 import json
 import logging
 import os
@@ -24,8 +26,14 @@ logger = logging.getLogger(__name__)
 
 @require_http_methods(["GET"])
 @login_required
+@api_rate_limit
 def get_personnel(request, personnel_id):
     """Get personnel details by ID (supports both direct ID and QR reference)"""
+    # Validate input using form
+    form = PersonnelLookupForm({'personnel_id': personnel_id})
+    if not form.is_valid():
+        return JsonResponse({'error': 'Invalid personnel ID format'}, status=400)
+    
     result = parse_qr_code(personnel_id)
     
     if result['success'] and result['type'] == 'personnel':
@@ -38,8 +46,14 @@ def get_personnel(request, personnel_id):
 
 @require_http_methods(["GET"])
 @login_required
+@api_rate_limit
 def get_item(request, item_id):
     """Get item details by ID (supports both direct ID and QR reference)"""
+    # Validate input using form
+    form = ItemLookupForm({'item_id': item_id})
+    if not form.is_valid():
+        return JsonResponse({'error': 'Invalid item ID format'}, status=400)
+    
     result = parse_qr_code(item_id)
     
     if result['success'] and result['type'] == 'item':

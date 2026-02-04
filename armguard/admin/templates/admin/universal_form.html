@@ -347,6 +347,18 @@
                 {% endif %}
             </div>
             
+            <!-- Admin Restriction Field - Only shown when role is Administrator -->
+            <div class="form-group" id="adminRestrictionGroup" style="display:none;">
+                <label for="{{ form.admin_restriction.id_for_label }}">
+                    Administrator Access Level <span class="required">*</span>
+                </label>
+                {{ form.admin_restriction }}
+                <p class="help-text">Select access level for administrator accounts</p>
+                {% if form.admin_restriction.errors %}
+                    <span class="error">{{ form.admin_restriction.errors }}</span>
+                {% endif %}
+            </div>
+            
             <div id="operationNotification" class="alert" style="display:none; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
                 <i class="fas fa-info-circle"></i>
                 <span id="operationText"></span>
@@ -579,6 +591,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const operationText = document.getElementById('operationText');
     const userSection = document.getElementById('userAccountSection');
     const personnelSection = document.getElementById('personnelInfoSection');
+    const adminRestrictionGroup = document.getElementById('adminRestrictionGroup');
     
     function updateOperationBasedOnRole() {
         if (!roleSelect || !operationTypeInput) return;
@@ -587,6 +600,15 @@ document.addEventListener('DOMContentLoaded', function() {
         let operationType = '';
         let notificationClass = '';
         let notificationMessage = '';
+        
+        // Show/hide admin restriction field
+        if (adminRestrictionGroup) {
+            if (role === 'admin') {
+                adminRestrictionGroup.style.display = 'block';
+            } else {
+                adminRestrictionGroup.style.display = 'none';
+            }
+        }
         
         // Set operation type and notification based on role
         if (role === 'personnel') {

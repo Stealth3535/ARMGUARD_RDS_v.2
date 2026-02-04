@@ -1,22 +1,32 @@
 # 🌐 Complete LAN/WAN Deployment Guide: ArmGuard Military Inventory
 
-**Enterprise Military Application Deployment** - LAN/WAN Hybrid Architecture
+**Enterprise Military Application Deployment** - LAN/WAN Hybrid Architecture with Enhanced Security
 
 ## 📋 Overview
 
-This guide covers deploying ArmGuard as a **LAN/WAN hybrid military inventory system** with **security-first architecture**:
+This guide covers deploying ArmGuard as a **LAN/WAN hybrid military inventory system** with **security-first architecture** and **enhanced administrative controls**:
 
 **🔒 LAN Operations (High Security):**
 - ✅ **Registration & Transactions** (LAN only via Raspberry Pi server)
 - ✅ **Inventory Management** (Add/Edit/Delete items)
-- ✅ **User Registration** (Personnel enrollment) 
+- ✅ **User Registration** (Personnel enrollment with restriction levels)
 - ✅ **Critical Operations** (Sensitive military data)
+- ✅ **Full Admin Access** (Unrestricted administrators)
 
 **🌐 WAN Operations (Read-Only Status):**
 - ✅ **Status Checking** (Personnel check their transaction history)
 - ✅ **Reports & Analytics** (Authorized personnel only)
 - ✅ **Read-Only Access** (No sensitive operations)
+- ✅ **Restricted Admin Access** (View-only administrative roles)
 - ✅ **Authorization-Based** (Role-based permissions)
+
+**🛡️ New Security Features:**
+- ✅ **Enhanced Security Middleware** (CSP headers, XSS protection)
+- ✅ **Rate Limiting** (Brute force protection)
+- ✅ **Single Session Enforcement** (Prevents concurrent logins)
+- ✅ **Admin Restriction System** (Granular access control)
+- ✅ **Security Logging** (Comprehensive audit trails)
+- ✅ **API Input Validation** (Enhanced data sanitization)
 
 **Network Architecture:**
 ```
