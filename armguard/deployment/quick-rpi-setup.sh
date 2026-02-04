@@ -55,7 +55,7 @@ deploy_armguard() {
     TEMP_DIR=$(mktemp -d)
     cd "$TEMP_DIR"
     
-    # Download the deployment script
+    # Download the deployment script from main branch
     log "📥 Downloading deployment script from GitHub..."
     wget -O deploy-rpi-test.sh \
         "https://raw.githubusercontent.com/Stealth3535/ARMGUARD_RDS/main/armguard/deployment/deploy-rpi-test.sh"

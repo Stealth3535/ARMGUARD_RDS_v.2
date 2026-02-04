@@ -138,8 +138,8 @@ clone_armguard() {
     sudo git clone https://github.com/Stealth3535/ARMGUARD_RDS.git "$DEPLOY_DIR"
     cd "$DEPLOY_DIR"
     
-    # Checkout the A+ performance tag
-    sudo git checkout v2.1.0-aplus
+    # Use main branch (contains latest A+ performance optimizations)
+    sudo git checkout main
     
     # Set proper permissions
     sudo chown -R $(whoami):$(whoami) "$DEPLOY_DIR"
