@@ -7,7 +7,6 @@ gunicorn==21.2.0
 
 # Enhanced Database Support (ARM64 Compatible)
 psycopg2-binary==2.9.10      # PostgreSQL adapter (ARM64 ready)
-psycopg2==2.9.9              # Fallback PostgreSQL adapter
 
 # System monitoring (Optional - enables enhanced RPi monitoring)
 # Install for production RPi deployment: pip install psutil==5.9.8
