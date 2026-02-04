@@ -776,12 +776,12 @@ if IS_RASPBERRY_PI:
     # Thermal protection middleware integration
     def thermal_protection_check():
         """Check for thermal throttling and adjust performance"""
-        thermal_state = get_rpi_thermal_state()
-        if thermal_state and thermal_state.get('temp', 0) > RPi_THERMAL_CRITICAL_TEMP:
+        thermal_temp = get_rpi_thermal_state()
+        if thermal_temp and thermal_temp > RPi_THERMAL_CRITICAL_TEMP:
             # Enable thermal protection mode
             import os
             os.environ['DJANGO_THERMAL_PROTECTION'] = 'true'
-            print(f"🔥 THERMAL PROTECTION: Activated at {thermal_state['temp']}°C")
+            print(f"🔥 THERMAL PROTECTION: Activated at {thermal_temp}°C")
             return True
         return False
     
