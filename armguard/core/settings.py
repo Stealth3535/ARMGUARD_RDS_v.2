@@ -454,6 +454,7 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 
 # Performance: Template Caching
 if not DEBUG:
+    TEMPLATES[0]['APP_DIRS'] = False  # Must be False when using custom loaders
     TEMPLATES[0]['OPTIONS']['loaders'] = [
         ('django.template.loaders.cached.Loader', [
             'django.template.loaders.filesystem.Loader',
