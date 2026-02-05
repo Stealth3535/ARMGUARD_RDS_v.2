@@ -1,0 +1,20 @@
+{% load static %}
+<nav class="navbar">
+    <div class="navbar-container">
+        <a href="{% url 'dashboard' %}" class="navbar-brand">
+            <span class="navbar-logo">🛡️</span>
+            <span class="navbar-title">ArmGuard</span>
+        </a>
+        <ul class="navbar-menu">
+            <li><a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' and 'admin' not in request.path %}active{% endif %}">Dashboard</a></li>
+            <li><a href="{% url 'personnel:personnel_profile_list' %}" class="{% if request.path|slice:':11' == '/personnel/' %}active{% endif %}">Personnel</a></li>
+            <li><a href="{% url 'inventory:item_list' %}" class="{% if request.path|slice:':11' == '/inventory/' %}active{% endif %}">Inventory</a></li>
+            <li><a href="{% url 'transactions:list' %}" class="{% if request.path|slice:':14' == '/transactions/' %}active{% endif %}">Transactions</a></li>
+            <li><a href="{% url 'qr_manager:personnel_qr_codes' %}" class="{% if request.path|slice:':4' == '/qr/' %}active{% endif %}">QR Codes</a></li>
+            {% if user.is_staff %}
+            <li><a href="{% url 'armguard_admin:dashboard' %}" class="{% if request.path|slice:':7' == '/admin/' %}active{% endif %}">Admin</a></li>
+            {% endif %}
+        </ul>
+    </div>
+</nav>
+

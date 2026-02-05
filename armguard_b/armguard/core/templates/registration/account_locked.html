@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Account Locked - ArmGuard{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-lock-fill"></i> Account Locked
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h5 class="alert-heading">Too Many Failed Login Attempts</h5>
+                        <p>Your account has been temporarily locked due to multiple failed login attempts.</p>
+                        <hr>
+                        <p class="mb-0">
+                            <strong>Lockout Duration:</strong> {{ cooloff_time|default:"1 hour" }}<br>
+                            <strong>What to do:</strong> Wait for the lockout period to expire, or contact your administrator.
+                        </p>
+                    </div>
+                    
+                    <h6>Security Measures</h6>
+                    <p>This security feature protects your account from unauthorized access attempts. If you're experiencing legitimate login issues:</p>
+                    <ul>
+                        <li>Check your username and password</li>
+                        <li>Ensure Caps Lock is off</li>
+                        <li>Wait for the lockout period to expire</li>
+                        <li>Contact your system administrator if problems persist</li>
+                    </ul>
+                    
+                    <div class="mt-4">
+                        <a href="{% url 'login' %}" class="btn btn-primary">Return to Login</a>
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Go to Dashboard</a>
+                    </div>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>
+                        <i class="bi bi-shield-check"></i> Your security is important to us.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

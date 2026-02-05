@@ -1,0 +1,353 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User Management - ArmGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    
+    .page-header h1 {
+        margin: 0;
+        color: #333;
+    }
+    
+    .btn-primary {
+        padding: 0.75rem 1.5rem;
+        background: #667eea;
+        color: white;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    
+    .btn-primary:hover {
+        background: #5568d3;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .user-table {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    th {
+        background: #f8f9fa;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #333;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    td {
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .badge-superuser {
+        background: #dc2626;
+        color: white;
+    }
+    
+    .badge-staff {
+        background: #667eea;
+        color: white;
+    }
+    
+    .badge-user {
+        background: #6ee7b7;
+        color: #065f46;
+    }
+    
+    .badge-active {
+        background: #dcfce7;
+        color: #14532d;
+    }
+    
+    .badge-inactive {
+        background: #fee2e2;
+        color: #7f1d1d;
+    }
+    
+    .action-links {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .action-links a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .action-links a:hover {
+        text-decoration: underline;
+    }
+    
+    .action-links a.delete {
+        color: #dc2626;
+    }
+    
+    .section-divider {
+        margin: 3rem 0 2rem 0;
+        border-top: 2px solid #e5e7eb;
+        padding-top: 2rem;
+    }
+    
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-header h2 {
+        margin: 0;
+        color: #333;
+        font-size: 1.5rem;
+    }
+    
+    .badge-officer {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .badge-enlisted {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .badge-linked {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .badge-no-user {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>👥 User Management</h1>
+    <a href="{% url 'armguard_admin:create_user' %}" class="btn-primary">+ Create New User</a>
+</div>
+
+<!-- Admin Users Section (Superuser, Administrator, Armorer) -->
+<div class="section-divider">
+    <div class="section-header">
+        <h2>🔑 System Users</h2>
+        <span style="color: #666; font-size: 0.9rem;">Administrators, Superusers, and Armorers</span>
+    </div>
+    
+<div class="user-table">
+    <table>
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Date Joined</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user_item in users %}
+            <tr>
+                <td><strong>{{ user_item.username }}</strong></td>
+                <td>{{ user_item.first_name }} {{ user_item.last_name }}</td>
+                <td>{{ user_item.email|default:"—" }}</td>
+                <td>
+                    {% if user_item.is_superuser %}
+                    <span class="badge badge-superuser">Superuser</span>
+                    {% elif user_item.groups.all.0.name == 'Admin' %}
+                    <span class="badge badge-staff">Admin</span>
+                    {% elif user_item.groups.all.0.name == 'Armorer' %}
+                    <span class="badge badge-user">Armorer</span>
+                    {% else %}
+                    <span class="badge badge-user">User</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if user_item.is_active %}
+                    <span class="badge badge-active">Active</span>
+                    {% else %}
+                    <span class="badge badge-inactive">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>{{ user_item.date_joined|date:"M d, Y" }}</td>
+                <td>
+                    <div class="action-links">
+                        {% if not user_item.is_superuser or user.is_superuser %}
+                        <a href="{% url 'armguard_admin:edit_user' user_item.id %}">Edit</a>
+                        {% endif %}
+                        {% if user.is_superuser and user_item != user %}
+                        <a href="{% url 'armguard_admin:delete_user' user_item.id %}" class="delete">Delete</a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 2rem; color: #666;">
+                    No system users found.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+
+<!-- Personnel Users Section -->
+<div class="section-divider">
+    <div class="section-header">
+        <h2>👤 Personnel with User Accounts</h2>
+        <span style="color: #666; font-size: 0.9rem;">Personnel who have login accounts</span>
+    </div>
+    
+<div class="user-table">
+    <table>
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Date Joined</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user_item in personnel_users %}
+            <tr>
+                <td><strong>{{ user_item.username }}</strong></td>
+                <td>{{ user_item.first_name }} {{ user_item.last_name }}</td>
+                <td>{{ user_item.email|default:"—" }}</td>
+                <td>
+                    <span class="badge badge-user">Personnel</span>
+                </td>
+                <td>
+                    {% if user_item.is_active %}
+                    <span class="badge badge-active">Active</span>
+                    {% else %}
+                    <span class="badge badge-inactive">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>{{ user_item.date_joined|date:"M d, Y" }}</td>
+                <td>
+                    <div class="action-links">
+                        <a href="{% url 'armguard_admin:edit_user' user_item.id %}">Edit</a>
+                        {% if user.is_superuser %}
+                        <a href="{% url 'armguard_admin:delete_user' user_item.id %}" class="delete">Delete</a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 2rem; color: #666;">
+                    No personnel with user accounts found.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+
+<!-- Personnel Management Section -->
+<div class="section-divider">
+    <div class="section-header">
+        <h2>👤 Personnel Management</h2>
+        <span style="color: #666; font-size: 0.9rem;">All personnel records (with or without user accounts)</span>
+    </div>
+    
+    <div class="user-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Personnel ID</th>
+                    <th>Full Name</th>
+                    <th>Rank</th>
+                    <th>Serial Number</th>
+                    <th>Group</th>
+                    <th>User Account</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for person in personnel %}
+                <tr>
+                    <td><strong>{{ person.id }}</strong></td>
+                    <td>{{ person.get_full_name }}</td>
+                    <td>
+                        {% if person.is_officer %}
+                        <span class="badge badge-officer">{{ person.rank }}</span>
+                        {% else %}
+                        <span class="badge badge-enlisted">{{ person.rank }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ person.get_serial_display }}</td>
+                    <td>{{ person.group }}</td>
+                    <td>
+                        {% if person.user %}
+                        <span class="badge badge-linked">{{ person.user.username }}</span>
+                        {% else %}
+                        <span class="badge badge-no-user">No User</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-links">
+                            {% if can_edit_personnel %}
+                            <a href="{% url 'armguard_admin:edit_personnel' person.id %}">Edit</a>
+                            {% endif %}
+                            {% if request.user.is_superuser %}
+                            <a href="{% url 'armguard_admin:delete_personnel' person.id %}" class="delete">Delete</a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 2rem; color: #666;">
+                        No personnel found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

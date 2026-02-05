@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Item - ArmGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-container {
+        max-width: 600px;
+        margin: 3rem auto;
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .warning-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: #fef2f2;
+        border: 2px solid #ef4444;
+        border-radius: 8px;
+    }
+    
+    .warning-header i {
+        font-size: 2rem;
+        color: #ef4444;
+    }
+    
+    .warning-header h1 {
+        margin: 0;
+        color: #991b1b;
+        font-size: 1.5rem;
+    }
+    
+    .item-details {
+        background: #f9fafb;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .item-details h2 {
+        margin-top: 0;
+        color: #374151;
+        font-size: 1.25rem;
+    }
+    
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-label {
+        font-weight: 600;
+        color: #6b7280;
+    }
+    
+    .detail-value {
+        color: #111827;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .status-available {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .status-issued {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .status-maintenance {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .status-retired {
+        background: #e5e7eb;
+        color: #374151;
+    }
+    
+    .warning-message {
+        background: #fffbeb;
+        border: 1px solid #fbbf24;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .warning-message p {
+        margin: 0;
+        color: #92400e;
+    }
+    
+    .warning-message ul {
+        margin: 0.5rem 0 0 1.5rem;
+        color: #92400e;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #333;
+        font-weight: 500;
+    }
+    
+    .form-group textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 1rem;
+        resize: vertical;
+        min-height: 80px;
+    }
+    
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #ef4444;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .btn {
+        flex: 1;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+        transition: all 0.3s;
+    }
+    
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background: #dc2626;
+    }
+    
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #4b5563;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="delete-container">
+    <div class="warning-header">
+        <i class="fas fa-exclamation-triangle"></i>
+        <h1>Delete Item?</h1>
+    </div>
+    
+    <div class="item-details">
+        <h2>Item Details</h2>
+        <div class="detail-row">
+            <span class="detail-label">ID:</span>
+            <span class="detail-value">{{ item.id }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Type:</span>
+            <span class="detail-value">{{ item.get_item_type_display }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Serial:</span>
+            <span class="detail-value">{{ item.serial }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Condition:</span>
+            <span class="detail-value">{{ item.get_condition_display }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Status:</span>
+            <span class="detail-value">
+                <span class="status-badge status-{{ item.status|lower }}">
+                    {{ item.get_status_display }}
+                </span>
+            </span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Registered:</span>
+            <span class="detail-value">{{ item.registration_date }}</span>
+        </div>
+    </div>
+    
+    <div class="warning-message">
+        <p><strong>⚠️ Warning:</strong> This action cannot be undone!</p>
+        <ul>
+            <li>Item record will be permanently deleted</li>
+            <li>QR code images will be removed</li>
+            <li>Action will be logged in audit trail</li>
+        </ul>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="reason">Deletion Reason (Optional):</label>
+            <textarea name="reason" id="reason" placeholder="Enter reason for deletion..."></textarea>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Confirm Delete
+            </button>
+            <a href="{% url 'inventory:item_detail' item.pk %}" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -29,11 +29,17 @@
     box-sizing: border-box;
 }
 
+html {
+    font-size: 16px;
+    line-height: 1.6;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
     line-height: 1.6;
+    min-height: 100vh;
 }
 
 /* Header Actions Bar */

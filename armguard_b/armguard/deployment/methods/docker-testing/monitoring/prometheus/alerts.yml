@@ -1,0 +1,150 @@
+# Prometheus Alert Rules for ArmGuard
+# Defines alerting conditions for application health, security, and performance
+
+groups:
+  # Application Health Alerts
+  - name: application_health
+    rules:
+      - alert: ApplicationDown
+        expr: up{job="armguard-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ArmGuard application is down"
+          description: "The ArmGuard Django application has been unreachable for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: rate(django_http_responses_total_by_status_total{status=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 10% for the last 5 minutes."
+
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(django_http_requests_latency_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: medium
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is above 2 seconds."
+
+  # Security Alerts
+  - name: security_alerts
+    rules:
+      - alert: HighFailedLoginRate
+        expr: rate(django_auth_login_attempts_total{result="failure"}[5m]) > 10
+        for: 2m
+        labels:
+          severity: high
+        annotations:
+          summary: "High failed login rate detected"
+          description: "More than 10 failed login attempts per minute. Possible brute force attack."
+
+      - alert: RateLimitExceeded
+        expr: rate(nginx_http_requests_total{status="429"}[5m]) > 50
+        for: 2m
+        labels:
+          severity: medium
+        annotations:
+          summary: "Rate limit frequently exceeded"
+          description: "High number of rate-limited requests detected."
+
+      - alert: SuspiciousActivity
+        expr: rate(django_security_events_total{type="suspicious"}[5m]) > 5
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: "Suspicious security activity detected"
+          description: "Multiple suspicious activities detected in short time period."
+
+  # Infrastructure Alerts
+  - name: infrastructure_alerts
+    rules:
+      - alert: DatabaseDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "Database connection has been unavailable for more than 1 minute."
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis cache is unavailable. Rate limiting and caching affected."
+
+      - alert: HighDatabaseConnections
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: medium
+        annotations:
+          summary: "High database connection count"
+          description: "Database connection pool is nearly exhausted."
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "High memory usage"
+          description: "System memory usage is above 90%."
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: medium
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80% for 5 minutes."
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "Low disk space"
+          description: "Less than 10% disk space remaining."
+
+  # Performance Alerts
+  - name: performance_alerts
+    rules:
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.99, rate(nginx_http_request_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: medium
+        annotations:
+          summary: "High request latency"
+          description: "99th percentile latency is above 5 seconds."
+
+      - alert: HighConcurrentRequests
+        expr: sum(nginx_connections_active) > 500
+        for: 5m
+        labels:
+          severity: medium
+        annotations:
+          summary: "High concurrent connections"
+          description: "More than 500 concurrent connections to Nginx."
+
+      - alert: CacheHitRateLow
+        expr: redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total) < 0.5
+        for: 10m
+        labels:
+          severity: low
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is below 50%."

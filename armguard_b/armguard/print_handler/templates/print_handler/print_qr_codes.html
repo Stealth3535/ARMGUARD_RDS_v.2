@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Print QR Codes - Simple{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="no-print">
+        <h1>🖨️ Print QR Codes</h1>
+        <p>QR Size: {{ qr_size_mm }}mm | Cards per row: {{ cards_per_row }}</p>
+        <div style="background: #fff3cd; border: 2px solid #ffc107; padding: 10px; margin: 10px 0; border-radius: 5px;">
+            <strong>⚠️ Print Settings Required:</strong>
+            <ul style="margin: 5px 0;">
+                <li><strong>Quality:</strong> High Quality (for sharp QR codes)</li>
+                <li><strong>Color:</strong> Black & White</li>
+            </ul>
+        </div>
+        <button onclick="window.print()" class="btn btn-primary">🖨️ Print</button>
+    </div>
+
+    <div class="print-area">
+        <h2>Personnel</h2>
+        <div class="qr-grid">
+            {% for qr in personnel_qrcodes %}
+            <div class="qr-card">
+                <div class="qr-id">ID: {{ qr.reference_id }}</div>
+                <div class="qr-name">{{ qr.name }}</div>
+                {% if qr.qr_image %}
+                <img src="{{ qr.qr_image.url }}" class="qr-image" alt="QR Code">
+                {% else %}
+                <div class="qr-placeholder">QR Code Missing</div>
+                {% endif %}
+                <div class="badge">PERSONNEL</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <h2>Items</h2>
+        <div class="qr-grid">
+            {% for qr in item_qrcodes %}
+            <div class="qr-card">
+                <div class="qr-id">ID: {{ qr.reference_id }}</div>
+                <div class="qr-name">{{ qr.name }}</div>
+                {% if qr.qr_image %}
+                <img src="{{ qr.qr_image.url }}" class="qr-image" alt="QR Code">
+                {% else %}
+                <div class="qr-placeholder">QR Code Missing</div>
+                {% endif %}
+                <div class="badge">ITEM</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+.qr-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10mm;
+}
+
+.qr-card {
+    width: {{ card_width_mm }}mm;
+    height: {{ card_height_mm }}mm;
+    border: 2px solid black;
+    padding: 3mm;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    page-break-inside: avoid;
+}
+
+.qr-image {
+    width: {{ qr_size_mm }}mm;
+    height: {{ qr_size_mm }}mm;
+    margin: auto;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+    /* Ensure sharp edges for print */
+}
+
+.qr-id {
+    font-size: {{ font_size_id }}pt;
+    font-weight: bold;
+    text-align: left;
+}
+
+.qr-name {
+    font-size: {{ font_size_name }}pt;
+    font-weight: bold;
+}
+
+.badge {
+    font-size: {{ font_size_badge }}pt;
+    background: #f0f0f0;
+    padding: 2px 8px;
+    border: 1px solid black;
+}
+
+.qr-placeholder {
+    width: {{ qr_size_mm }}mm;
+    height: {{ qr_size_mm }}mm;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+    border: 2px dashed #ccc;
+    color: #999;
+    font-size: 10pt;
+}
+
+@media print {
+    .no-print { display: none !important; }
+    body { margin: 0; }
+    .container { width: 100%; max-width: none; margin: 0; padding: 0; }
+    .print-area { padding: 15mm; }
+    
+    /* HD QR code rendering for print */
+    .qr-image {
+        image-rendering: -webkit-optimize-contrast !important;
+        image-rendering: crisp-edges !important;
+        image-rendering: pixelated !important;
+        /* Force high-quality rendering */
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
+</style>
+{% endblock %}

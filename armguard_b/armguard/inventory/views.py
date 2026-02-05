@@ -1,0 +1,138 @@
+"""
+Inventory Views
+"""
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views.generic import ListView, DetailView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Item
+from core.network_decorators import lan_required, read_only_on_wan
+
+
+class ItemListView(LoginRequiredMixin, ListView):
+    """List all items - Read-only on WAN, full access on LAN"""
+    model = Item
+    template_name = 'inventory/item_list.html'
+    context_object_name = 'items'
+    paginate_by = 100
+
+    @read_only_on_wan
+    def dispatch(self, request, *args, **kwargs):
+        """Override dispatch to apply network restrictions"""
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.order_by('item_type', 'serial')
+    
+    def get_context_data(self, **kwargs):
+        """Add QR code objects to items"""
+        context = super().get_context_data(**kwargs)
+        # Import here to avoid circular imports
+        from qr_manager.models import QRCodeImage
+        
+        # Attach QR code object to each item
+        for item in context['items']:
+            try:
+                item.qr_code_obj = QRCodeImage.objects.get(
+                    qr_type=QRCodeImage.TYPE_ITEM,
+                    reference_id=item.id  # Use item.id, not item.serial
+                )
+            except QRCodeImage.DoesNotExist:
+                item.qr_code_obj = None
+        
+        return context
+
+
+class ItemDetailView(LoginRequiredMixin, DetailView):
+    """View item details - Read-only on WAN, full access on LAN"""
+    model = Item
+    template_name = 'inventory/item_detail.html'
+    context_object_name = 'item'
+    
+    @read_only_on_wan
+    def dispatch(self, request, *args, **kwargs):
+        """Override dispatch to apply network restrictions"""
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        """Add QR code object and last take transaction to context"""
+        context = super().get_context_data(**kwargs)
+        # Import here to avoid circular imports
+        from qr_manager.models import QRCodeImage
+        from transactions.models import Transaction
+        
+        try:
+            context['qr_code_obj'] = QRCodeImage.objects.get(
+                qr_type=QRCodeImage.TYPE_ITEM,
+                reference_id=self.object.id  # Use item.id, not item.serial
+            )
+        except QRCodeImage.DoesNotExist:
+            context['qr_code_obj'] = None
+        
+        # Get last 'Take' transaction for issued items
+        if self.object.status == 'Issued':
+            last_take = self.object.transactions.filter(action='Take').order_by('-date_time').first()
+            # Check if there's no return after this take
+            if last_take and not self.object.transactions.filter(action='Return', date_time__gt=last_take.date_time).exists():
+                context['last_take'] = last_take
+            else:
+                context['last_take'] = None
+        else:
+            context['last_take'] = None
+            
+        return context
+
+
+def is_admin_or_armorer(user):
+    """Check if user is admin, superuser, or armorer - can modify items"""
+    return user.is_authenticated and (
+        user.is_superuser or 
+        user.groups.filter(name='Admin').exists() or 
+        user.groups.filter(name='Armorer').exists()
+    )
+
+
+from django.contrib.auth.decorators import user_passes_test
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+@login_required
+@user_passes_test(is_admin_or_armorer, login_url='/')
+def update_item_status(request, pk):
+    """Update item status (only for non-issued items) - Admin/Armorer only"""
+    if request.method != 'POST':
+        return redirect('inventory:item_detail', pk=pk)
+    
+    item = get_object_or_404(Item, pk=pk)
+    new_status = request.POST.get('status', '').strip()
+    
+    # Input validation
+    if not new_status:
+        messages.error(request, 'Status is required.')
+        return redirect('inventory:item_detail', pk=pk)
+    
+    # Only allow status changes if item is not issued
+    if item.status == Item.STATUS_ISSUED:
+        messages.error(request, 'Cannot change status of issued items. Please return the item first.')
+        return redirect('inventory:item_detail', pk=pk)
+    
+    # Validate new status
+    valid_statuses = [Item.STATUS_AVAILABLE, Item.STATUS_MAINTENANCE, Item.STATUS_RETIRED]
+    if new_status not in valid_statuses:
+        logger.warning("Invalid status attempted: %s by user %s", new_status, request.user.username)
+        messages.error(request, 'Invalid status selected.')
+        return redirect('inventory:item_detail', pk=pk)
+    
+    # Update status
+    old_status = item.status
+    item.status = new_status
+    item.save()
+    
+    logger.info("Item %s status changed from %s to %s by %s", pk, old_status, new_status, request.user.username)
+    messages.success(request, f'Item status changed from "{old_status}" to "{new_status}".')
+    return redirect('inventory:item_detail', pk=pk)
+

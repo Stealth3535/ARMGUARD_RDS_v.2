@@ -4,299 +4,221 @@
 {% block title %}Personnel Directory - ArmGuard{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'personnel/personnel_profile_list.css' %}?v={{ timestamp }}">
 <style>
-.personnel-card {
-    background: white;
-    border: none;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-    transition: all 0.3s ease;
-    overflow: hidden;
-}
-.personnel-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
-}
-.profile-avatar {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: linear-gradient(45deg, #667eea, #764ba2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.8rem;
-    color: white;
-    font-weight: bold;
-}
-.rank-badge {
-    font-size: 0.7rem;
-    padding: 0.3rem 0.6rem;
-    border-radius: 20px;
-    font-weight: 600;
-}
-.filter-card {
-    background: white;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-    padding: 1.5rem;
-}
+    .view-btn {
+        padding: 0.25rem 0.75rem;
+        background: #007bff;
+        color: white;
+        border-radius: 0.25rem;
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: all 0.3s;
+    }
+    
+    .view-btn:hover {
+        background: #0056b3;
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+    
+    .user-linked {
+        color: #00b894;
+    }
+    
+    .user-unlinked {
+        color: #e17055;
+    }
+    
+    /* Force consistent ACTIVE badge styling - highest specificity */
+    .personnel-card .badge-active,
+    .personnel-card span.badge.badge-active,
+    .badge.badge-active,
+    span.badge-active,
+    .badge:contains("ACTIVE"),
+    span[class*="badge"]:contains("ACTIVE") {
+        background-color: #d4edda !important;
+        color: #155724 !important;
+        border: none !important;
+    }
+    
+    /* Override any Bootstrap or framework badge styles */
+    .badge,
+    .badge-secondary,
+    .badge-danger,
+    .badge-primary {
+        background-color: inherit;
+        color: inherit;
+    }
+    
+    /* Specific override for active status */
+    .badge-active {
+        background-color: #d4edda !important;
+        color: #155724 !important;
+    }
+    
+    /* Debug styling to see what's happening */
+    .personnel-card .badge {
+        border: 1px solid #000 !important;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-lg py-4">
+<div class="container">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header">
         <div>
-            <h1 class="display-6 fw-bold mb-1">Personnel Directory</h1>
-            <p class="text-muted mb-0">Manage military personnel records and assignments</p>
+            <h1 class="page-title">Personnel Directory</h1>
+            <p class="page-subtitle">{{ total_count }} Personnel Records</p>
         </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#filterPanel">
-                <i class="bi bi-funnel"></i> Filter
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+        <form method="get" style="display: flex; gap: 1rem; align-items: center;">
+            {{ search_form.search_query }}
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search"></i> Search
             </button>
-            <a href="{% url 'armguard_admin:registration' %}" class="btn btn-primary">
-                <i class="bi bi-person-plus"></i> Register Personnel
+            <a href="{% url 'personnel:personnel_profile_list' %}" class="btn btn-outline-secondary">
+                Clear
             </a>
-        </div>
+        </form>
     </div>
-    
-    <!-- Filter Panel -->
-    <div class="collapse show mb-4" id="filterPanel">
-        <div class="filter-card">
-            <form method="GET" class="row g-3">
-                <div class="col-md-3">
-                    <label for="search" class="form-label">Search</label>
-                    <input type="text" class="form-control" name="search" id="search" 
-                           placeholder="Name, rank, or ID..." value="{{ request.GET.search }}">
-                </div>
-                <div class="col-md-3">
-                    <label for="classification" class="form-label">Classification</label>
-                    <select name="classification" id="classification" class="form-select">
-                        <option value="">All Classifications</option>
-                        <option value="OFFICER" {% if request.GET.classification == 'OFFICER' %}selected{% endif %}>Officer</option>
-                        <option value="ENLISTED PERSONNEL" {% if request.GET.classification == 'ENLISTED PERSONNEL' %}selected{% endif %}>Enlisted Personnel</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="status" class="form-label">Status</label>
-                    <select name="status" id="status" class="form-select">
-                        <option value="">All Status</option>
-                        <option value="Active" {% if request.GET.status == 'Active' %}selected{% endif %}>Active</option>
-                        <option value="Inactive" {% if request.GET.status == 'Inactive' %}selected{% endif %}>Inactive</option>
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <i class="bi bi-search"></i> Apply Filter
-                    </button>
-                    <a href="{% url 'personnel:personnel_profile_list' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-circle"></i> Clear
-                    </a>
-                </div>
-            </form>
-        </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <form method="get" style="display: flex; gap: 1rem; align-items: center;">
+            {{ search_form.status }}
+            {{ search_form.rank_type }}
+            {{ search_form.group }}
+            <button type="submit" class="btn btn-secondary">Filter</button>
+        </form>
     </div>
-    
-    <!-- Statistics Row -->
-    <div class="row g-3 mb-4">
-        <div class="col-lg-3 col-md-6">
-            <div class="card border-0 bg-primary text-white h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-subtitle mb-2 opacity-75">Total Personnel</h6>
-                            <h3 class="card-title mb-0 fw-bold">{{ personnel_list|length }}</h3>
-                        </div>
-                        <i class="bi bi-people" style="font-size: 2.5rem; opacity: 0.7;"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="card border-0 bg-success text-white h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-subtitle mb-2 opacity-75">Active</h6>
-                            <h3 class="card-title mb-0 fw-bold">{{ active_count|default:0 }}</h3>
-                        </div>
-                        <i class="bi bi-check-circle" style="font-size: 2.5rem; opacity: 0.7;"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="card border-0 bg-info text-white h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-subtitle mb-2 opacity-75">Officers</h6>
-                            <h3 class="card-title mb-0 fw-bold">{{ officers_count|default:0 }}</h3>
-                        </div>
-                        <i class="bi bi-star" style="font-size: 2.5rem; opacity: 0.7;"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6">
-            <div class="card border-0 bg-warning text-dark h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-subtitle mb-2 opacity-75">Enlisted</h6>
-                            <h3 class="card-title mb-0 fw-bold">{{ enlisted_count|default:0 }}</h3>
-                        </div>
-                        <i class="bi bi-award" style="font-size: 2.5rem; opacity: 0.7;"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
+
     <!-- Personnel Cards Grid -->
-    <div class="row g-4 mb-5">
-        {% for personnel in personnel_list %}
-        <div class="col-xl-4 col-lg-6 col-md-12">
-            <div class="personnel-card card h-100">
-                <div class="card-body p-4">
-                    <!-- Header with Avatar and Status -->
-                    <div class="d-flex align-items-start mb-3">
-                        <div class="profile-avatar me-3">
-                            {{ personnel.first_name|slice:":1" }}{{ personnel.last_name|slice:":1" }}
-                        </div>
-                        <div class="flex-grow-1">
-                            <h5 class="card-title mb-1">
-                                {{ personnel.get_full_name }}
-                            </h5>
-                            <div class="d-flex flex-wrap gap-2 mb-2">
-                                <span class="badge bg-{% if personnel.status == 'Active' %}success{% else %}secondary{% endif %}">
-                                    {{ personnel.status }}
-                                </span>
-                                <span class="rank-badge bg-primary-subtle text-primary">
-                                    {{ personnel.rank }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Personnel Details -->
-                    <div class="row text-sm mb-3">
-                        <div class="col-6">
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="bi bi-person-badge text-muted me-2"></i>
-                                <span>{{ personnel.personnel_id }}</span>
-                            </div>
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="bi bi-telephone text-muted me-2"></i>
-                                <span>{{ personnel.phone_number|default:"N/A" }}</span>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="bi bi-building text-muted me-2"></i>
-                                <span>{{ personnel.unit|default:"Unassigned" }}</span>
-                            </div>
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="bi bi-star text-muted me-2"></i>
-                                <span>{{ personnel.classification }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- User Account Status -->
-                    {% if personnel.user %}
-                        <div class="alert alert-success py-2 px-3 mb-3" style="font-size: 0.875rem;">
-                            <i class="bi bi-check-circle me-1"></i>
-                            Account linked to <strong>{{ personnel.user.username }}</strong>
-                        </div>
-                    {% else %}
-                        <div class="alert alert-warning py-2 px-3 mb-3" style="font-size: 0.875rem;">
-                            <i class="bi bi-exclamation-triangle me-1"></i>
-                            No user account linked
-                        </div>
-                    {% endif %}
-                    
-                    <!-- Action Buttons -->
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'personnel:personnel_profile_detail' personnel.id %}" 
-                           class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-eye"></i> View Profile
-                        </a>
+    <div class="grid grid-3" id="personnelGrid">
+        {% for person in page_obj %}
+        <div class="card personnel-card" 
+             data-status="{{ person.status }}" 
+             data-rank="{% if person.classification == 'OFFICER' %}officer{% elif person.classification == 'SUPERUSER' %}superuser{% else %}enlisted{% endif %}"
+             data-group="{{ person.group }}"
+             data-search="{{ person.get_full_name|lower }} {{ person.rank|lower }} {{ person.serial|lower }} {{ person.group|lower }}">
+            
+            <div class="d-flex gap-2 mb-2">
+                {% if person.picture %}
+                <img src="{{ person.picture.url }}" alt="{{ person.get_full_name }}" class="personnel-picture" style="width: 100px; height: 100px;">
+                {% else %}
+                <div class="no-picture" style="width: 100px; height: 100px; font-size: 0.8rem;">No Photo</div>
+                {% endif %}
+                
+                <div style="flex: 1;">
+                    <h3 style="margin: 0; color: var(--primary-color); font-size: 1.1rem;">
+                        {{ person.get_full_name }}
+                    </h3>
+                    <p style="margin: 0.5rem 0; color: var(--text-light);">
+                        <strong>
+                        {% if person.classification == 'SUPERUSER' %}
+                            SUPERUSER
+                        {% else %}
+                            {{ person.rank }}
+                        {% endif %}
+                        </strong>
+                    </p>
+                    <div>
+                        {% if person.classification == 'OFFICER' %}
+                        <span class="badge badge-officer">Officer</span>
+                        {% elif person.classification == 'SUPERUSER' %}
+                        <span class="badge badge-superuser">Superuser</span>
+                        {% else %}
+                        <span class="badge badge-enlisted">Enlisted</span>
+                        {% endif %}
+                        
+                        {% if person.status == 'Active' %}
+                        <span class="badge badge-active">{{ person.status }}</span>
+                        {% elif person.status == 'ACTIVE' %}
+                        <span class="badge badge-active">{{ person.status }}</span>
+                        {% else %}
+                        <span class="badge badge-inactive">{{ person.status }}</span>
+                        {% endif %}
                     </div>
                 </div>
+            </div>
+            
+            <div class="detail-grid" style="margin-top: 1rem;">
+                <div class="detail-item" style="padding: 0.5rem;">
+                    <div class="detail-label" style="font-size: 0.75rem;">ID</div>
+                    <div class="detail-value" style="font-size: 0.9rem;">{{ person.id }}</div>
+                </div>
+                <div class="detail-item" style="padding: 0.5rem;">
+                    <div class="detail-label" style="font-size: 0.75rem;">Serial</div>
+                    <div class="detail-value" style="font-size: 0.9rem;">{{ person.get_serial_display }}</div>
+                </div>
+                <div class="detail-item" style="padding: 0.5rem;">
+                    <div class="detail-label" style="font-size: 0.75rem;">Group</div>
+                    <div class="detail-value" style="font-size: 0.9rem;">{{ person.group }}</div>
+                </div>
+                <div class="detail-item" style="padding: 0.5rem;">
+                    <div class="detail-label" style="font-size: 0.75rem;">Phone</div>
+                    <div class="detail-value" style="font-size: 0.9rem;">{{ person.tel }}</div>
+                </div>
+            </div>
+            
+            <div class="mt-2">
+                <a href="{% url 'personnel:personnel_profile_detail' person.id %}" class="btn btn-primary btn-sm" style="width: 100%;">View Details →</a>
+                
+                {% if user.is_superuser or 'Admin' in user.groups.all|join:',' %}
+                <div style="margin-top: 0.5rem;">
+                    <small class="text-muted" style="font-size: 0.7rem; display: block; text-align: center;">
+                        To edit or register personnel, use the 
+                        <a href="{% url 'armguard_admin:registration' %}" class="text-primary">Registration Form</a>
+                    </small>
+                </div>
+                {% endif %}
             </div>
         </div>
         {% empty %}
-        <div class="col-12">
-            <div class="text-center py-5">
-                <i class="bi bi-people display-1 text-muted mb-3"></i>
-                <h4 class="text-muted mb-2">No Personnel Found</h4>
-                <p class="text-muted mb-3">
-                    {% if request.GET.search %}
-                        No personnel match your search criteria.
-                    {% else %}
-                        No personnel have been registered yet.
-                    {% endif %}
-                </p>
-                <a href="{% url 'armguard_admin:registration' %}" class="btn btn-primary">
-                    <i class="bi bi-person-plus"></i> Register First Personnel
-                </a>
-            </div>
+        <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
+            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted mb-2">No Personnel Found</h4>
+            <p class="text-muted mb-3">
+                {% if request.GET.search_query %}
+                    No personnel match your search criteria.
+                {% else %}
+                    No personnel records have been created yet.
+                {% endif %}
+            </p>
+            {% if user.is_superuser or 'Admin' in user.groups.all|join:',' %}
+            <a href="{% url 'armguard_admin:registration' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i> Register Personnel
+            </a>
+            <br>
+            <small class="text-muted mt-2" style="display: block;">
+                Use the Registration Form to add new personnel
+            </small>
+            {% endif %}
         </div>
         {% endfor %}
     </div>
-    
-    <!-- Pagination -->
-    {% if is_paginated %}
-    <nav aria-label="Personnel pagination" class="mt-5">
-        <ul class="pagination justify-content-center">
-            {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.classification %}classification={{ request.GET.classification }}&{% endif %}page={{ page_obj.previous_page_number }}">
-                        <i class="bi bi-chevron-left"></i> Previous
-                    </a>
-                </li>
-            {% endif %}
-            
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ num }}</span>
-                    </li>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <li class="page-item">
-                        <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.classification %}classification={{ request.GET.classification }}&{% endif %}page={{ num }}">{{ num }}</a>
-                    </li>
-                {% endif %}
-            {% endfor %}
-            
-            {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.classification %}classification={{ request.GET.classification }}&{% endif %}page={{ page_obj.next_page_number }}">
-                        Next <i class="bi bi-chevron-right"></i>
-                    </a>
-                </li>
-            {% endif %}
-        </ul>
-    </nav>
-    {% endif %}
 </div>
 
-{% endblock %}
-
-{% block extra_js %}
 <script>
-// Real-time search functionality
-document.getElementById('search').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    const cards = document.querySelectorAll('.personnel-card');
-    
-    cards.forEach(card => {
-        const name = card.querySelector('.card-title').textContent.toLowerCase();
-        const id = card.querySelector('.bi-person-badge').parentElement.textContent.toLowerCase();
-        const rank = card.querySelector('.rank-badge').textContent.toLowerCase();
+document.addEventListener('DOMContentLoaded', function() {
+    // Force all ACTIVE badges to have consistent styling
+    const allBadges = document.querySelectorAll('.badge');
+    allBadges.forEach(function(badge) {
+        if (badge.textContent.trim() === 'ACTIVE' || badge.textContent.trim() === 'Active') {
+            badge.style.setProperty('background-color', '#d4edda', 'important');
+            badge.style.setProperty('color', '#155724', 'important');
+            badge.style.setProperty('border', 'none', 'important');
+            console.log('Fixed badge:', badge.textContent, badge);
+        }
+    });
+});
+</script>
+{% endblock %}
         
         if (name.includes(searchTerm) || id.includes(searchTerm) || rank.includes(searchTerm)) {
             card.closest('.col-lg-4').style.display = 'block';

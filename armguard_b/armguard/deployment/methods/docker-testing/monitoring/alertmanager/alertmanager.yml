@@ -1,0 +1,65 @@
+# Alertmanager Configuration for ArmGuard Testing Environment
+
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alertmanager@armguard.local'
+  smtp_require_tls: false
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default-receiver'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      continue: true
+    - match:
+        severity: high
+      receiver: 'high-alerts'
+    - match:
+        severity: medium
+      receiver: 'medium-alerts'
+    - match:
+        severity: low
+      receiver: 'low-alerts'
+
+receivers:
+  - name: 'default-receiver'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook'
+        send_resolved: true
+
+  - name: 'critical-alerts'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook/critical'
+        send_resolved: true
+
+  - name: 'high-alerts'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook/high'
+        send_resolved: true
+
+  - name: 'medium-alerts'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook/medium'
+        send_resolved: true
+
+  - name: 'low-alerts'
+    webhook_configs:
+      - url: 'http://localhost:5001/webhook/low'
+        send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'high'
+    equal: ['alertname']
+  - source_match:
+      severity: 'high'
+    target_match:
+      severity: 'medium'
+    equal: ['alertname']

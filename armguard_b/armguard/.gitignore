@@ -1,0 +1,100 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+/media/
+/logs/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Project specific
+test_qr.png
+*.pyc
+core/media/temp/
+core/media/qr_codes/*
+!core/media/qr_codes/.gitkeep
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Deployment sensitive files
+deployment/organized/active/*.backup
+deployment/organized/archive/*.backup
+
+# SSL certificates and keys
+ssl/
+certs/
+certificates/
+*.key
+*.pem
+*.crt
+*.csr
+ca.pem
+server-cert.pem
+server-key.pem
+
+# Database backups
+*.sql
+*.dump
+
+# Raspberry Pi specific
+*.img
+*.iso
+
+# Additional security
+secrets.json
+private_key.pem

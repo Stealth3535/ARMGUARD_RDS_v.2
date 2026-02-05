@@ -1,0 +1,631 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title|default:"Registration" }} - ArmGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 900px;
+        margin: 2rem auto;
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .form-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #667eea;
+    }
+    
+    .form-header h1 {
+        margin: 0 0 0.5rem 0;
+        color: #333;
+        font-size: 1.8rem;
+    }
+    
+    .form-header .subtitle {
+        color: #666;
+        font-size: 0.95rem;
+    }
+    
+    .info-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #e0e7ff;
+        color: #3730a3;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+    
+    .personnel-info {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 0.75rem 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 4px;
+    }
+    
+    .personnel-info strong {
+        color: #92400e;
+    }
+    
+    .alert-info {
+        background: #d1ecf1;
+        border-left: 4px solid #17a2b8;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 4px;
+        color: #0c5460;
+    }
+    
+    .alert-warning {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 4px;
+        color: #856404;
+    }
+    
+    .hidden {
+        display: none !important;
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .form-section:last-of-type {
+        border-bottom: none;
+    }
+    
+    .form-section h2 {
+        font-size: 1.25rem;
+        color: #374151;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .form-section h2::before {
+        content: '';
+        width: 4px;
+        height: 1.5rem;
+        background: #667eea;
+        border-radius: 2px;
+    }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-row.single {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #333;
+        font-weight: 500;
+        font-size: 0.95rem;
+    }
+    
+    .form-group label .required {
+        color: #dc3545;
+        margin-left: 0.25rem;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 1rem;
+        transition: border-color 0.2s;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .form-control[readonly] {
+        background-color: #f3f4f6;
+        cursor: not-allowed;
+    }
+    
+    select.form-control {
+        cursor: pointer;
+    }
+    
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #666;
+        margin-top: 0.25rem;
+        font-style: italic;
+    }
+    
+    .error {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: block;
+    }
+    
+    .alert {
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
+        border-radius: 5px;
+        border-left: 4px solid;
+    }
+    
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border-color: #28a745;
+    }
+    
+    .alert-error, .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+        border-color: #dc3545;
+    }
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border-color: #17a2b8;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border-color: #ffc107;
+    }
+    
+    .alert i {
+        margin-right: 0.5rem;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    .btn {
+        padding: 0.75rem 2rem;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+    }
+    
+    .btn-primary {
+        background: #667eea;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #5568d3;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #4b5563;
+    }
+    
+    .current-image {
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        background: #f9fafb;
+        border-radius: 4px;
+        display: inline-block;
+    }
+    
+    .current-image img {
+        max-height: 80px;
+        border-radius: 4px;
+        border: 2px solid #e5e7eb;
+    }
+    
+    /* Dynamic field visibility */
+    .field-user-only,
+    .field-personnel-only,
+    .field-both {
+        transition: opacity 0.3s, max-height 0.3s;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <!-- Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <!-- Header -->
+    <div class="form-header">
+        <h1>
+            {{ page_title|default:"Registration Form" }}
+            {% if is_edit and edit_user %}
+                {% if edit_user.is_superuser %}
+                <span class="info-badge">Superuser</span>
+                {% elif edit_user.is_staff %}
+                <span class="info-badge">Admin</span>
+                {% else %}
+                <span class="info-badge">Personnel</span>
+                {% endif %}
+            {% endif %}
+        </h1>
+        <p class="subtitle">
+            {% if is_edit %}
+                Modify user account and personnel information
+            {% else %}
+                Register new users and personnel in the ArmGuard system
+            {% endif %}
+        </p>
+    </div>
+    
+    <!-- Personnel Link Info (if editing and has personnel) -->
+    {% if is_edit and edit_user.personnel %}
+    <div class="personnel-info">
+        <strong>Linked Personnel:</strong> 
+        {{ edit_user.personnel.firstname }} {{ edit_user.personnel.surname }} 
+        ({{ edit_user.personnel.rank }} - Serial: {{ edit_user.personnel.get_serial_display }})
+    </div>
+    {% endif %}
+    
+    <!-- Form -->
+    <form method="post" enctype="multipart/form-data" id="universalForm">
+        {% csrf_token %}
+        
+        {# Hidden fields #}
+        {{ form.operation_type }}
+        {{ form.edit_user_id }}
+        {{ form.edit_personnel_id }}
+        
+        <!-- Role Selection Section (show only for new registration and not for armorers) -->
+        {% if not is_edit %}
+        {% if not user_is_armorer %}
+        <div class="form-section">
+            <h2>Registration Type</h2>
+            <div class="form-group">
+                <label for="{{ form.role.id_for_label }}">
+                    {{ form.role.label }} <span class="required">*</span>
+                </label>
+                {{ form.role }}
+                <p class="help-text">Select the role to determine what type of registration will be performed</p>
+                {% if form.role.errors %}
+                    <span class="error">{{ form.role.errors }}</span>
+                {% endif %}
+            </div>
+            
+            <div id="operationNotification" class="alert" style="display:none; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+                <i class="fas fa-info-circle"></i>
+                <span id="operationText"></span>
+            </div>
+        </div>
+        {% else %}
+        {# Hidden role field for armorers - always set to personnel #}
+        <input type="hidden" name="role" value="personnel">
+        <div class="alert alert-info" style="padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460;">
+            <i class="fas fa-info-circle"></i>
+            <strong>Armorer Mode:</strong> You can register personnel records only. Contact an administrator for user account registration.
+        </div>
+        {% endif %}
+        {% endif %}
+        
+        <!-- User Account Section -->
+        <div class="form-section field-user-account" id="userAccountSection">
+            <h2>User Account Information</h2>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}">
+                        {{ form.username.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <span class="error">{{ form.username.errors }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}">
+                        {{ form.email.label }}
+                    </label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <span class="error">{{ form.email.errors }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.password.id_for_label }}">
+                        {{ form.password.label }} {% if not is_edit %}<span class="required">*</span>{% endif %}
+                    </label>
+                    {{ form.password }}
+                    {% if form.password.help_text %}
+                        <p class="help-text">{{ form.password.help_text }}</p>
+                    {% endif %}
+                    {% if form.password.errors %}
+                        <span class="error">{{ form.password.errors }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.confirm_password.id_for_label }}">
+                        {{ form.confirm_password.label }} {% if not is_edit %}<span class="required">*</span>{% endif %}
+                    </label>
+                    {{ form.confirm_password }}
+                    {% if form.confirm_password.errors %}
+                        <span class="error">{{ form.confirm_password.errors }}</span>
+                    {% endif %}
+                </div>
+            </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.department.id_for_label }}">
+                        {{ form.department.label }}
+                    </label>
+                    {{ form.department }}
+                    {% if form.department.help_text %}
+                        <p class="help-text">{{ form.department.help_text }}</p>
+                    {% endif %}
+                    {% if form.department.errors %}
+                        <span class="error">{{ form.department.errors }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    {{ form.is_active }}
+                    <label for="{{ form.is_active.id_for_label }}">
+                        {{ form.is_active.label }}
+                    </label>
+                </div>
+                <p class="help-text">Inactive users cannot log in to the system.</p>
+                {% if form.is_active.errors %}
+                    <span class="error">{{ form.is_active.errors }}</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Personnel Information Section -->
+        <div class="form-section field-personnel-info" id="personnelInfoSection">
+            <h2>Personnel Information</h2>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.surname.id_for_label }}">
+                        {{ form.surname.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.surname }}
+                    {% if form.surname.errors %}
+                        <span class="error">{{ form.surname.errors }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.firstname.id_for_label }}">
+                        {{ form.firstname.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.firstname }}
+                    {% if form.firstname.errors %}
+                        <span class="error">{{ form.firstname.errors }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.middle_initial.id_for_label }}">
+                        {{ form.middle_initial.label }}
+                    </label>
+                    {{ form.middle_initial }}
+                    {% if form.middle_initial.errors %}
+                        <span class="error">{{ form.middle_initial.errors }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.rank.id_for_label }}">
+                        {{ form.rank.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.rank }}
+                    {% if form.rank.errors %}
+                        <span class="error">{{ form.rank.errors }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.serial.id_for_label }}">
+                        Serial Number <span class="required">*</span>
+                    </label>
+                    {{ form.serial }}
+                    {% if form.serial.help_text %}
+                        <p class="help-text">{{ form.serial.help_text }}</p>
+                    {% endif %}
+                    {% if form.serial.errors %}
+                        <span class="error">{{ form.serial.errors }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.personnel_group.id_for_label }}">
+                        {{ form.personnel_group.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.personnel_group }}
+                    {% if form.personnel_group.errors %}
+                        <span class="error">{{ form.personnel_group.errors }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.tel.id_for_label }}">
+                        {{ form.tel.label }} <span class="required">*</span>
+                    </label>
+                    {{ form.tel }}
+                    {% if form.tel.help_text %}
+                        <p class="help-text">{{ form.tel.help_text }}</p>
+                    {% endif %}
+                    {% if form.tel.errors %}
+                        <span class="error">{{ form.tel.errors }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.personnel_status.id_for_label }}">
+                        {{ form.personnel_status.label }}
+                    </label>
+                    {{ form.personnel_status }}
+                    {% if form.personnel_status.errors %}
+                        <span class="error">{{ form.personnel_status.errors }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-row single">
+                <div class="form-group">
+                    <label for="{{ form.personnel_picture.id_for_label }}">
+                        {{ form.personnel_picture.label }}
+                    </label>
+                    {{ form.personnel_picture }}
+                    {% if is_edit and edit_user.personnel and edit_user.personnel.picture %}
+                        <div class="current-image">
+                            <small>Current:</small>
+                            <img src="{{ edit_user.personnel.picture.url }}" alt="Personnel Photo">
+                        </div>
+                    {% endif %}
+                    {% if form.personnel_picture.errors %}
+                        <span class="error">{{ form.personnel_picture.errors }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                {{ submit_text|default:"Register" }}
+            </button>
+            <a href="{% if is_edit %}{% url 'armguard_admin:user_management' %}{% else %}{% url 'armguard_admin:dashboard' %}{% endif %}" class="btn btn-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roleSelect = document.getElementById('{{ form.role.id_for_label }}');
+    const operationTypeInput = document.getElementById('operationType');
+    const operationNotification = document.getElementById('operationNotification');
+    const operationText = document.getElementById('operationText');
+    const userSection = document.getElementById('userAccountSection');
+    const personnelSection = document.getElementById('personnelInfoSection');
+    
+    function updateOperationBasedOnRole() {
+        if (!roleSelect || !operationTypeInput) return;
+        
+        const role = roleSelect.value;
+        let operationType = '';
+        let notificationClass = '';
+        let notificationMessage = '';
+        
+        // Set operation type and notification based on role
+        if (role === 'personnel') {
+            operationType = 'create_personnel_only';
+            notificationClass = 'alert-info';
+            notificationMessage = '<i class="fas fa-user"></i> <strong>Personnel Registration:</strong> Creating personnel record only (no user login account)';
+            // Hide user section, show personnel section
+            if (userSection) userSection.style.display = 'none';
+            if (personnelSection) personnelSection.style.display = 'block';
+        } else if (role === 'armorer' || role === 'admin') {
+            operationType = 'create_user_with_personnel';
+            notificationClass = 'alert-info';
+            const roleLabel = role === 'armorer' ? 'Armorer' : 'Administrator';
+            notificationMessage = '<i class="fas fa-user-shield"></i> <strong>' + roleLabel + ' Registration:</strong> Creating user login + personnel record';
+            // Show both sections
+            if (userSection) userSection.style.display = 'block';
+            if (personnelSection) personnelSection.style.display = 'block';
+        }
+        
+        // Update operation type hidden input
+        operationTypeInput.value = operationType;
+        
+        // Update notification
+        if (operationNotification && notificationMessage) {
+            operationNotification.className = 'alert ' + notificationClass;
+            operationText.innerHTML = notificationMessage;
+            operationNotification.style.display = 'block';
+        } else if (operationNotification) {
+            operationNotification.style.display = 'none';
+        }
+    }
+    
+    // Listen to role changes
+    if (roleSelect) {
+        roleSelect.addEventListener('change', updateOperationBasedOnRole);
+        // Set initial state
+        updateOperationBasedOnRole();
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

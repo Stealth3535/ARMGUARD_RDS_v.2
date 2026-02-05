@@ -1,0 +1,415 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Logs - Armguard Admin</title>
+    <link rel="stylesheet" href="{% static 'admin_styles.css' %}">
+    <style>
+        .audit-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+        
+        .page-header {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .page-header h1 {
+            font-size: 2rem;
+            color: #212529;
+            margin: 0;
+        }
+        
+        .back-link {
+            background: #6c757d;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: background 0.3s ease;
+        }
+        
+        .back-link:hover {
+            background: #5a6268;
+        }
+        
+        .filters {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .filter-row {
+            display: flex;
+            gap: 1rem;
+            align-items: end;
+        }
+        
+        .filter-group {
+            flex: 1;
+        }
+        
+        .filter-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #495057;
+        }
+        
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+        
+        .filter-btn {
+            padding: 0.5rem 1.5rem;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .filter-btn:hover {
+            background: #0056b3;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        
+        .section-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .section-content {
+            padding: 1.5rem;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background: #f8f9fa;
+        }
+        
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .badge-create {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-update {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .badge-delete {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-login {
+            background: #d1ecf1;
+            color: #004085;
+        }
+        
+        .badge-logout {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-status {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+        
+        .timestamp {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        
+        .view-details-btn {
+            background: #007bff;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+        
+        .view-details-btn:hover {
+            background: #0056b3;
+        }
+        
+        .details-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            position: relative;
+            background: white;
+            max-width: 800px;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 8px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 2rem;
+            cursor: pointer;
+            color: #6c757d;
+        }
+        
+        .modal-close:hover {
+            color: #212529;
+        }
+        
+        pre {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="audit-container">
+        <div class="page-header">
+            <h1>📋 Audit Logs & Deleted Records</h1>
+            <a href="{% url 'armguard_admin:dashboard' %}" class="back-link">← Back to Dashboard</a>
+        </div>
+        
+        <!-- Filters -->
+        <div class="filters">
+            <form method="get">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="action">Filter by Action:</label>
+                        <select id="action" name="action">
+                            <option value="">All Actions</option>
+                            {% for action_code, action_name in action_choices %}
+                            <option value="{{ action_code }}" {% if current_action == action_code %}selected{% endif %}>
+                                {{ action_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="user">Filter by User:</label>
+                        <input type="text" id="user" name="user" value="{{ current_user }}" placeholder="Enter username...">
+                    </div>
+                    
+                    <button type="submit" class="filter-btn">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Audit Logs Section -->
+        <div class="section">
+            <div class="section-header">
+                🔍 Recent Audit Logs (Latest 100)
+            </div>
+            <div class="section-content">
+                {% if audit_logs %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Target</th>
+                            <th>Description</th>
+                            <th>IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in audit_logs %}
+                        <tr>
+                            <td class="timestamp">{{ log.timestamp|date:"M d, Y H:i:s" }}</td>
+                            <td><strong>{{ log.performed_by.username }}</strong></td>
+                            <td>
+                                {% if log.action == 'CREATE' %}
+                                <span class="badge badge-create">{{ log.get_action_display }}</span>
+                                {% elif log.action == 'UPDATE' %}
+                                <span class="badge badge-update">{{ log.get_action_display }}</span>
+                                {% elif log.action == 'DELETE' %}
+                                <span class="badge badge-delete">{{ log.get_action_display }}</span>
+                                {% elif log.action == 'LOGIN' %}
+                                <span class="badge badge-login">{{ log.get_action_display }}</span>
+                                {% elif log.action == 'LOGOUT' %}
+                                <span class="badge badge-logout">{{ log.get_action_display }}</span>
+                                {% else %}
+                                <span class="badge badge-status">{{ log.get_action_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ log.target_model }}
+                                {% if log.target_name %}
+                                <br><small style="color: #6c757d;">{{ log.target_name }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ log.description }}</td>
+                            <td class="timestamp">{{ log.ip_address|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="no-data">
+                    No audit logs found matching your criteria.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Deleted Records Section -->
+        <div class="section">
+            <div class="section-header">
+                🗑️ Deleted Records (Latest 50)
+            </div>
+            <div class="section-content">
+                {% if deleted_records %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Deleted At</th>
+                            <th>Deleted By</th>
+                            <th>Model</th>
+                            <th>Record ID</th>
+                            <th>Reason</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in deleted_records %}
+                        <tr>
+                            <td class="timestamp">{{ record.deleted_at|date:"M d, Y H:i:s" }}</td>
+                            <td><strong>{{ record.deleted_by.username }}</strong></td>
+                            <td>{{ record.model_name }}</td>
+                            <td>{{ record.record_id }}</td>
+                            <td>{{ record.reason|default:"No reason provided" }}</td>
+                            <td>
+                                <button class="view-details-btn" onclick="showDetails({{ record.id }})">
+                                    View Details
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="no-data">
+                    No deleted records found.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Details Modal -->
+    <div id="detailsModal" class="details-modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <h2>Deleted Record Details</h2>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Store deleted records data for modal
+        const deletedRecordsData = {
+            {% for record in deleted_records %}
+            {{ record.id }}: JSON.parse('{{ record.record_data|escapejs }}'),
+            {% endfor %}
+        };
+        
+        function showDetails(recordId) {
+            const data = deletedRecordsData[recordId];
+            const modal = document.getElementById('detailsModal');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalBody.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            modal.style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('detailsModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('detailsModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
