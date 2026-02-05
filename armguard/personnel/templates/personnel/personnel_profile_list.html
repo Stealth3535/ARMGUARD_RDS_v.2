@@ -63,7 +63,7 @@
     </div>
     
     <!-- Filter Panel -->
-    <div class="collapse mb-4" id="filterPanel">
+    <div class="collapse show mb-4" id="filterPanel">
         <div class="filter-card">
             <form method="GET" class="row g-3">
                 <div class="col-md-3">
@@ -101,54 +101,54 @@
     
     <!-- Statistics Row -->
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 bg-primary text-white">
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 bg-primary text-white h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-subtitle mb-2">Total Personnel</h6>
-                            <h3 class="card-title mb-0">{{ personnel_list|length }}</h3>
+                            <h6 class="card-subtitle mb-2 opacity-75">Total Personnel</h6>
+                            <h3 class="card-title mb-0 fw-bold">{{ personnel_list|length }}</h3>
                         </div>
-                        <i class="bi bi-people display-6"></i>
+                        <i class="bi bi-people" style="font-size: 2.5rem; opacity: 0.7;"></i>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 bg-success text-white">
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 bg-success text-white h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-subtitle mb-2">Active</h6>
-                            <h3 class="card-title mb-0">{{ active_count|default:0 }}</h3>
+                            <h6 class="card-subtitle mb-2 opacity-75">Active</h6>
+                            <h3 class="card-title mb-0 fw-bold">{{ active_count|default:0 }}</h3>
                         </div>
-                        <i class="bi bi-check-circle display-6"></i>
+                        <i class="bi bi-check-circle" style="font-size: 2.5rem; opacity: 0.7;"></i>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 bg-info text-white">
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 bg-info text-white h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-subtitle mb-2">Officers</h6>
-                            <h3 class="card-title mb-0">{{ officers_count|default:0 }}</h3>
+                            <h6 class="card-subtitle mb-2 opacity-75">Officers</h6>
+                            <h3 class="card-title mb-0 fw-bold">{{ officers_count|default:0 }}</h3>
                         </div>
-                        <i class="bi bi-star display-6"></i>
+                        <i class="bi bi-star" style="font-size: 2.5rem; opacity: 0.7;"></i>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 bg-warning text-dark">
+        <div class="col-lg-3 col-md-6">
+            <div class="card border-0 bg-warning text-dark h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-subtitle mb-2">Enlisted</h6>
-                            <h3 class="card-title mb-0">{{ enlisted_count|default:0 }}</h3>
+                            <h6 class="card-subtitle mb-2 opacity-75">Enlisted</h6>
+                            <h3 class="card-title mb-0 fw-bold">{{ enlisted_count|default:0 }}</h3>
                         </div>
-                        <i class="bi bi-award display-6"></i>
+                        <i class="bi bi-award" style="font-size: 2.5rem; opacity: 0.7;"></i>
                     </div>
                 </div>
             </div>
@@ -156,9 +156,9 @@
     </div>
     
     <!-- Personnel Cards Grid -->
-    <div class="row g-4">
+    <div class="row g-4 mb-5">
         {% for personnel in personnel_list %}
-        <div class="col-lg-4 col-md-6">
+        <div class="col-xl-4 col-lg-6 col-md-12">
             <div class="personnel-card card h-100">
                 <div class="card-body p-4">
                     <!-- Header with Avatar and Status -->
