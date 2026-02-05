@@ -41,6 +41,26 @@ Developer PC ←→ Router (LAN) ←→ Raspberry Pi Server ←→ Armory PC
 
 ---
 
+## ✅ Deployment Checklist Update (Feb 2026)
+
+Use this quick checklist before final cutover:
+
+1) **Settings logging**
+  - Ensure settings no longer emit `print()` in production.
+  - Raspberry Pi detection/optimization logs now flow through logging.
+
+2) **VPN client removal integrity**
+  - `vpn_command --action remove` now updates `wg0.conf`, creates a backup, and restarts WireGuard.
+  - If `/usr/local/bin/remove-vpn-client` exists, it will be used automatically.
+
+3) **Production deploy checks**
+  - Run `python manage.py check --deploy --settings=core.settings_production` before go-live.
+
+4) **Environment safety**
+  - Verify `.env` is **not** tracked in Git, and rotate `DJANGO_SECRET_KEY` for production.
+
+---
+
 ## �️ Phase 1: Choose Network Architecture (10 minutes)
 
 ### Option A: LAN-Only Deployment (Recommended for Secure Environments)

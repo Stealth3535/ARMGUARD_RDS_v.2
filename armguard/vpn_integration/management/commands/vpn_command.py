@@ -3,6 +3,9 @@
 
 import json
 import asyncio
+import re
+import shutil
+from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from django.utils import timezone
@@ -279,26 +282,108 @@ class Command(BaseCommand):
                 return
         
         try:
-            # Remove client configuration
+            import subprocess
+
+            remove_script = '/usr/local/bin/remove-vpn-client'
+            if os.path.exists(remove_script):
+                result = subprocess.run(
+                    ['sudo', remove_script, client_name],
+                    capture_output=True,
+                    text=True
+                )
+                if result.stdout.strip():
+                    self.stdout.write(result.stdout.strip())
+                if result.stderr.strip():
+                    self.stdout.write(self.style.WARNING(result.stderr.strip()))
+
+                if result.returncode == 0:
+                    self._restart_wireguard()
+                    self.stdout.write(self.style.SUCCESS(f'✓ Client {client_name} removed'))
+                    return
+                else:
+                    self.stdout.write(self.style.WARNING('remove-vpn-client script failed, falling back to manual cleanup'))
+
+            # Manual cleanup fallback
             client_config = f'/etc/wireguard/clients/{client_name}.conf'
             client_qr = f'/etc/wireguard/clients/{client_name}.png'
-            
+            wg_conf = '/etc/wireguard/wg0.conf'
+
+            client_ip = None
+            if os.path.exists(client_config):
+                with open(client_config, 'r', encoding='utf-8', errors='ignore') as f:
+                    for line in f:
+                        if line.strip().startswith('Address'):
+                            address = line.split('=', 1)[1].strip()
+                            client_ip = address.split('/')[0].strip()
+                            break
+
+            if os.path.exists(wg_conf):
+                backup_dir = '/etc/wireguard/backups'
+                os.makedirs(backup_dir, exist_ok=True)
+                backup_path = os.path.join(
+                    backup_dir,
+                    f'wg0.conf.backup.{datetime.now().strftime("%Y%m%d-%H%M%S")}'
+                )
+                shutil.copy(wg_conf, backup_path)
+                self.stdout.write(f'Backup created: {backup_path}')
+
+                with open(wg_conf, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+
+                blocks = re.split(r'\n\s*\n', content.strip()) if content.strip() else []
+                kept_blocks = []
+                removed = False
+
+                name_pattern = re.compile(rf'^#\s*Name:\s*{re.escape(client_name)}\s*$', re.MULTILINE)
+                client_pattern = re.compile(rf'^#\s*Client:\s*.*{re.escape(client_name)}.*$', re.MULTILINE)
+
+                for block in blocks:
+                    if '[Peer]' in block:
+                        if name_pattern.search(block) or client_pattern.search(block):
+                            removed = True
+                            continue
+                        if client_ip and f'AllowedIPs = {client_ip}/32' in block:
+                            removed = True
+                            continue
+                    kept_blocks.append(block)
+
+                if removed:
+                    new_content = '\n\n'.join(kept_blocks).rstrip() + '\n'
+                    with open(wg_conf, 'w', encoding='utf-8') as f:
+                        f.write(new_content)
+                    self.stdout.write(f'Updated: {wg_conf}')
+                else:
+                    self.stdout.write(self.style.WARNING('No matching peer block found in wg0.conf'))
+            else:
+                self.stdout.write(self.style.WARNING('wg0.conf not found; skipping server config update'))
+
             if os.path.exists(client_config):
                 os.remove(client_config)
                 self.stdout.write(f'Removed: {client_config}')
-            
+
             if os.path.exists(client_qr):
                 os.remove(client_qr)
                 self.stdout.write(f'Removed: {client_qr}')
-            
-            # TODO: Remove from server configuration and restart WireGuard
-            self.stdout.write(self.style.WARNING('Note: Server configuration update not implemented yet'))
-            self.stdout.write('You may need to manually remove the peer from wg0.conf and restart WireGuard')
-            
+
+            self._restart_wireguard()
             self.stdout.write(self.style.SUCCESS(f'✓ Client {client_name} removed'))
-            
+
         except Exception as e:
             raise CommandError(f'Failed to remove client: {str(e)}')
+
+    def _restart_wireguard(self):
+        """Restart WireGuard to apply changes"""
+        try:
+            import subprocess
+            subprocess.run(
+                ['sudo', 'systemctl', 'restart', 'wg-quick@wg0'],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            self.stdout.write(self.style.SUCCESS('✓ WireGuard restarted'))
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'WireGuard restart failed: {str(e)}'))
 
     def handle_backup(self):
         """Create VPN configuration backup"""

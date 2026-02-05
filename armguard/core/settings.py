@@ -13,6 +13,10 @@ import os
 from pathlib import Path
 from decouple import config, Csv
 import platform
+import logging
+
+# Logging (early initialization for settings diagnostics)
+logger = logging.getLogger("core.settings")
 
 # Optional imports with graceful fallbacks
 try:
@@ -21,7 +25,7 @@ try:
 except ImportError:
     psutil = None
     PSUTIL_AVAILABLE = False
-    print("⚠️  psutil not available - using fallback system monitoring")
+    logger.warning("psutil not available - using fallback system monitoring")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -73,15 +77,19 @@ MEMORY_INFO = get_memory_info()
 
 # RPi-specific settings
 if IS_RASPBERRY_PI:
-    print(f"🍓 Raspberry Pi detected - Applying ARM64 optimizations")
-    print(f"📊 Memory: {MEMORY_INFO['total_gb']:.1f}GB total, {MEMORY_INFO['available_gb']:.1f}GB available")
+    logger.info("Raspberry Pi detected - Applying ARM64 optimizations")
+    logger.info(
+        "Memory: %.1fGB total, %.1fGB available",
+        MEMORY_INFO['total_gb'],
+        MEMORY_INFO['available_gb']
+    )
     
     # Thermal monitoring
     temp = get_rpi_thermal_state()
     if temp:
-        print(f"🌡️ Current temperature: {temp}°C")
+        logger.info("Current temperature: %.1f°C", temp)
         if temp > 70:
-            print("⚠️ Warning: High temperature detected")
+            logger.warning("High temperature detected")
 
 # ============================================================================
 # Core Django Settings
@@ -737,7 +745,7 @@ if DEBUG:
 if IS_RASPBERRY_PI:
     # Memory optimization for RPi
     if MEMORY_INFO['total_gb'] < 2:
-        print("🔧 Applying low-memory optimizations for RPi")
+        logger.info("Applying low-memory optimizations for RPi")
         # Reduce database connections
         DATABASES['default']['CONN_MAX_AGE'] = 60  # Shorter connection lifetime
         # Only apply PostgreSQL-specific options if using PostgreSQL
@@ -750,7 +758,7 @@ if IS_RASPBERRY_PI:
         CACHES['default']['BACKEND'] = 'django.core.cache.backends.dummy.DummyCache'
     
     elif MEMORY_INFO['total_gb'] < 4:
-        print("🔧 Applying moderate optimizations for RPi")
+        logger.info("Applying moderate optimizations for RPi")
         # Standard optimizations for 2-4GB RPi
         DATABASES['default']['CONN_MAX_AGE'] = 300
         # Only apply PostgreSQL-specific options if using PostgreSQL
@@ -777,7 +785,7 @@ if IS_RASPBERRY_PI:
     try:
         import RPi.GPIO as GPIO
         RPi_GPIO_AVAILABLE = True
-        print("🔌 RPi.GPIO available for hardware monitoring")
+        logger.info("RPi.GPIO available for hardware monitoring")
     except ImportError:
         RPi_GPIO_AVAILABLE = False
     
@@ -790,7 +798,7 @@ if IS_RASPBERRY_PI:
 
 # ARM64 Architecture Optimizations (for all ARM64 systems)
 if platform.machine() in ['aarch64', 'arm64']:
-    print("🏗️ Applying ARM64 architecture optimizations")
+    logger.info("Applying ARM64 architecture optimizations")
     
     # Optimize for ARM64 architecture
     DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -817,8 +825,11 @@ if platform.machine() in ['aarch64', 'arm64']:
 
 # Final RPi status report
 if IS_RASPBERRY_PI:
-    print("✅ Raspberry Pi optimizations applied successfully")
-    print(f"🎯 Configuration: {'Low-memory' if MEMORY_INFO['total_gb'] < 2 else 'Standard'} mode")
+    logger.info("Raspberry Pi optimizations applied successfully")
+    logger.info(
+        "Configuration: %s mode",
+        'Low-memory' if MEMORY_INFO['total_gb'] < 2 else 'Standard'
+    )
     
     # Create RPi monitoring function
     def get_rpi_status():
@@ -839,7 +850,7 @@ if IS_RASPBERRY_PI:
             # Enable thermal protection mode
             import os
             os.environ['DJANGO_THERMAL_PROTECTION'] = 'true'
-            print(f"🔥 THERMAL PROTECTION: Activated at {thermal_temp}°C")
+            logger.warning("THERMAL PROTECTION: Activated at %.1f°C", thermal_temp)
             return True
         return False
     
@@ -851,9 +862,9 @@ if IS_RASPBERRY_PI:
     thermal_protection_check()
 
 # ARM64/RPi deployment completion marker
-print("🎯 ArmGuard Configuration: 100% RASPBERRY PI 4B READY")
-print("📋 Deployment Guide: See RPi_DEPLOYMENT_COMPLETE.md")
-print("🔍 Validation: Run python validate_deployment.py")
+logger.info("ArmGuard Configuration: 100% RASPBERRY PI 4B READY")
+logger.info("Deployment Guide: See RPi_DEPLOYMENT_COMPLETE.md")
+logger.info("Validation: Run python validate_deployment.py")
 
 # Create logs directory if it doesn't exist
 import os
