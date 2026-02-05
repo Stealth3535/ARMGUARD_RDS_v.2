@@ -30,311 +30,171 @@
                 <option value="M14">M14</option>
                 <option value="M16">M16</option>
                 <option value="M4">M4</option>
-                <option value="GLOCK">GLOCK</option>
-                <option value="45">.45</option>
-            </select>
-        </div>
-        <div class="form-group" style="margin: 0; min-width: 200px;">
-            <select id="statusFilter" class="form-control form-select">
-                <option value="">All Status</option>
-                <option value="Available">Available</option>
-                <option value="Issued">Issued</option>
-                <option value="Maintenance">Maintenance</option>
-                <option value="Retired">Retired</option>
-            </select>
-        </div>
-        <div class="form-group" style="margin: 0; min-width: 200px;">
-            <select id="conditionFilter" class="form-control form-select">
-                <option value="">All Conditions</option>
-                <option value="Good">Good</option>
-                <option value="Fair">Fair</option>
-                <option value="Poor">Poor</option>
-                <option value="Damaged">Damaged</option>
-            </select>
-        </div>
-    </div>
+                {% extends 'base.html' %}
+                {% load static %}
 
-    <!-- Inventory Table -->
-    <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Type</th>
-                    <th>Serial Number</th>
-                    <th>Status</th>
-                    <th>Condition</th>
-                    <th>Description</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="inventoryTable">
-                {% for item in items %}
-                <tr class="item-row" 
-                    data-type="{{ item.item_type }}"
-                    data-status="{{ item.status }}"
-                    data-condition="{{ item.condition }}"
-                    data-search="{{ item.item_type|lower }} {{ item.serial|lower }} {{ item.description|lower }}">
-                    <td><strong>{{ item.id }}</strong></td>
-                    <td>
-                        <strong>{{ item.item_type }}</strong><br>
-                        <small class="text-muted">
-                            {% if item.is_rifle %}Rifle{% else %}Pistol{% endif %}
-                        </small>
-                    </td>
-                    <td>{{ item.serial }}</td>
-                    <td>
-                        {% if item.status == 'Available' %}
-                        <span class="badge badge-available">{{ item.status }}</span>
-                        {% elif item.status == 'Issued' %}
-                        <span class="badge badge-issued">{{ item.status }}</span>
-                        {% elif item.status == 'Maintenance' %}
-                        <span class="badge badge-maintenance">{{ item.status }}</span>
-                        {% else %}
-                        <span class="badge badge-inactive">{{ item.status }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if item.condition == 'Good' %}
-                        <span class="badge badge-available">{{ item.condition }}</span>
-                        {% elif item.condition == 'Fair' %}
-                        <span class="badge badge-issued">{{ item.condition }}</span>
-                        {% elif item.condition == 'Poor' %}
-                        <span class="badge badge-maintenance">{{ item.condition }}</span>
-                        {% else %}
-                        <span class="badge badge-inactive">{{ item.condition }}</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ item.description|default:"-" }}</td>
-                    <td>
-                        <a href="{% url 'inventory:item_detail' item.id %}" class="btn btn-primary btn-sm">View</a>
-                        {% if user.is_staff or user.is_superuser or user.userprofile.is_armorer %}
-                        <a href="{% url 'armguard_admin:edit_item' item.id %}" class="btn btn-warning btn-sm">Edit</a>
-                        {% endif %}
-                        {% if user.is_staff or user.is_superuser %}
-                        <a href="{% url 'armguard_admin:delete_item' item.id %}" class="btn btn-danger btn-sm">Delete</a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="text-center text-muted">No items found in inventory.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-{% endblock %}
+                {% block title %}Inventory - ArmGuard{% endblock %}
 
-{% block extra_js %}
-<script>
-// Filter functionality
-document.getElementById('searchInput').addEventListener('input', filterItems);
-document.getElementById('typeFilter').addEventListener('change', filterItems);
-document.getElementById('statusFilter').addEventListener('change', filterItems);
-document.getElementById('conditionFilter').addEventListener('change', filterItems);
+                {% block extra_css %}
+                <link rel="stylesheet" href="{% static 'inventory/inventory.css' %}">
+                {% endblock %}
 
-function filterItems() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const typeFilter = document.getElementById('typeFilter').value;
-    const statusFilter = document.getElementById('statusFilter').value;
-    const conditionFilter = document.getElementById('conditionFilter').value;
+                {% block content %}
+                <div class="container">
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div>
+                            <h1 class="page-title">Firearms Inventory</h1>
+                            <p class="page-subtitle">{{ items|length }} Items in Inventory</p>
+                        </div>
+                    </div>
+
+                    <!-- Search Bar -->
+                    <div class="search-bar">
+                        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by type, serial, or description...">
+                    </div>
+
+                    <!-- Filter Bar -->
+                    <div class="filter-bar">
+                        <div class="form-group" style="margin: 0; min-width: 200px;">
+                            <select id="typeFilter" class="form-control form-select">
+                                <option value="">All Types</option>
+                                <option value="M14">M14</option>
+                                <option value="M16">M16</option>
+                                <option value="M4">M4</option>
+                                <option value="GLOCK">GLOCK</option>
+                                <option value="45">.45</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin: 0; min-width: 200px;">
+                            <select id="statusFilter" class="form-control form-select">
+                                <option value="">All Status</option>
+                                <option value="Available">Available</option>
+                                <option value="Issued">Issued</option>
+                                <option value="Maintenance">Maintenance</option>
+                                <option value="Retired">Retired</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin: 0; min-width: 200px;">
+                            <select id="conditionFilter" class="form-control form-select">
+                                <option value="">All Conditions</option>
+                                <option value="Good">Good</option>
+                                <option value="Fair">Fair</option>
+                                <option value="Poor">Poor</option>
+                                <option value="Damaged">Damaged</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Inventory Table -->
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Type</th>
+                                    <th>Serial Number</th>
+                                    <th>Status</th>
+                                    <th>Condition</th>
+                                    <th>Description</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryTable">
+                                {% for item in items %}
+                                <tr class="item-row" 
+                                    data-type="{{ item.item_type }}"
+                                    data-status="{{ item.status }}"
+                                    data-condition="{{ item.condition }}"
+                                    data-search="{{ item.item_type|lower }} {{ item.serial|lower }} {{ item.description|lower }}">
+                                    <td><strong>{{ item.id }}</strong></td>
+                                    <td>
+                                        <strong>{{ item.item_type }}</strong><br>
+                                        <small class="text-muted">
+                                            {% if item.is_rifle %}Rifle{% else %}Pistol{% endif %}
+                                        </small>
+                                    </td>
+                                    <td>{{ item.serial }}</td>
+                                    <td>
+                                        {% if item.status == 'Available' %}
+                                        <span class="badge badge-available">{{ item.status }}</span>
+                                        {% elif item.status == 'Issued' %}
+                                        <span class="badge badge-issued">{{ item.status }}</span>
+                                        {% elif item.status == 'Maintenance' %}
+                                        <span class="badge badge-maintenance">{{ item.status }}</span>
+                                        {% else %}
+                                        <span class="badge badge-inactive">{{ item.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.condition == 'Good' %}
+                                        <span class="badge badge-available">{{ item.condition }}</span>
+                                        {% elif item.condition == 'Fair' %}
+                                        <span class="badge badge-issued">{{ item.condition }}</span>
+                                        {% elif item.condition == 'Poor' %}
+                                        <span class="badge badge-maintenance">{{ item.condition }}</span>
+                                        {% else %}
+                                        <span class="badge badge-inactive">{{ item.condition }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.description|default:"-" }}</td>
+                                    <td>
+                                        <a href="{% url 'inventory:item_detail' item.id %}" class="btn btn-primary btn-sm">View</a>
+                                        {% if user.is_staff or user.is_superuser or user.userprofile.is_armorer %}
+                                        <a href="{% url 'armguard_admin:edit_item' item.id %}" class="btn btn-warning btn-sm">Edit</a>
+                                        {% endif %}
+                                        {% if user.is_staff or user.is_superuser %}
+                                        <a href="{% url 'armguard_admin:delete_item' item.id %}" class="btn btn-danger btn-sm">Delete</a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">No items found in inventory.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endblock %}
+
+                {% block extra_js %}
+                <script>
+                // Filter functionality
+                document.getElementById('searchInput').addEventListener('input', filterItems);
+                document.getElementById('typeFilter').addEventListener('change', filterItems);
+                document.getElementById('statusFilter').addEventListener('change', filterItems);
+                document.getElementById('conditionFilter').addEventListener('change', filterItems);
+
+                function filterItems() {
+                    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                    const typeFilter = document.getElementById('typeFilter').value;
+                    const statusFilter = document.getElementById('statusFilter').value;
+                    const conditionFilter = document.getElementById('conditionFilter').value;
     
-    const rows = document.querySelectorAll('.item-row');
+                    const rows = document.querySelectorAll('.item-row');
     
-    rows.forEach(row => {
-        const searchData = row.getAttribute('data-search');
-        const type = row.getAttribute('data-type');
-        const status = row.getAttribute('data-status');
-        const condition = row.getAttribute('data-condition');
+                    rows.forEach(row => {
+                        const searchData = row.getAttribute('data-search');
+                        const type = row.getAttribute('data-type');
+                        const status = row.getAttribute('data-status');
+                        const condition = row.getAttribute('data-condition');
         
-        const matchesSearch = searchData.includes(searchTerm);
-        const matchesType = !typeFilter || type === typeFilter;
-        const matchesStatus = !statusFilter || status === statusFilter;
-        const matchesCondition = !conditionFilter || condition === conditionFilter;
+                        const matchesSearch = searchData.includes(searchTerm);
+                        const matchesType = !typeFilter || type === typeFilter;
+                        const matchesStatus = !statusFilter || status === statusFilter;
+                        const matchesCondition = !conditionFilter || condition === conditionFilter;
         
-        if (matchesSearch && matchesType && matchesStatus && matchesCondition) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-}
-</script>
-{% endblock %}
-                        <option value="">All Status</option>
-                        <option value="Available" {% if request.GET.status == 'Available' %}selected{% endif %}>Available</option>
-                        <option value="Issued" {% if request.GET.status == 'Issued' %}selected{% endif %}>Issued</option>
-                        <option value="Maintenance" {% if request.GET.status == 'Maintenance' %}selected{% endif %}>Maintenance</option>
-                        <option value="Retired" {% if request.GET.status == 'Retired' %}selected{% endif %}>Retired</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="condition" class="form-label">Condition</label>
-                    <select name="condition" id="condition" class="form-select">
-                        <option value="">All Conditions</option>
-                        <option value="Good" {% if request.GET.condition == 'Good' %}selected{% endif %}>Good</option>
-                        <option value="Fair" {% if request.GET.condition == 'Fair' %}selected{% endif %}>Fair</option>
-                        <option value="Poor" {% if request.GET.condition == 'Poor' %}selected{% endif %}>Poor</option>
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <i class="bi bi-search"></i> Apply Filter
-                    </button>
-                    <a href="{% url 'inventory:item_list' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-circle"></i> Clear
-                    </a>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <!-- Inventory Items Grid -->
-    <div class="row g-4">
-        {% for item in items %}
-        <div class="col-lg-4 col-md-6">
-            <div class="inventory-card card h-100">
-                <div class="card-body p-4">
-                    <!-- Header with Icon and Status -->
-                    <div class="d-flex align-items-start mb-3">
-                        <div class="item-icon me-3 status-{{ item.status|lower }}">
-                            {% if item.item_type == 'M14' or item.item_type == 'M16' or item.item_type == 'M4' %}
-                                <i class="bi bi-crosshair"></i>
-                            {% elif item.item_type == 'GLOCK' or item.item_type == '45' %}
-                                <i class="bi bi-bullseye"></i>
-                            {% else %}
-                                <i class="bi bi-box"></i>
-                            {% endif %}
-                        </div>
-                        <div class="flex-grow-1">
-                            <h5 class="card-title mb-1">{{ item.item_type }}</h5>
-                            <div class="d-flex flex-wrap gap-2 mb-2">
-                                <span class="badge bg-{% if item.status == 'Available' %}success{% elif item.status == 'Issued' %}primary{% elif item.status == 'Maintenance' %}warning{% else %}danger{% endif %}">
-                                    {{ item.status }}
-                                </span>
-                                <span class="badge bg-secondary-subtle text-secondary">
-                                    {{ item.condition|default:"Good" }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Item Details -->
-                    <div class="row text-sm mb-3">
-                        <div class="col-12 mb-2">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-hash text-muted me-2"></i>
-                                <strong>{{ item.serial_number }}</strong>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="bi bi-calendar3 text-muted me-2"></i>
-                                <span>{{ item.date_acquired|date:"M d, Y"|default:"N/A" }}</span>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="bi bi-person text-muted me-2"></i>
-                                <span>{% if item.assigned_to %}{{ item.assigned_to.get_full_name }}{% else %}Unassigned{% endif %}</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Description -->
-                    {% if item.description %}
-                    <div class="mb-3">
-                        <small class="text-muted">{{ item.description|truncatechars:100 }}</small>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Action Buttons -->
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'inventory:item_detail' item.id %}" 
-                           class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-eye"></i> View Details
-                        </a>
-                        {% if item.status == 'Available' %}
-                        <div class="btn-group" role="group">
-                                     <a href="{% url 'transactions:qr_scanner' %}?item={{ item.id }}" 
-                               class="btn btn-success btn-sm">
-                                <i class="bi bi-arrow-right"></i> Issue
-                            </a>
-                            <a href="#" class="btn btn-outline-warning btn-sm" 
-                               onclick="markForMaintenance({{ item.id }})">
-                                <i class="bi bi-tools"></i> Maintenance
-                            </a>
-                        </div>
-                        {% elif item.status == 'Issued' %}
-                                <a href="{% url 'transactions:qr_scanner' %}?item={{ item.id }}" 
-                                    class="btn btn-info btn-sm">
-                            <i class="bi bi-arrow-left"></i> Return Item
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% empty %}
-        <div class="col-12">
-            <div class="text-center py-5">
-                <i class="bi bi-boxes display-1 text-muted mb-3"></i>
-                <h4 class="text-muted mb-2">No Items Found</h4>
-                <p class="text-muted mb-3">
-                    {% if request.GET.search %}
-                        No items match your search criteria.
-                    {% else %}
-                        No items have been added to inventory yet.
-                    {% endif %}
-                </p>
-                <a href="{% url 'armguard_admin:register_item' %}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Add First Item
-                </a>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-
-<!-- QR Code Modal -->
-<div class="modal fade" id="qrCodeModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">QR Code</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <div id="qrCodeContainer"></div>
-                <p class="mt-3 text-muted">Scan this QR code for quick access to item details</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-{% endblock %}
-
-{% block extra_js %}
-<script>
-// Real-time search functionality
-document.getElementById('search').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    const cards = document.querySelectorAll('.inventory-card');
-    
-    cards.forEach(card => {
-        const title = card.querySelector('.card-title').textContent.toLowerCase();
-        const serial = card.querySelector('.bi-hash').parentElement.textContent.toLowerCase();
-        const description = card.querySelector('.text-muted');
-        const descText = description ? description.textContent.toLowerCase() : '';
-        
-        if (title.includes(searchTerm) || serial.includes(searchTerm) || descText.includes(searchTerm)) {
-            card.closest('.col-lg-4').style.display = 'block';
-        } else {
-            card.closest('.col-lg-4').style.display = 'none';
-        }
-    });
+                        if (matchesSearch && matchesType && matchesStatus && matchesCondition) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                }
+                </script>
+                {% endblock %}
 });
 
 // Filter functionality
