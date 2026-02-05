@@ -347,29 +347,6 @@
                 {% endif %}
             </div>
             
-            <!-- Admin Restriction Field - Only shown when role is Administrator -->
-            <div class="form-group" id="adminRestrictionGroup" style="display:none;">
-                {% if is_superuser %}
-                <label for="{{ form.admin_restriction.id_for_label }}">
-                    Administrator Access Level <span class="required">*</span>
-                </label>
-                {{ form.admin_restriction }}
-                <p class="help-text">Select access level for administrator accounts</p>
-                {% if form.admin_restriction.errors %}
-                    <span class="error">{{ form.admin_restriction.errors }}</span>
-                {% endif %}
-                {% else %}
-                <label for="{{ form.admin_restriction.id_for_label }}">
-                    Administrator Access Level
-                </label>
-                <div class="form-field-disabled" style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6;">
-                    <p style="margin: 0 0 5px 0;"><strong>{{ form.admin_restriction.value|default:"No restriction" }}</strong></p>
-                    <p class="help-text" style="color: #dc3545; margin: 0;"><i class="fas fa-lock"></i> Only superusers can modify admin restrictions</p>
-                </div>
-                <input type="hidden" name="admin_restriction" value="{{ form.admin_restriction.value }}">
-                {% endif %}
-            </div>
-            
             <div id="operationNotification" class="alert" style="display:none; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
                 <i class="fas fa-info-circle"></i>
                 <span id="operationText"></span>
@@ -383,6 +360,36 @@
             <strong>Armorer Mode:</strong> You can register personnel records only. Contact an administrator for user account registration.
         </div>
         {% endif %}
+        {% endif %}
+        
+        <!-- Admin Restriction Field - Shown for both create and edit when role is Administrator -->
+        <div class="form-group" id="adminRestrictionGroup" style="display:none;">
+            {% if is_superuser or not is_edit %}
+            {# Superusers can always edit, non-superusers can only set during creation #}
+            <label for="{{ form.admin_restriction.id_for_label }}">
+                Administrator Access Level <span class="required">*</span>
+            </label>
+            {{ form.admin_restriction }}
+            <p class="help-text">Select access level for administrator accounts</p>
+            {% if form.admin_restriction.errors %}
+                <span class="error">{{ form.admin_restriction.errors }}</span>
+            {% endif %}
+            {% else %}
+            {# Non-superusers editing existing admin - field is locked #}
+            <label for="{{ form.admin_restriction.id_for_label }}">
+                Administrator Access Level
+            </label>
+            <div class="form-field-disabled" style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6;">
+                <p style="margin: 0 0 5px 0;"><strong>{{ form.admin_restriction.value|default:"No restriction" }}</strong></p>
+                <p class="help-text" style="color: #dc3545; margin: 0;"><i class="fas fa-lock"></i> Only superusers can modify existing admin restrictions</p>
+            </div>
+            <input type="hidden" name="admin_restriction" value="{{ form.admin_restriction.value }}">
+            {% endif %}
+        </div>
+        
+        <!-- Hidden role field for edit mode to help JavaScript -->
+        {% if is_edit and edit_user %}
+        <input type="hidden" id="hidden_role_value" value="{% if edit_user.is_superuser %}superuser{% elif edit_user.groups.all|first %}{{ edit_user.groups.all|first|lower }}{% else %}personnel{% endif %}">
         {% endif %}
         
         <!-- User Account Section -->
@@ -603,11 +610,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const userSection = document.getElementById('userAccountSection');
     const personnelSection = document.getElementById('personnelInfoSection');
     const adminRestrictionGroup = document.getElementById('adminRestrictionGroup');
+    const hiddenRoleValue = document.getElementById('hidden_role_value');
     
     function updateOperationBasedOnRole() {
-        if (!roleSelect || !operationTypeInput) return;
+        // Get role from select (create mode) or hidden input (edit mode)
+        let role = '';
+        if (roleSelect && roleSelect.value) {
+            role = roleSelect.value;
+        } else if (hiddenRoleValue && hiddenRoleValue.value) {
+            role = hiddenRoleValue.value;
+        }
         
-        const role = roleSelect.value;
+        if (!role || !operationTypeInput) return;
         let operationType = '';
         let notificationClass = '';
         let notificationMessage = '';
@@ -655,9 +669,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Listen to role changes
     if (roleSelect) {
         roleSelect.addEventListener('change', updateOperationBasedOnRole);
-        // Set initial state
-        updateOperationBasedOnRole();
     }
+    
+    // Set initial state (works in both create and edit modes)
+    updateOperationBasedOnRole();
 });
 </script>
 {% endblock %}
