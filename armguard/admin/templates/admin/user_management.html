@@ -211,7 +211,7 @@
                 <td>{{ user_item.date_joined|date:"M d, Y" }}</td>
                 <td>
                     <div class="action-links">
-                        {% if can_edit and not user_item.is_superuser or user.is_superuser %}
+                        {% if user.is_superuser or can_edit and not user_item.is_superuser and not is_restricted_admin %}
                         <a href="{% url 'armguard_admin:edit_user' user_item.id %}">Edit</a>
                         {% endif %}
                         {% if can_edit and user.is_superuser and user_item != user %}
