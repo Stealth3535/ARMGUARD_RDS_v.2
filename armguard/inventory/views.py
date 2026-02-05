@@ -84,6 +84,9 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
                 context['last_take'] = None
         else:
             context['last_take'] = None
+        
+        # Check if user is admin (not just armorer)
+        context['is_admin'] = self.request.user.is_superuser or self.request.user.groups.filter(name='Admin').exists()
             
         return context
 
