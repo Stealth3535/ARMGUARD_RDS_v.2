@@ -29,21 +29,24 @@ sudo rm -f /run/armguard.sock
 # Step 3: Fix systemd service file to use correct paths
 echo -e "${YELLOW}Step 3: Updating systemd service file...${NC}"
 
-# Detect actual deployment location
-if [ -d "/home/ubuntu/ARMGUARD_RDS/armguard" ]; then
-    PROJECT_DIR="/home/ubuntu/ARMGUARD_RDS/armguard"
-    VENV_DIR="/home/ubuntu/ARMGUARD_RDS/venv"
-    LOG_DIR="/home/ubuntu/ARMGUARD_RDS/logs"
-    RUN_USER="ubuntu"
-    RUN_GROUP="ubuntu"
-elif [ -d "/opt/armguard/armguard" ]; then
+# Detect actual deployment location by checking for venv with gunicorn
+if [ -f "/opt/armguard/venv/bin/gunicorn" ]; then
     PROJECT_DIR="/opt/armguard/armguard"
     VENV_DIR="/opt/armguard/venv"
     LOG_DIR="/var/log/armguard"
     RUN_USER="ubuntu"
     RUN_GROUP="ubuntu"
+elif [ -f "/home/ubuntu/ARMGUARD_RDS/venv/bin/gunicorn" ]; then
+    PROJECT_DIR="/home/ubuntu/ARMGUARD_RDS/armguard"
+    VENV_DIR="/home/ubuntu/ARMGUARD_RDS/venv"
+    LOG_DIR="/home/ubuntu/ARMGUARD_RDS/logs"
+    RUN_USER="ubuntu"
+    RUN_GROUP="ubuntu"
 else
-    echo -e "${RED}ERROR: Cannot find ArmGuard installation directory${NC}"
+    echo -e "${RED}ERROR: Cannot find ArmGuard installation with gunicorn${NC}"
+    echo "Checked:"
+    echo "  - /opt/armguard/venv/bin/gunicorn"
+    echo "  - /home/ubuntu/ARMGUARD_RDS/venv/bin/gunicorn"
     exit 1
 fi
 
