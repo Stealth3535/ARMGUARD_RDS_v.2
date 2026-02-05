@@ -84,32 +84,67 @@ SUBDIRS=(
     "transaction_forms"
 )
 
-for subdir in "${SUBDIRS[@]}"; do
-    mkdir -p "$MEDIA_DIR/$subdir"
-    echo "✓ Created $MEDIA_DIR/$subdir"
-done
-
-# Set permissions
-echo ""
-echo "Setting permissions (775)..."
-chmod -R 775 "$MEDIA_DIR"
-echo "✓ Permissions set to 775 (rwxrwxr-x)"
-
-# Set ownership if running as root
+# Check if user and group exist before creating directories
 if [ "$SKIP_OWNERSHIP" = false ]; then
-    echo ""
-    echo "Setting ownership to $OWNER:$GROUP..."
-    
-    # Check if user and group exist
-    if id "$OWNER" &>/dev/null && getent group "$GROUP" &>/dev/null; then
-        chown -R "$OWNER:$GROUP" "$MEDIA_DIR"
-        echo "✓ Ownership set to $OWNER:$GROUP"
-    else
-        echo "❌ Error: User '$OWNER' or group '$GROUP' does not exist"
+    if ! id "$OWNER" &>/dev/null; then
+        echo "❌ Error: User '$OWNER' does not exist"
         echo "   Available users: $(cut -d: -f1 /etc/passwd | tr '\n' ' ')"
         exit 1
     fi
+    if ! getent group "$GROUP" &>/dev/null; then
+        echo "❌ Error: Group '$GROUP' does not exist"
+        exit 1
+    fi
+    echo "✓ User and group validated"
+    echo ""
 fi
+
+# Create each subdirectory with proper ownership immediately
+for subdir in "${SUBDIRS[@]}"; do
+    mkdir -p "$MEDIA_DIR/$subdir"
+    
+    # Set ownership immediately after creation (before next directory is created)
+    if [ "$SKIP_OWNERSHIP" = false ]; then
+        chown "$OWNER:$GROUP" "$MEDIA_DIR/$subdir"
+        # Also set ownership on parent directories
+        PARENT_DIR=$(dirname "$MEDIA_DIR/$subdir")
+        while [ "$PARENT_DIR" != "$MEDIA_DIR" ] && [ "$PARENT_DIR" != "/" ]; do
+            chown "$OWNER:$GROUP" "$PARENT_DIR"
+            PARENT_DIR=$(dirname "$PARENT_DIR")
+        done
+    fi
+    
+    # Set permissions immediately
+    chmod 775 "$MEDIA_DIR/$subdir"
+    
+    echo "✓ Created $MEDIA_DIR/$subdir"
+done
+
+# Set permissions and ownership on root media directory
+echo ""
+echo "Setting permissions (775) on root media directory..."
+chmod 775 "$MEDIA_DIR"
+
+if [ "$SKIP_OWNERSHIP" = false ]; then
+    chown "$OWNER:$GROUP" "$MEDIA_DIR"
+    echo "✓ Ownership set to $OWNER:$GROUP"
+fi
+
+echo "✓ Permissions set to 775 (rwxrwxr-x)"
+
+# Final recursive pass to ensure everything is correct
+if [ "$SKIP_OWNERSHIP" = false ]; then
+    echo ""
+    echo "Applying final recursive ownership pass..."
+    chown -R "$OWNER:$GROUP" "$MEDIA_DIR"
+    echo "✓ Final ownership pass complete"
+fi
+
+# Final recursive permission pass
+echo ""
+echo "Applying final recursive permission pass..."
+chmod -R 775 "$MEDIA_DIR"
+echo "✓ Final permission pass complete"
 
 # Verify setup
 echo ""
