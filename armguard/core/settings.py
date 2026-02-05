@@ -348,13 +348,24 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'core', 'media')
 
 # Performance Optimization: Advanced Multi-Level Caching Configuration
+# ARM64/RPi compatible Redis configuration
+def get_redis_parser_class():
+    """Get the best available Redis parser for the platform"""
+    try:
+        import hiredis
+        return 'redis.connection.HiredisParser'
+    except ImportError:
+        return 'redis.connection.PythonParser'  # Fallback for ARM64
+
+REDIS_PARSER_CLASS = get_redis_parser_class()
+
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'PARSER_CLASS': 'redis.connection.HiredisParser',
+            'PARSER_CLASS': REDIS_PARSER_CLASS,
             'PICKLE_VERSION': 2,
             'CONNECTION_POOL_KWARGS': {
                 'max_connections': config('REDIS_MAX_CONNECTIONS', default=50, cast=int),
@@ -372,6 +383,7 @@ CACHES = {
         'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/2'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'PARSER_CLASS': REDIS_PARSER_CLASS,
             'IGNORE_EXCEPTIONS': True,
         },
         'KEY_PREFIX': 'armguard_sessions',
@@ -382,6 +394,7 @@ CACHES = {
         'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/3'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'PARSER_CLASS': REDIS_PARSER_CLASS,
             'IGNORE_EXCEPTIONS': True,
         },
         'KEY_PREFIX': 'armguard_queries',
@@ -392,6 +405,7 @@ CACHES = {
         'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/4'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'PARSER_CLASS': REDIS_PARSER_CLASS,
             'IGNORE_EXCEPTIONS': True,
         },
         'KEY_PREFIX': 'armguard_templates',
