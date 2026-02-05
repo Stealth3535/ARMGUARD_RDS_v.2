@@ -27,7 +27,12 @@ fi
 PROJECT_DIR="/var/www/armguard"
 if [ ! -d "$PROJECT_DIR" ]; then
     sudo git clone https://github.com/Stealth3535/armguard.git "$PROJECT_DIR"
-    sudo chown -R $USER:$USER "$PROJECT_DIR"
+    sudo groupadd -f armguard
+    sudo usermod -a -G armguard $USER 2>/dev/null || true
+    sudo usermod -a -G armguard www-data 2>/dev/null || true
+    sudo chown -R $USER:armguard "$PROJECT_DIR"
+    sudo chmod -R g+rwX "$PROJECT_DIR"
+    sudo find "$PROJECT_DIR" -type d -exec chmod g+s {} \;
 fi
 cd "$PROJECT_DIR"
 

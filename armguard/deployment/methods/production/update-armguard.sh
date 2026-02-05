@@ -36,6 +36,7 @@ PROJECT_DIR="${PROJECT_DIR:-/var/www/armguard}"
 BACKUP_DIR="${BACKUP_DIR:-/var/www/armguard/backups}"
 SERVICE_NAME="${SERVICE_NAME:-gunicorn-armguard}"
 RUN_USER="${RUN_USER:-www-data}"
+RUN_GROUP="${RUN_GROUP:-armguard}"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 # Print banner
@@ -63,6 +64,17 @@ if [ "$EUID" -ne 0 ]; then
     echo -e "${YELLOW}Usage: sudo bash deployment/update-armguard.sh${NC}"
     exit 1
 fi
+
+# Ensure shared group exists and users are added
+ensure_shared_group() {
+    groupadd -f "$RUN_GROUP"
+    usermod -a -G "$RUN_GROUP" "$RUN_USER" 2>/dev/null || true
+    if [ -n "$SUDO_USER" ]; then
+        usermod -a -G "$RUN_GROUP" "$SUDO_USER" 2>/dev/null || true
+    fi
+}
+
+ensure_shared_group
 
 # Check if project directory exists
 if [ ! -d "$PROJECT_DIR" ]; then
@@ -225,7 +237,9 @@ check_success "Static files collected"
 print_section "Step 8: Fixing Permissions"
 
 echo -e "${YELLOW}Setting file permissions...${NC}"
-chown -R $RUN_USER:$RUN_USER "$PROJECT_DIR"
+chown -R $RUN_USER:$RUN_GROUP "$PROJECT_DIR"
+chmod -R g+rwX "$PROJECT_DIR"
+find "$PROJECT_DIR" -type d -exec chmod g+s {} \;
 check_success "Permissions set"
 
 # Step 9: Restart service

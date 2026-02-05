@@ -16,7 +16,7 @@ export VENV_DIR="${PROJECT_DIR}/.venv"
 export SERVICE_NAME="gunicorn-armguard"
 export SOCKET_PATH="${ARMGUARD_SOCKET_PATH:-/run/gunicorn-armguard.sock}"
 export RUN_USER="${ARMGUARD_RUN_USER:-www-data}"
-export RUN_GROUP="${ARMGUARD_RUN_GROUP:-www-data}"
+export RUN_GROUP="${ARMGUARD_RUN_GROUP:-armguard}"
 
 # Network Configuration
 export DEFAULT_DOMAIN="${ARMGUARD_DOMAIN:-armguard.local}"

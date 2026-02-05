@@ -36,6 +36,9 @@ info() {
     echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')] INFO: $1${NC}"
 }
 
+# Shared group configuration
+RUN_GROUP="armguard"
+
 # RPi Configuration Detection
 detect_rpi_config() {
     log "🔍 Detecting Raspberry Pi Configuration..."
@@ -161,8 +164,13 @@ clone_armguard() {
     # Use main branch (contains latest A+ performance optimizations)
     sudo git checkout main
     
-    # Set proper permissions
-    sudo chown -R $(whoami):$(whoami) "$DEPLOY_DIR"
+    # Ensure shared group exists and set permissions
+    sudo groupadd -f "$RUN_GROUP"
+    sudo usermod -a -G "$RUN_GROUP" "$(whoami)" 2>/dev/null || true
+    sudo usermod -a -G "$RUN_GROUP" www-data 2>/dev/null || true
+    sudo chown -R "$(whoami):${RUN_GROUP}" "$DEPLOY_DIR"
+    sudo chmod -R g+rwX "$DEPLOY_DIR"
+    sudo find "$DEPLOY_DIR" -type d -exec chmod g+s {} \;
     
     log "✅ ArmGuard v2.1.0-aplus cloned successfully"
 }
@@ -447,7 +455,7 @@ After=network.target
 [Service]
 Type=notify
 User=www-data
-Group=www-data
+Group=${RUN_GROUP}
 RuntimeDirectory=armguard
 WorkingDirectory=/opt/armguard/armguard
 Environment=DJANGO_SETTINGS_MODULE=core.settings
@@ -472,7 +480,8 @@ Description=ArmGuard A+ Performance Edition Socket
 [Socket]
 ListenStream=/run/armguard.sock
 SocketUser=www-data
-SocketMode=0666
+SocketGroup=${RUN_GROUP}
+SocketMode=0660
 
 [Install]
 WantedBy=sockets.target
@@ -480,8 +489,10 @@ EOF"
 
     # Set permissions and enable service
     sudo mkdir -p /var/log/armguard
-    sudo chown www-data:www-data /var/log/armguard
-    sudo chown -R www-data:www-data "$DEPLOY_DIR"
+    sudo chown www-data:${RUN_GROUP} /var/log/armguard
+    sudo chown -R www-data:${RUN_GROUP} "$DEPLOY_DIR"
+    sudo chmod -R g+rwX "$DEPLOY_DIR"
+    sudo find "$DEPLOY_DIR" -type d -exec chmod g+s {} \;
     
     sudo systemctl daemon-reload
     sudo systemctl enable armguard.socket
