@@ -56,7 +56,7 @@
             <button class="btn btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#filterPanel">
                 <i class="bi bi-funnel"></i> Filter
             </button>
-            <a href="{% url 'personnel:register' %}" class="btn btn-primary">
+            <a href="{% url 'armguard_admin:registration' %}" class="btn btn-primary">
                 <i class="bi bi-person-plus"></i> Register Personnel
             </a>
         </div>
@@ -240,7 +240,7 @@
                         No personnel have been registered yet.
                     {% endif %}
                 </p>
-                <a href="{% url 'personnel:register' %}" class="btn btn-primary">
+                <a href="{% url 'armguard_admin:registration' %}" class="btn btn-primary">
                     <i class="bi bi-person-plus"></i> Register First Personnel
                 </a>
             </div>
