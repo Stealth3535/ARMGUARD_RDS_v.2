@@ -312,7 +312,19 @@ class ComprehensiveTestSuite:
         try:
             # Test POST without CSRF token
             response = self.client.post('/login/', {'username': 'test', 'password': 'test'})
-            if response.status_code == 403 or 'csrf' in response.content.decode().lower():
+            
+            # Handle potential gzip compression in response
+            try:
+                content = response.content.decode('utf-8')
+            except UnicodeDecodeError:
+                # Response might be gzipped, try to decompress
+                import gzip
+                try:
+                    content = gzip.decompress(response.content).decode('utf-8')
+                except:
+                    content = str(response.content)
+            
+            if response.status_code == 403 or 'csrf' in content.lower():
                 self.log_test("CSRF Protection", "PASS")
             else:
                 self.log_test("CSRF Protection", "WARN", "CSRF protection may not be active")
