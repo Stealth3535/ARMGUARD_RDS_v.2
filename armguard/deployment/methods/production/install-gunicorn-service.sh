@@ -21,6 +21,22 @@ LOG_DIR="/var/log/armguard"
 RUN_USER="www-data"
 RUN_GROUP="www-data"
 
+# Deployment consistency check
+if [[ "$1" == "rpi" ]]; then
+    SERVICE_NAME="armguard"
+    SERVICE_FILE="${SERVICE_NAME}.service"
+    RUN_USER="ubuntu"
+    RUN_GROUP="ubuntu"
+    SOCKET_PATH="/run/armguard.sock"
+else
+    SERVICE_NAME="gunicorn-armguard"
+    SERVICE_FILE="${SERVICE_NAME}.service"
+    RUN_USER="www-data"
+    RUN_GROUP="www-data"
+    SOCKET_PATH="/run/gunicorn-armguard.sock"
+fi
+
+
 # Calculate optimal worker count (2 × CPU + 1)
 CPU_CORES=$(nproc)
 WORKERS=$((2 * CPU_CORES + 1))
@@ -90,8 +106,8 @@ Environment="DJANGO_SETTINGS_MODULE=core.settings_production"
 EnvironmentFile=-${PROJECT_DIR}/.env
 
 ExecStart=${VENV_DIR}/bin/gunicorn \\
-          --workers ${WORKERS} \\
-          --bind unix:/run/${SERVICE_NAME}.sock \\
+          --workers ${WORKERS} \
+          --bind unix:${SOCKET_PATH} \
           --timeout 60 \\
           --access-logfile ${LOG_DIR}/access.log \\
           --error-logfile ${LOG_DIR}/error.log \\
