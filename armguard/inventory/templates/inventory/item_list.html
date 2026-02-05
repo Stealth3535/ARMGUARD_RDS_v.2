@@ -63,7 +63,7 @@
             <button class="btn btn-outline-success" onclick="exportInventory()">
                 <i class="bi bi-file-earmark-excel"></i> Export
             </button>
-            <a href="{% url 'inventory:add_item' %}" class="btn btn-primary">
+            <a href="{% url 'armguard_admin:register_item' %}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Add Item
             </a>
         </div>
@@ -274,7 +274,7 @@
                         No items have been added to inventory yet.
                     {% endif %}
                 </p>
-                <a href="{% url 'inventory:add_item' %}" class="btn btn-primary">
+                <a href="{% url 'armguard_admin:register_item' %}" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Add First Item
                 </a>
             </div>
