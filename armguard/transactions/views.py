@@ -14,10 +14,15 @@ from personnel.models import Personnel
 from qr_manager.models import QRCodeImage
 from django.utils import timezone
 from core.network_decorators import lan_required, read_only_on_wan, network_aware_permission_required
+from admin.permissions import check_restricted_admin
 
 
 def is_admin_or_armorer(user):
     """Check if user is admin, superuser, or armorer - can issue items"""
+    # Restricted admins cannot create transactions
+    if check_restricted_admin(user):
+        return False
+    
     return user.is_authenticated and (
         user.is_superuser or 
         user.groups.filter(name='Admin').exists() or 
@@ -46,6 +51,8 @@ class TransactionListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         try:
             context = super().get_context_data(**kwargs)
+            # Check if user can create transactions (not a restricted admin)
+            context['can_create_transaction'] = is_admin_or_armorer(self.request.user)
             # Get currently issued items (items with status 'Issued')
             issued_items_ids = Item.objects.filter(status='Issued').values_list('id', flat=True)
             context['issued_items'] = Transaction.objects.filter(

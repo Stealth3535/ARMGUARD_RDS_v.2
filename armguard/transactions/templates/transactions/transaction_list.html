@@ -236,6 +236,7 @@
     </div>
 
     <!-- Transaction Form (Inline) -->
+    {% if can_create_transaction %}
     <div class="transaction-form">
         <h3>📝 Create Transaction</h3>
         <form id="transactionForm" onsubmit="return false;">
@@ -299,6 +300,12 @@
             <button type="button" class="btn-submit-transaction" onclick="handleManualSubmit()">✅ Submit Transaction</button>
         </form>
     </div>
+    {% else %}
+    <div class="alert alert-info" style="padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; background-color: #d1ecf1; border: 1px solid #bee5eb;">
+        <i class="fas fa-info-circle"></i>
+        <strong>View-Only Access:</strong> You have restricted admin privileges and can view transactions but cannot create new ones. Contact a superuser or unrestricted administrator for full transaction access.
+    </div>
+    {% endif %}
 
     <!-- QR Scanner Modal -->
     <div id="qrScannerModal">
