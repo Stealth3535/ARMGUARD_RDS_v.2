@@ -16,11 +16,12 @@ from core.network_decorators import lan_required, read_only_on_wan
 @read_only_on_wan
 def personnel_profile_list(request):
     """Display list of all personnel with search functionality - WAN read-only"""
-    personnel_list = Personnel.objects.all().order_by('rank', 'surname', 'firstname')
-    search_form = PersonnelSearchForm(request.GET)
-    
-    # Apply search filters
-    if search_form.is_valid():
+    try:
+        personnel_list = Personnel.objects.all().order_by('rank', 'surname', 'firstname')
+        search_form = PersonnelSearchForm(request.GET)
+        
+        # Apply search filters
+        if search_form.is_valid():
         search_query = search_form.cleaned_data.get('search_query')
         status = search_form.cleaned_data.get('status')
         rank_type = search_form.cleaned_data.get('rank_type')
@@ -47,23 +48,54 @@ def personnel_profile_list(request):
         if group:
             personnel_list = personnel_list.filter(group=group)
     
-    # Pagination
-    paginator = Paginator(personnel_list, 20)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    context = {
-        'page_obj': page_obj,
-        'search_form': search_form,
-        'total_count': personnel_list.count(),
-        'officer_count': personnel_list.filter(rank__in=[r[0] for r in Personnel.RANKS_OFFICER]).count(),
-        'enlisted_count': personnel_list.filter(rank__in=[r[0] for r in Personnel.RANKS_ENLISTED]).count(),
-        'active_count': personnel_list.filter(status=Personnel.STATUS_ACTIVE).count(),
-        'with_user_count': personnel_list.filter(user__isnull=False).count(),
-        'without_user_count': personnel_list.filter(user__isnull=True).count(),
-    }
-    
-    return render(request, 'personnel/personnel_profile_list.html', context)
+        # Pagination
+        paginator = Paginator(personnel_list, 20)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        # Calculate counts safely
+        try:
+            total_count = personnel_list.count()
+            officer_count = personnel_list.filter(rank__in=[r[0] for r in Personnel.RANKS_OFFICER]).count()
+            enlisted_count = personnel_list.filter(rank__in=[r[0] for r in Personnel.RANKS_ENLISTED]).count()
+            active_count = personnel_list.filter(status=Personnel.STATUS_ACTIVE).count()
+            with_user_count = personnel_list.filter(user__isnull=False).count()
+            without_user_count = personnel_list.filter(user__isnull=True).count()
+        except Exception as e:
+            # Fallback to safe defaults if count fails
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error calculating personnel counts: {e}")
+            total_count = officer_count = enlisted_count = active_count = with_user_count = without_user_count = 0
+        
+        context = {
+            'page_obj': page_obj,
+            'search_form': search_form,
+            'total_count': total_count,
+            'officer_count': officer_count,
+            'enlisted_count': enlisted_count,
+            'active_count': active_count,
+            'with_user_count': with_user_count,
+            'without_user_count': without_user_count,
+        }
+        
+        return render(request, 'personnel/personnel_profile_list.html', context)
+        
+    except Exception as e:
+        # Log the error and return a user-friendly error page
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in personnel_profile_list: {e}")
+        logger.error(traceback.format_exc())
+        
+        from django.http import HttpResponse
+        return HttpResponse(
+            f"<h1>Personnel List Error</h1><p>An error occurred: {str(e)}</p>"
+            f"<p>Please check logs: <code>sudo journalctl -u armguard.service -n 50</code></p>"
+            f"<pre>{traceback.format_exc()}</pre>",
+            status=500
+        )
 
 
 @login_required

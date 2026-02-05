@@ -33,18 +33,35 @@ class TransactionListView(LoginRequiredMixin, ListView):
     paginate_by = 20
     
     def get_queryset(self):
-        queryset = super().get_queryset()
-        return queryset.select_related('personnel', 'item').order_by('-date_time')
+        try:
+            queryset = super().get_queryset()
+            return queryset.select_related('personnel', 'item').order_by('-date_time')
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f\"Error in TransactionListView.get_queryset: {e}\")\n            # Return empty queryset on error
+            return Transaction.objects.none()
     
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Get currently issued items (items with status 'Issued')
-        issued_items_ids = Item.objects.filter(status='Issued').values_list('id', flat=True)
-        context['issued_items'] = Transaction.objects.filter(
-            item_id__in=issued_items_ids,
-            action='Take'
-        ).select_related('personnel', 'item').order_by('-date_time')
-        return context
+        try:
+            context = super().get_context_data(**kwargs)
+            # Get currently issued items (items with status 'Issued')
+            issued_items_ids = Item.objects.filter(status='Issued').values_list('id', flat=True)
+            context['issued_items'] = Transaction.objects.filter(
+                item_id__in=issued_items_ids,
+                action='Take'
+            ).select_related('personnel', 'item').order_by('-date_time')
+            return context
+        except Exception as e:
+            import logging
+            import traceback
+            logger = logging.getLogger(__name__)
+            logger.error(f\"Error in TransactionListView.get_context_data: {e}\")
+            logger.error(traceback.format_exc())
+            # Return minimal context on error
+            context = super(ListView, self).get_context_data(**kwargs)
+            context['error_message'] = str(e)
+            return context
 
 
 class TransactionDetailView(LoginRequiredMixin, DetailView):
