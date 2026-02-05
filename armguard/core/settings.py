@@ -98,7 +98,34 @@ SECRET_KEY = config('DJANGO_SECRET_KEY')  # No default - must be set in .env
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='127.0.0.1,localhost,192.168.68.129,192.168.56.1,192.168.42.1,192.168.59.1,armguard.rds,testserver', cast=Csv())
+ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='127.0.0.1,localhost,192.168.68.129,192.168.56.1,192.168.42.1,192.168.59.1,192.168.0.177,ubuntu.local,armguard.rds,testserver', cast=Csv())
+
+# Reverse Proxy Configuration (for Nginx)
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# CSRF Trusted Origins (for production deployments behind Nginx)
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost',
+    'http://127.0.0.1',
+    'http://192.168.0.177',
+    'https://192.168.0.177',
+    'http://ubuntu.local',
+    'https://ubuntu.local',
+    'http://192.168.68.129',
+    'https://192.168.68.129',
+    'http://192.168.56.1',
+    'https://192.168.56.1',
+    'http://192.168.42.1',
+    'https://192.168.42.1',
+    'http://192.168.59.1',
+    'https://192.168.59.1',
+]
+
+# Add any additional CSRF trusted origins from environment
+if config('CSRF_TRUSTED_ORIGINS', default=''):
+    CSRF_TRUSTED_ORIGINS.extend(config('CSRF_TRUSTED_ORIGINS', cast=Csv()))
 
 
 # Application definition
@@ -557,18 +584,14 @@ ALLOWED_DOCUMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'txt']
 # Enhanced Session Security
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='Lax')
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = config('SESSION_COOKIE_AGE', default=3600, cast=int)  # 1 hour
-
-# CSRF Protection
-CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='Lax')
-# CSRF failure handling will use default Django view
-SESSION_COOKIE_AGE = config('SESSION_COOKIE_AGE', default=3600, cast=int)  # 1 hour default
 SESSION_SAVE_EVERY_REQUEST = True  # Reset timeout on each request
 SESSION_EXPIRE_AT_BROWSER_CLOSE = config('SESSION_EXPIRE_AT_BROWSER_CLOSE', default=False, cast=bool)
-CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'Lax'
+
+# CSRF Protection
+CSRF_COOKIE_HTTPONLY = False  # Must be False for JavaScript access to CSRF token
+CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='Lax')
+CSRF_USE_SESSIONS = False  # Store CSRF token in cookies, not sessions
 
 # Rate Limiting Configuration
 RATELIMIT_ENABLE = config('RATELIMIT_ENABLE', default=True, cast=bool)
