@@ -219,25 +219,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-        
-        if (name.includes(searchTerm) || id.includes(searchTerm) || rank.includes(searchTerm)) {
-            card.closest('.col-lg-4').style.display = 'block';
-        } else {
-            card.closest('.col-lg-4').style.display = 'none';
-        }
-    });
-});
-
-// Filter functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const filterInputs = document.querySelectorAll('#classification, #status');
-    
-    filterInputs.forEach(input => {
-        input.addEventListener('change', function() {
-            // Auto-submit form when filter changes
-            this.closest('form').submit();
-        });
-    });
-});
-</script>
-{% endblock %}
