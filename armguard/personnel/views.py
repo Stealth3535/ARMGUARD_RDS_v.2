@@ -22,31 +22,31 @@ def personnel_profile_list(request):
         
         # Apply search filters
         if search_form.is_valid():
-        search_query = search_form.cleaned_data.get('search_query')
-        status = search_form.cleaned_data.get('status')
-        rank_type = search_form.cleaned_data.get('rank_type')
-        group = search_form.cleaned_data.get('group')
-        
-        if search_query:
-            personnel_list = personnel_list.filter(
-                Q(surname__icontains=search_query) |
-                Q(firstname__icontains=search_query) |
-                Q(rank__icontains=search_query) |
-                Q(serial__icontains=search_query) |
-                Q(group__icontains=search_query)
-            )
-        
-        if status:
-            personnel_list = personnel_list.filter(status=status)
-        
-        if rank_type:
-            if rank_type == 'officer':
-                personnel_list = personnel_list.filter(rank__in=[r[0] for r in Personnel.RANKS_OFFICER])
-            elif rank_type == 'enlisted':
-                personnel_list = personnel_list.filter(rank__in=[r[0] for r in Personnel.RANKS_ENLISTED])
-        
-        if group:
-            personnel_list = personnel_list.filter(group=group)
+            search_query = search_form.cleaned_data.get('search_query')
+            status = search_form.cleaned_data.get('status')
+            rank_type = search_form.cleaned_data.get('rank_type')
+            group = search_form.cleaned_data.get('group')
+            
+            if search_query:
+                personnel_list = personnel_list.filter(
+                    Q(surname__icontains=search_query) |
+                    Q(firstname__icontains=search_query) |
+                    Q(rank__icontains=search_query) |
+                    Q(serial__icontains=search_query) |
+                    Q(group__icontains=search_query)
+                )
+            
+            if status:
+                personnel_list = personnel_list.filter(status=status)
+            
+            if rank_type:
+                if rank_type == 'officer':
+                    personnel_list = personnel_list.filter(rank__in=[r[0] for r in Personnel.RANKS_OFFICER])
+                elif rank_type == 'enlisted':
+                    personnel_list = personnel_list.filter(rank__in=[r[0] for r in Personnel.RANKS_ENLISTED])
+            
+            if group:
+                personnel_list = personnel_list.filter(group=group)
     
         # Pagination
         paginator = Paginator(personnel_list, 20)
