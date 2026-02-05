@@ -11,30 +11,45 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Configuration variables
+############################################################
+# ArmGuard Deployment Location Detection & Configuration
+############################################################
 PROJECT_NAME="armguard"
-PROJECT_DIR="/var/www/armguard"
-SERVICE_NAME="gunicorn-armguard"
-SERVICE_FILE="${SERVICE_NAME}.service"
-VENV_DIR="${PROJECT_DIR}/.venv"
-LOG_DIR="/var/log/armguard"
-RUN_USER="www-data"
-RUN_GROUP="www-data"
+DEFAULT_PROJECT_DIR="/var/www/armguard"
+ALT_PROJECT_DIR="/home/ubuntu/ARMGUARD_RDS/armguard"
+DEFAULT_VENV_DIR="${DEFAULT_PROJECT_DIR}/.venv"
+ALT_VENV_DIR="/home/ubuntu/ARMGUARD_RDS/venv"
+DEFAULT_LOG_DIR="/var/log/armguard"
+ALT_LOG_DIR="/home/ubuntu/ARMGUARD_RDS/logs"
 
-# Deployment consistency check
-if [[ "$1" == "rpi" ]]; then
-    SERVICE_NAME="armguard"
-    SERVICE_FILE="${SERVICE_NAME}.service"
+# Detect deployment location
+if [ -d "$ALT_PROJECT_DIR" ]; then
+    PROJECT_DIR="$ALT_PROJECT_DIR"
+    VENV_DIR="$ALT_VENV_DIR"
+    LOG_DIR="$ALT_LOG_DIR"
     RUN_USER="ubuntu"
     RUN_GROUP="ubuntu"
-    SOCKET_PATH="/run/armguard.sock"
-else
-    SERVICE_NAME="gunicorn-armguard"
+    SERVICE_NAME="armguard"
     SERVICE_FILE="${SERVICE_NAME}.service"
+    SOCKET_PATH="/run/armguard.sock"
+    echo -e "${YELLOW}Detected RPi/ARMGUARD_RDS deployment at $ALT_PROJECT_DIR${NC}"
+else
+    PROJECT_DIR="$DEFAULT_PROJECT_DIR"
+    VENV_DIR="$DEFAULT_VENV_DIR"
+    LOG_DIR="$DEFAULT_LOG_DIR"
     RUN_USER="www-data"
     RUN_GROUP="www-data"
+    SERVICE_NAME="gunicorn-armguard"
+    SERVICE_FILE="${SERVICE_NAME}.service"
     SOCKET_PATH="/run/gunicorn-armguard.sock"
+    echo -e "${YELLOW}Using default deployment at $DEFAULT_PROJECT_DIR${NC}"
 fi
+
+# Create socket directory if needed
+SOCKET_DIR=$(dirname "$SOCKET_PATH")
+mkdir -p "$SOCKET_DIR"
+chown "$RUN_USER":"$RUN_GROUP" "$SOCKET_DIR"
+chmod 755 "$SOCKET_DIR"
 
 
 # Calculate optimal worker count (2 × CPU + 1)
@@ -105,13 +120,13 @@ Environment="PATH=${VENV_DIR}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/
 Environment="DJANGO_SETTINGS_MODULE=core.settings_production"
 EnvironmentFile=-${PROJECT_DIR}/.env
 
-ExecStart=${VENV_DIR}/bin/gunicorn \\
+ExecStart=${VENV_DIR}/bin/gunicorn \
           --workers ${WORKERS} \
           --bind unix:${SOCKET_PATH} \
-          --timeout 60 \\
-          --access-logfile ${LOG_DIR}/access.log \\
-          --error-logfile ${LOG_DIR}/error.log \\
-          --log-level info \\
+          --timeout 60 \
+          --access-logfile ${LOG_DIR}/access.log \
+          --error-logfile ${LOG_DIR}/error.log \
+          --log-level info \
           core.wsgi:application
 
 Restart=always
