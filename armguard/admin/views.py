@@ -410,11 +410,8 @@ def edit_user(request, user_id):
             except Exception as e:
                 messages.error(request, f'Error updating user: {str(e)}')
         else:
-            # Form has validation errors
+            # Form has validation errors - errors will display inline in template
             messages.error(request, 'Please correct the errors below.')
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'{field}: {error}')
     else:
         # Create form for editing - include personnel if linked
         has_personnel = hasattr(edit_user_obj, 'personnel') and edit_user_obj.personnel
@@ -475,10 +472,8 @@ def edit_personnel(request, personnel_id):
             except Exception as e:
                 messages.error(request, f'Error updating personnel: {str(e)}')
         else:
+            # Form has validation errors - errors will display inline in template
             messages.error(request, 'Please correct the errors below.')
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'{field}: {error}')
     else:
         # Create form for editing personnel only
         form = UniversalForm(
