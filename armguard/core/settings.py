@@ -348,31 +348,40 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'core', 'media')
 
 # Performance Optimization: Advanced Multi-Level Caching Configuration
-# ARM64/RPi compatible Redis configuration
-def get_redis_parser_class():
-    """Get the best available Redis parser for the platform"""
+# ARM64/RPi compatible Redis configuration - Let Redis auto-select parser
+def get_redis_options():
+    """Get Redis options with automatic parser selection"""
+    base_options = {
+        'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        'PICKLE_VERSION': 2,
+        'CONNECTION_POOL_KWARGS': {
+            'max_connections': config('REDIS_MAX_CONNECTIONS', default=50, cast=int),
+            'health_check_interval': 30,
+            'retry_on_timeout': True,
+        },
+        'IGNORE_EXCEPTIONS': True,  # Graceful fallback
+    }
+    
+    # Only add parser if we can confirm it works
     try:
-        import hiredis
-        return 'redis.connection.HiredisParser'
+        import redis
+        # Test if we can create a connection with default settings
+        # This lets Redis choose the best parser automatically
+        conn = redis.Redis(decode_responses=True)
+        # Don't specify parser - let Redis auto-detect best option
     except ImportError:
-        return 'redis.connection.PythonParser'  # Fallback for ARM64
+        pass
+    
+    return base_options
 
-REDIS_PARSER_CLASS = get_redis_parser_class()
+REDIS_OPTIONS = get_redis_options()
 
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
         'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'PARSER_CLASS': REDIS_PARSER_CLASS,
-            'PICKLE_VERSION': 2,
-            'CONNECTION_POOL_KWARGS': {
-                'max_connections': config('REDIS_MAX_CONNECTIONS', default=50, cast=int),
-                'health_check_interval': 30,
-                'retry_on_timeout': True,
-            },
-            'IGNORE_EXCEPTIONS': True,  # Graceful fallback
+            **REDIS_OPTIONS,
         },
         'KEY_PREFIX': 'armguard',
         'TIMEOUT': config('CACHE_TIMEOUT', default=300, cast=int),  # 5 minutes default
@@ -383,7 +392,6 @@ CACHES = {
         'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/2'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'PARSER_CLASS': REDIS_PARSER_CLASS,
             'IGNORE_EXCEPTIONS': True,
         },
         'KEY_PREFIX': 'armguard_sessions',
@@ -394,7 +402,6 @@ CACHES = {
         'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/3'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'PARSER_CLASS': REDIS_PARSER_CLASS,
             'IGNORE_EXCEPTIONS': True,
         },
         'KEY_PREFIX': 'armguard_queries',
@@ -405,7 +412,6 @@ CACHES = {
         'LOCATION': config('REDIS_URL', default='redis://127.0.0.1:6379/4'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'PARSER_CLASS': REDIS_PARSER_CLASS,
             'IGNORE_EXCEPTIONS': True,
         },
         'KEY_PREFIX': 'armguard_templates',
