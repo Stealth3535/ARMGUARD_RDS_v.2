@@ -18,14 +18,11 @@ from admin.permissions import check_restricted_admin
 
 
 def is_admin_or_armorer(user):
-    """Check if user is admin, superuser, or armorer - can issue items"""
-    # Restricted admins cannot create transactions
-    if check_restricted_admin(user):
-        return False
-    
+    """Check if user is superuser or armorer - can issue items"""
+    # Only superusers and armorers can create transactions
+    # Admins (both restricted and unrestricted) cannot create transactions
     return user.is_authenticated and (
         user.is_superuser or 
-        user.groups.filter(name='Admin').exists() or 
         user.groups.filter(name='Armorer').exists()
     )
 
