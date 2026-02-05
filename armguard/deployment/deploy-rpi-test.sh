@@ -307,7 +307,7 @@ setup_nginx() {
     sudo sh -c "cat > /etc/nginx/sites-available/armguard << 'EOF'
 # ArmGuard A+ Performance Nginx Configuration for Raspberry Pi
 upstream armguard {
-    server unix:/opt/armguard/armguard.sock;
+    server unix:/run/armguard.sock;
 }
 
 server {
@@ -328,11 +328,22 @@ server {
     add_header Referrer-Policy \"strict-origin-when-cross-origin\" always;
     add_header Cache-Control \"public, max-age=31536000\" always;
     
-    # Gzip compression (A+ performance)
+    # Gzip compression (A+ performance) - disabled for CSRF-sensitive endpoints
     gzip on;
     gzip_comp_level 6;
     gzip_min_length 1000;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+    gzip_types text/plain text/css application/javascript text/xml application/xml application/xml+rss text/javascript;
+    gzip_proxied no-cache no-store private expired auth;
+    
+    # Disable gzip for CSRF-sensitive endpoints
+    location ~ ^/(login|admin|api)/ {
+        gzip off;
+        include proxy_params;
+        proxy_pass http://armguard;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
     
     # Static files with long-term caching
     location /static/ {
@@ -392,7 +403,7 @@ setup_gunicorn() {
 import multiprocessing
 
 # Server socket
-bind = "unix:/opt/armguard/armguard.sock"
+bind = "unix:/run/armguard.sock"
 backlog = 2048
 
 # Worker processes
@@ -459,8 +470,9 @@ EOF"
 Description=ArmGuard A+ Performance Edition Socket
 
 [Socket]
-ListenStream=/opt/armguard/armguard.sock
+ListenStream=/run/armguard.sock
 SocketUser=www-data
+SocketMode=0666
 
 [Install]
 WantedBy=sockets.target

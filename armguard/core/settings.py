@@ -129,6 +129,9 @@ MIDDLEWARE = [
     # Django Core Security (Must be first)
     'django.middleware.security.SecurityMiddleware',
     
+    # Static Files (WhiteNoise)
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    
     # Performance Optimizations (Early in stack)
     'core.middleware.performance.PerformanceOptimizationMiddleware',  # Response caching & compression
     'core.middleware.performance.DatabaseQueryOptimizationMiddleware',  # Query monitoring
@@ -331,6 +334,13 @@ WHITENOISE_USE_FINDERS = True
 WHITENOISE_AUTOREFRESH = DEBUG
 WHITENOISE_MAX_AGE = 31536000 if not DEBUG else 0  # 1 year cache in production
 WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 'xz', 'br']
+
+# Prevent compression of CSRF-sensitive content (fixes UTF-8 decoding errors)
+WHITENOISE_MIMETYPES = {
+    '.html': 'text/html; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.js': 'application/javascript; charset=utf-8',
+}
 
 # Static file compression
 COMPRESS_ENABLED = not DEBUG
