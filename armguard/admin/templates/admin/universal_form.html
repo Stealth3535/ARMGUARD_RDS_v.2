@@ -348,8 +348,8 @@
             </div>
             
             <!-- Admin Restriction Field - Only shown when role is Administrator -->
-            {% if is_superuser %}
             <div class="form-group" id="adminRestrictionGroup" style="display:none;">
+                {% if is_superuser %}
                 <label for="{{ form.admin_restriction.id_for_label }}">
                     Administrator Access Level <span class="required">*</span>
                 </label>
@@ -358,19 +358,17 @@
                 {% if form.admin_restriction.errors %}
                     <span class="error">{{ form.admin_restriction.errors }}</span>
                 {% endif %}
-            </div>
-            {% else %}
-            <div class="form-group" id="adminRestrictionGroup" style="display:none;">
+                {% else %}
                 <label for="{{ form.admin_restriction.id_for_label }}">
                     Administrator Access Level
                 </label>
-                <div class="form-field-disabled">
-                    <p><strong>{{ form.admin_restriction.value|default:"No restriction" }}</strong></p>
-                    <p class="help-text" style="color: #dc3545;"><i class="fas fa-lock"></i> Only superusers can modify admin restrictions</p>
+                <div class="form-field-disabled" style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6;">
+                    <p style="margin: 0 0 5px 0;"><strong>{{ form.admin_restriction.value|default:"No restriction" }}</strong></p>
+                    <p class="help-text" style="color: #dc3545; margin: 0;"><i class="fas fa-lock"></i> Only superusers can modify admin restrictions</p>
                 </div>
                 <input type="hidden" name="admin_restriction" value="{{ form.admin_restriction.value }}">
+                {% endif %}
             </div>
-            {% endif %}
             
             <div id="operationNotification" class="alert" style="display:none; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
                 <i class="fas fa-info-circle"></i>
