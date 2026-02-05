@@ -39,7 +39,8 @@ class TransactionListView(LoginRequiredMixin, ListView):
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
-            logger.error(f\"Error in TransactionListView.get_queryset: {e}\")\n            # Return empty queryset on error
+            logger.error(f"Error in TransactionListView.get_queryset: {e}")
+            # Return empty queryset on error
             return Transaction.objects.none()
     
     def get_context_data(self, **kwargs):
@@ -56,7 +57,7 @@ class TransactionListView(LoginRequiredMixin, ListView):
             import logging
             import traceback
             logger = logging.getLogger(__name__)
-            logger.error(f\"Error in TransactionListView.get_context_data: {e}\")
+            logger.error(f"Error in TransactionListView.get_context_data: {e}")
             logger.error(traceback.format_exc())
             # Return minimal context on error
             context = super(ListView, self).get_context_data(**kwargs)
@@ -194,7 +195,6 @@ def verify_qr_code(request):
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 
-@login_required
 @login_required
 @lan_required  # NEW: Transaction creation requires LAN access for security
 @user_passes_test(is_admin_or_armorer)
