@@ -574,8 +574,9 @@ def register_personnel(request):
 
 @login_required
 @user_passes_test(is_admin_or_armorer)
+@unrestricted_admin_required
 def register_item(request):
-    """Register new inventory item - Admin and Armorer can add items"""
+    """Register new inventory item - Unrestricted Admin and Armorer only"""
     if request.method == 'POST':
         form = ItemRegistrationForm(request.POST)
         if form.is_valid():
