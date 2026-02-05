@@ -31,6 +31,7 @@ class ItemListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         # Import here to avoid circular imports
         from qr_manager.models import QRCodeImage
+        from admin.permissions import check_restricted_admin
         
         # Attach QR code object to each item
         for item in context['items']:
@@ -42,8 +43,10 @@ class ItemListView(LoginRequiredMixin, ListView):
             except QRCodeImage.DoesNotExist:
                 item.qr_code_obj = None
         
-        # Check if user is admin (not just armorer)
-        context['is_admin'] = self.request.user.is_superuser or self.request.user.groups.filter(name='Admin').exists()
+        # Check if user is unrestricted admin (not restricted admin or armorer)
+        is_admin = self.request.user.is_superuser or self.request.user.groups.filter(name='Admin').exists()
+        is_restricted = check_restricted_admin(self.request.user)
+        context['is_admin'] = is_admin and not is_restricted
         
         return context
 
@@ -65,6 +68,7 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
         # Import here to avoid circular imports
         from qr_manager.models import QRCodeImage
         from transactions.models import Transaction
+        from admin.permissions import check_restricted_admin
         
         try:
             context['qr_code_obj'] = QRCodeImage.objects.get(
@@ -85,8 +89,10 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
         else:
             context['last_take'] = None
         
-        # Check if user is admin (not just armorer)
-        context['is_admin'] = self.request.user.is_superuser or self.request.user.groups.filter(name='Admin').exists()
+        # Check if user is unrestricted admin (not restricted admin or armorer)
+        is_admin = self.request.user.is_superuser or self.request.user.groups.filter(name='Admin').exists()
+        is_restricted = check_restricted_admin(self.request.user)
+        context['is_admin'] = is_admin and not is_restricted
             
         return context
 
