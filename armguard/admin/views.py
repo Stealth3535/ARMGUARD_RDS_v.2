@@ -197,15 +197,12 @@ def universal_registration(request):
                     
                     if personnel:
                         # Generate personnel QR code (includes user link if exists)
+                        # Use standard QR generator for consistent gray-on-black styling
+                        from utils.qr_generator import generate_qr_code_to_buffer
                         user_info = f":{user.username}" if user else ""
                         personnel_data = f"PERSONNEL:{personnel.id}:{personnel.rank} {personnel.surname}, {personnel.firstname}:{personnel.serial}{user_info}"
-                        qr_personnel = qrcode.QRCode(version=1, box_size=10, border=5)
-                        qr_personnel.add_data(personnel_data)
-                        qr_personnel.make(fit=True)
                         
-                        img_personnel = qr_personnel.make_image(fill_color="black", back_color="white")
-                        buffer_personnel = BytesIO()
-                        img_personnel.save(buffer_personnel, format='PNG')
+                        buffer_personnel = generate_qr_code_to_buffer(personnel_data, size=600)
                         qr_code = base64.b64encode(buffer_personnel.getvalue()).decode()
                     
                     # Success message based on what was created
@@ -585,15 +582,11 @@ def register_item(request):
             try:
                 item = form.save()
                 
-                # Generate QR code
+                # Generate QR code using standard generator for consistent gray-on-black styling
+                from utils.qr_generator import generate_qr_code_to_buffer
                 item_data = f"ITEM:{item.id}:{item.item_type}:{item.serial}"
-                qr = qrcode.QRCode(version=1, box_size=10, border=5)
-                qr.add_data(item_data)
-                qr.make(fit=True)
                 
-                img = qr.make_image(fill_color="black", back_color="white")
-                buffer = BytesIO()
-                img.save(buffer, format='PNG')
+                buffer = generate_qr_code_to_buffer(item_data, size=600)
                 qr_code = base64.b64encode(buffer.getvalue()).decode()
                 
                 messages.success(request, f'Item "{item}" registered successfully with QR code!')
@@ -854,15 +847,12 @@ def registration(request):
                     
                     if personnel:
                         # Generate personnel QR code (includes user link if exists)
+                        # Use standard QR generator for consistent gray-on-black styling
+                        from utils.qr_generator import generate_qr_code_to_buffer
                         user_info = f":{user.username}" if user else ""
                         personnel_data = f"PERSONNEL:{personnel.id}:{personnel.rank} {personnel.surname}, {personnel.firstname}:{personnel.serial}{user_info}"
-                        qr_personnel = qrcode.QRCode(version=1, box_size=10, border=5)
-                        qr_personnel.add_data(personnel_data)
-                        qr_personnel.make(fit=True)
                         
-                        img_personnel = qr_personnel.make_image(fill_color="black", back_color="white")
-                        buffer_personnel = BytesIO()
-                        img_personnel.save(buffer_personnel, format='PNG')
+                        buffer_personnel = generate_qr_code_to_buffer(personnel_data, size=600)
                         qr_code = base64.b64encode(buffer_personnel.getvalue()).decode()
                     
                     # Success message based on what was created
