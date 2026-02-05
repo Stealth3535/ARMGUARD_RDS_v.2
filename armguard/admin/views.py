@@ -990,9 +990,9 @@ def edit_item(request, item_id):
 
 
 @login_required
-@user_passes_test(is_staff_or_superuser)
+@user_passes_test(is_admin_user)
 def delete_item(request, item_id):
-    """Delete inventory item with audit logging - Staff/Superuser only"""
+    """Delete inventory item with audit logging - Admin/Superuser only"""
     from .models import AuditLog, DeletedRecord
     import json
     

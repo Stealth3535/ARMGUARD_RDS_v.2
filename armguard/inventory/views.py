@@ -42,6 +42,9 @@ class ItemListView(LoginRequiredMixin, ListView):
             except QRCodeImage.DoesNotExist:
                 item.qr_code_obj = None
         
+        # Check if user is admin (not just armorer)
+        context['is_admin'] = self.request.user.is_superuser or self.request.user.groups.filter(name='Admin').exists()
+        
         return context
 
 
