@@ -58,22 +58,23 @@ class Colors:
     BOLD = '\033[1m'
 
 class ComprehensiveTestSuite:
-        def test_0_gateway_error(self):
-            """Test 0: Check for 502 Bad Gateway error from main endpoint"""
-            print(f"\n{Colors.BLUE}🌐 Gateway Error Check{Colors.ENDC}")
-            try:
-                # Use requests to simulate external HTTP request to local server
-                response = requests.get("http://127.0.0.1:8000/", timeout=5)
-                if response.status_code == 502:
-                    self.log_test("Gateway Error: 502 Bad Gateway", "FAIL", "Nginx/Gunicorn connection issue detected")
-                elif response.status_code == 200:
-                    self.log_test("Gateway Error: Main Endpoint", "PASS", "Main endpoint accessible (200 OK)")
-                else:
-                    self.log_test("Gateway Error: Main Endpoint", "WARN", f"Unexpected status: {response.status_code}")
-            except requests.ConnectionError as e:
-                self.log_test("Gateway Error: Connection", "FAIL", f"Connection error: {e}")
-            except Exception as e:
-                self.log_test("Gateway Error: Exception", "FAIL", str(e))
+    def test_0_gateway_error(self):
+        """Test 0: Check for 502 Bad Gateway error from main endpoint"""
+        print(f"\n{Colors.BLUE}🌐 Gateway Error Check{Colors.ENDC}")
+        try:
+            # Use requests to simulate external HTTP request to local server
+            response = requests.get("http://127.0.0.1:8000/", timeout=5)
+            if response.status_code == 502:
+                self.log_test("Gateway Error: 502 Bad Gateway", "FAIL", "Nginx/Gunicorn connection issue detected")
+            elif response.status_code == 200:
+                self.log_test("Gateway Error: Main Endpoint", "PASS", "Main endpoint accessible (200 OK)")
+            else:
+                self.log_test("Gateway Error: Main Endpoint", "WARN", f"Unexpected status: {response.status_code}")
+        except requests.ConnectionError as e:
+            self.log_test("Gateway Error: Connection", "FAIL", f"Connection error: {e}")
+        except Exception as e:
+            self.log_test("Gateway Error: Exception", "FAIL", str(e))
+
     def __init__(self):
         # Force test-friendly settings
         from django.conf import settings
@@ -81,7 +82,7 @@ class ComprehensiveTestSuite:
             # Add testserver to allowed hosts if not present
             if 'testserver' not in settings.ALLOWED_HOSTS:
                 settings.ALLOWED_HOSTS.append('testserver')
-        
+
         self.client = Client()
         self.test_results = {
             'passed': 0,
@@ -92,7 +93,7 @@ class ComprehensiveTestSuite:
             'test_details': {}
         }
         self.start_time = time.time()
-        
+
     def print_banner(self):
         print(f"{Colors.CYAN}{'='*80}{Colors.ENDC}")
         print(f"{Colors.CYAN}{Colors.BOLD}    ArmGuard Comprehensive Testing Suite{Colors.ENDC}")
