@@ -102,10 +102,49 @@ mkdir -p ${LOG_DIR}
 chown ${RUN_USER}:${RUN_GROUP} ${LOG_DIR}
 chmod 755 ${LOG_DIR}
 
-# Create systemd service file
 echo -e "${YELLOW}Creating systemd service file...${NC}"
 
-cat > /etc/systemd/system/${SERVICE_FILE} <<EOF
+# Detect if a socket unit exists for this service
+SOCKET_UNIT="/etc/systemd/system/${SERVICE_NAME}.socket"
+if [ -f "$SOCKET_UNIT" ]; then
+    echo -e "${YELLOW}Detected systemd socket unit: $SOCKET_UNIT${NC}"
+    # Omit --bind if socket activation is used
+    cat > /etc/systemd/system/${SERVICE_FILE} <<EOF
+[Unit]
+Description=Gunicorn daemon for ArmGuard
+Documentation=https://github.com/Stealth3535/armguard
+After=network.target
+
+[Service]
+Type=exec
+User=${RUN_USER}
+Group=${RUN_GROUP}
+WorkingDirectory=${PROJECT_DIR}
+Environment="PATH=${VENV_DIR}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="DJANGO_SETTINGS_MODULE=core.settings_production"
+EnvironmentFile=-${PROJECT_DIR}/.env
+
+ExecStart=${VENV_DIR}/bin/gunicorn \
+          --workers ${WORKERS} \
+          --timeout 60 \
+          --access-logfile ${LOG_DIR}/access.log \
+          --error-logfile ${LOG_DIR}/error.log \
+          --log-level info \
+          core.wsgi:application
+
+Restart=always
+RestartSec=3
+PrivateTmp=true
+NoNewPrivileges=true
+KillMode=mixed
+KillSignal=SIGQUIT
+TimeoutStopSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+else
+    cat > /etc/systemd/system/${SERVICE_FILE} <<EOF
 [Unit]
 Description=Gunicorn daemon for ArmGuard
 Documentation=https://github.com/Stealth3535/armguard
@@ -140,6 +179,7 @@ TimeoutStopSec=5
 [Install]
 WantedBy=multi-user.target
 EOF
+fi
 
 echo -e "${GREEN}✓ Service file created: /etc/systemd/system/${SERVICE_FILE}${NC}"
 
