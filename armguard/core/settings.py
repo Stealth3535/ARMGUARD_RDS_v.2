@@ -687,9 +687,11 @@ if IS_RASPBERRY_PI:
         print("🔧 Applying low-memory optimizations for RPi")
         # Reduce database connections
         DATABASES['default']['CONN_MAX_AGE'] = 60  # Shorter connection lifetime
-        if 'OPTIONS' not in DATABASES['default']:
-            DATABASES['default']['OPTIONS'] = {}
-        DATABASES['default']['OPTIONS']['MAX_CONNS'] = 5  # Fewer connections
+        # Only apply PostgreSQL-specific options if using PostgreSQL
+        if 'postgresql' in DATABASES['default']['ENGINE']:
+            if 'OPTIONS' not in DATABASES['default']:
+                DATABASES['default']['OPTIONS'] = {}
+            DATABASES['default']['OPTIONS']['MAX_CONNS'] = 5  # Fewer connections
         
         # Use simple cache backend
         CACHES['default']['BACKEND'] = 'django.core.cache.backends.dummy.DummyCache'
@@ -698,9 +700,11 @@ if IS_RASPBERRY_PI:
         print("🔧 Applying moderate optimizations for RPi")
         # Standard optimizations for 2-4GB RPi
         DATABASES['default']['CONN_MAX_AGE'] = 300
-        if 'OPTIONS' not in DATABASES['default']:
-            DATABASES['default']['OPTIONS'] = {}
-        DATABASES['default']['OPTIONS']['MAX_CONNS'] = 10
+        # Only apply PostgreSQL-specific options if using PostgreSQL
+        if 'postgresql' in DATABASES['default']['ENGINE']:
+            if 'OPTIONS' not in DATABASES['default']:
+                DATABASES['default']['OPTIONS'] = {}
+            DATABASES['default']['OPTIONS']['MAX_CONNS'] = 10
     
     # ARM64-specific file handling
     FILE_UPLOAD_MAX_MEMORY_SIZE = min(FILE_UPLOAD_MAX_MEMORY_SIZE, 2 * 1024 * 1024)  # 2MB max
