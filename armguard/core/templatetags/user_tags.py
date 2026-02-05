@@ -2,6 +2,7 @@
 Custom template tags for user-related functionality
 """
 from django import template
+from admin.permissions import check_restricted_admin
 
 register = template.Library()
 
@@ -10,7 +11,7 @@ register = template.Library()
 def get_user_role(user):
     """
     Get the user's role based on permissions and groups
-    Returns: 'Superuser', 'Admin', 'Armorer', or 'Personnel'
+    Returns: 'Superuser', 'Admin', 'Admin (Restricted)', 'Armorer', or 'Personnel'
     """
     if not user.is_authenticated:
         return 'Guest'
@@ -20,7 +21,10 @@ def get_user_role(user):
     
     # Check groups
     if user.groups.filter(name='Admin').exists():
-        return 'Admin'
+        # Check if admin has restrictions
+        if check_restricted_admin(user):
+            return 'Administrator (Restricted)'
+        return 'Administrator'
     
     if user.groups.filter(name='Armorer').exists():
         return 'Armorer'
