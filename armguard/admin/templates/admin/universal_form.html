@@ -348,6 +348,7 @@
             </div>
             
             <!-- Admin Restriction Field - Only shown when role is Administrator -->
+            {% if is_superuser %}
             <div class="form-group" id="adminRestrictionGroup" style="display:none;">
                 <label for="{{ form.admin_restriction.id_for_label }}">
                     Administrator Access Level <span class="required">*</span>
@@ -358,6 +359,18 @@
                     <span class="error">{{ form.admin_restriction.errors }}</span>
                 {% endif %}
             </div>
+            {% else %}
+            <div class="form-group" id="adminRestrictionGroup" style="display:none;">
+                <label for="{{ form.admin_restriction.id_for_label }}">
+                    Administrator Access Level
+                </label>
+                <div class="form-field-disabled">
+                    <p><strong>{{ form.admin_restriction.value|default:"No restriction" }}</strong></p>
+                    <p class="help-text" style="color: #dc3545;"><i class="fas fa-lock"></i> Only superusers can modify admin restrictions</p>
+                </div>
+                <input type="hidden" name="admin_restriction" value="{{ form.admin_restriction.value }}">
+            </div>
+            {% endif %}
             
             <div id="operationNotification" class="alert" style="display:none; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
                 <i class="fas fa-info-circle"></i>

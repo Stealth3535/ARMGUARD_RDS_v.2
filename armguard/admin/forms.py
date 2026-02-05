@@ -95,6 +95,7 @@ class UniversalForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.edit_user = kwargs.pop('edit_user', None)
         self.edit_personnel = kwargs.pop('edit_personnel', None)
+        self.request_user = kwargs.pop('request_user', None)
         super().__init__(*args, **kwargs)
         
         if self.edit_user:
@@ -114,13 +115,19 @@ class UniversalForm(forms.Form):
                     'phone_number': profile.phone_number or '',
                     'admin_restriction': 'with_restriction' if profile.is_restricted_admin else 'no_restriction'
                 })
+                # Store original restriction status for non-superuser edits
+                self._original_restriction = profile.is_restricted_admin
             except AttributeError:
                 # User doesn't have a profile yet
                 self.initial.update({'admin_restriction': 'no_restriction'})
+                self._original_restriction = False
             except Exception as e:
                 import logging
                 logging.getLogger(__name__).warning("Error accessing user profile: %s", str(e))
                 self.initial.update({'admin_restriction': 'no_restriction'})
+                self._original_restriction = False
+        else:
+            self._original_restriction = False
         
         if self.edit_personnel:
             self.initial.update({
@@ -265,8 +272,13 @@ class UniversalForm(forms.Form):
             profile.is_armorer = (role == 'armorer')
             # Handle admin restriction
             if role == 'admin':
-                admin_restriction = self.cleaned_data.get('admin_restriction', 'no_restriction')
-                profile.is_restricted_admin = (admin_restriction == 'with_restriction')
+                # Only allow superusers to change admin restriction
+                if self.request_user and self.request_user.is_superuser:
+                    admin_restriction = self.cleaned_data.get('admin_restriction', 'no_restriction')
+                    profile.is_restricted_admin = (admin_restriction == 'with_restriction')
+                else:
+                    # Preserve original restriction for non-superuser edits
+                    profile.is_restricted_admin = getattr(self, '_original_restriction', False)
             else:
                 profile.is_restricted_admin = False
             if self.cleaned_data.get('profile_picture'):
@@ -310,8 +322,13 @@ class UniversalForm(forms.Form):
             profile.is_armorer = (role == 'armorer')
             # Handle admin restriction for edit operations
             if role == 'admin':
-                admin_restriction = self.cleaned_data.get('admin_restriction', 'no_restriction')
-                profile.is_restricted_admin = (admin_restriction == 'with_restriction')
+                # Only allow superusers to change admin restriction
+                if self.request_user and self.request_user.is_superuser:
+                    admin_restriction = self.cleaned_data.get('admin_restriction', 'no_restriction')
+                    profile.is_restricted_admin = (admin_restriction == 'with_restriction')
+                else:
+                    # Preserve original restriction for non-superuser edits
+                    profile.is_restricted_admin = getattr(self, '_original_restriction', False)
             else:
                 profile.is_restricted_admin = False
             if self.cleaned_data.get('profile_picture'):

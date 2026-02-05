@@ -390,7 +390,7 @@ def edit_user(request, user_id):
         data['edit_user_id'] = edit_user_obj.id
         
         # Pass both edit_user and edit_personnel if personnel exists
-        form_kwargs = {'edit_user': edit_user_obj}
+        form_kwargs = {'edit_user': edit_user_obj, 'request_user': request.user}
         if has_personnel:
             form_kwargs['edit_personnel'] = edit_user_obj.personnel
         form = UniversalForm(data, request.FILES, **form_kwargs)
@@ -426,6 +426,7 @@ def edit_user(request, user_id):
         'is_edit': True,
         'page_title': f'Edit User: {edit_user_obj.username}',
         'submit_text': 'Save Changes',
+        'is_superuser': request.user.is_superuser,
     }
     return render(request, 'admin/universal_form.html', context)
 
