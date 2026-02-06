@@ -47,6 +47,8 @@ from django.contrib.auth.models import User, Group
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
+from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
 from unittest.mock import patch, MagicMock
 import json
 import logging
@@ -181,15 +183,16 @@ class NetworkTypeDetectionTest(NetworkSecurityTestCase):
         self.assertEqual(request.network_type, 'wan')
     
     def test_unknown_port_defaults(self):
-        """Test unknown port defaults to WAN for security"""
+        """Test unknown port defaults to WAN for security (uses non-LAN IP)"""
         from django.test import RequestFactory
         
         middleware = NetworkBasedAccessMiddleware(get_response=lambda r: None)
         factory = RequestFactory()
         
-        # Create real request with unknown port
+        # Create real request with unknown port and WAN IP
         request = factory.get('/')
         request.META['SERVER_PORT'] = '8080'
+        request.META['REMOTE_ADDR'] = '8.8.8.8'  # Public IP (Google DNS)
         
         middleware.process_request(request)
         
@@ -313,30 +316,34 @@ class DecoratorTest(NetworkSecurityTestCase):
     
     def test_lan_required_decorator(self):
         """Test @lan_required decorator"""
+        from django.test import RequestFactory
+        from django.http import JsonResponse
+        
         @lan_required
         def test_view(request):
             return "success"
         
-        # Mock LAN request
-        lan_request = MagicMock()
+        # Test LAN request - should succeed
+        factory = RequestFactory()
+        lan_request = factory.get('/')
         lan_request.is_lan_access = True
         lan_request.is_wan_access = False
+        lan_request.network_type = 'lan'
+        lan_request.path = '/'
         
         result = test_view(lan_request)
         self.assertEqual(result, "success")
         
-        # Mock WAN request - should be blocked
-        wan_request = MagicMock()
+        # Test WAN request - should be blocked
+        wan_request = factory.get('/')
         wan_request.is_lan_access = False
         wan_request.is_wan_access = True
+        wan_request.network_type = 'wan'
+        wan_request.path = '/'
         
-        try:
-            result = test_view(wan_request)
-            # Should raise exception or return redirect
-            self.assertNotEqual(result, "success")
-        except:
-            # Expected to fail on WAN
-            pass
+        # Should raise PermissionDenied
+        with self.assertRaises(PermissionDenied):
+            test_view(wan_request)
     
     def test_read_only_on_wan_decorator(self):
         """Test @read_only_on_wan decorator"""

@@ -1,2 +1,0 @@
-# Placeholder for logo.png
-# Add your ArmGuard logo image here

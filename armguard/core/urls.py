@@ -55,6 +55,10 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='auth/login.html'), name='login'),
     path('logout/', views.logout_view, name='logout'),
     
+    # Real-time features test page
+    path('test-realtime/', TemplateView.as_view(template_name='test_realtime.html'), name='test_realtime'),
+    path('websocket-test/', TemplateView.as_view(template_name='websocket_test.html'), name='websocket_test'),
+    
     # API endpoints
     path('api/personnel/<str:personnel_id>/', api_views.get_personnel, name='api_personnel'),
     path('api/items/<str:item_id>/', api_views.get_item, name='api_item'),

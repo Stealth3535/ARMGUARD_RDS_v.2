@@ -560,18 +560,226 @@ grep DATABASE .env
 
 ---
 
+## 🔄 Phase 7: Real-Time WebSocket Features (Optional - 30 minutes)
+
+**New Feature:** ArmGuard now supports real-time updates via WebSocket connections for live notifications, transaction feeds, inventory updates, and user presence tracking.
+
+### Prerequisites:
+- ✅ **Redis server** (required for production channel layer)
+- ✅ **Daphne ASGI server** (replaces Gunicorn for WebSocket support)
+- ✅ **Nginx WebSocket proxy** configuration
+- ✅ **Django Channels** (included in requirements.txt)
+
+### Step 1: Install Redis (Production Channel Layer)
+
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y redis-server
+
+# Start and enable Redis
+sudo systemctl start redis
+sudo systemctl enable redis
+
+# Verify Redis is running
+redis-cli ping  # Should return "PONG"
+```
+
+### Step 2: Install Daphne Service
+
+The deployment includes a systemd service installer for Daphne:
+
+```bash
+# From deployment directory
+cd /var/www/armguard/deployment/methods/production/
+sudo bash install-daphne-service.sh
+
+# Or from home directory deployment
+cd /home/ubuntu/ARMGUARD_RDS/deployment/methods/production/
+sudo bash install-daphne-service.sh
+```
+
+**What this does:**
+- ✅ Validates environment (checks for daphne, Redis, directories)
+- ✅ Stops existing Gunicorn services
+- ✅ Creates systemd service file with security hardening
+- ✅ Enables auto-start on boot
+- ✅ Configures logging to `/var/log/armguard/`
+
+**Service configuration:**
+- Binds to `127.0.0.1:8000` (behind Nginx proxy)
+- Runs 4 workers for production load
+- Restart policy: Always restart on failure
+- Security: PrivateTmp, NoNewPrivileges, ProtectSystem
+- Dependencies: Requires Redis service
+
+### Step 3: Configure Nginx for WebSocket
+
+Update your Nginx configuration to support WebSocket connections:
+
+```bash
+# Copy WebSocket configuration
+sudo cp /var/www/armguard/deployment/nginx-websocket.conf /etc/nginx/sites-available/armguard
+
+# Or manually add to existing config:
+sudo nano /etc/nginx/sites-available/armguard
+```
+
+**Add WebSocket upgrade headers:**
+```nginx
+location /ws/ {
+    proxy_pass http://127.0.0.1:8000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    
+    # WebSocket timeout (24 hours)
+    proxy_read_timeout 86400s;
+    proxy_send_timeout 86400s;
+}
+```
+
+```bash
+# Test and reload Nginx
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### Step 4: Update Django Settings for Production
+
+Edit your production settings to use Redis channel layer:
+
+```bash
+sudo nano /var/www/armguard/armguard/core/settings_production.py
+```
+
+**Add Redis channel layer:**
+```python
+# Real-time WebSocket channel layer (Redis)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+            "capacity": 1500,
+            "expiry": 10,
+        },
+    },
+}
+```
+
+### Step 5: Verify Installation
+
+```bash
+# Check Daphne service status
+sudo systemctl status armguard-daphne
+
+# Check Redis status
+sudo systemctl status redis
+
+# View Daphne logs
+sudo journalctl -u armguard-daphne -n 50 -f
+
+# Test WebSocket connection
+# Visit: https://yourdomain.com/websocket-test/
+```
+
+### Step 6: Real-Time Features Available
+
+Once deployed, users will automatically get:
+
+1. **Live Notifications** (🔔 Bell icon in navbar)
+   - Transaction alerts
+   - Inventory updates
+   - System announcements
+   - Auto-dismissing toasts
+
+2. **Real-Time Transaction Feed**
+   - Live updates on transaction page
+   - Color-coded by status
+   - Automatic refresh without page reload
+
+3. **Inventory Live Updates**
+   - Stock changes appear instantly
+   - Low stock alerts
+   - Item availability status
+
+4. **User Presence Tracking**
+   - See who's online (if enabled)
+   - Active user count
+   - Connection status indicator
+
+### Troubleshooting Real-Time Features
+
+**WebSocket connection fails:**
+```bash
+# Check Daphne is running
+sudo systemctl status armguard-daphne
+
+# Check Nginx WebSocket config
+sudo nginx -t
+
+# View Daphne error logs
+sudo tail -f /var/log/armguard/daphne-error.log
+```
+
+**Redis connection issues:**
+```bash
+# Test Redis
+redis-cli ping
+
+# Check Redis logs
+sudo journalctl -u redis -n 50
+```
+
+**Fallback to polling:** If WebSocket fails, the frontend automatically falls back to HTTP polling every 30 seconds.
+
+### Performance Notes
+
+- **Connection limit:** Daphne with 4 workers can handle ~400-800 concurrent WebSocket connections
+- **Redis memory:** Monitor Redis memory usage with `redis-cli info memory`
+- **Scaling:** For >1000 concurrent users, consider multiple Daphne instances behind load balancer
+
+### Switching from Gunicorn to Daphne
+
+If you have an existing Gunicorn deployment:
+
+```bash
+# Stop Gunicorn service
+sudo systemctl stop armguard
+
+# Run Daphne installer (automatically handles migration)
+cd /var/www/armguard/deployment/methods/production/
+sudo bash install-daphne-service.sh
+
+# Verify Daphne is running
+sudo systemctl status armguard-daphne
+```
+
+**Note:** Both Gunicorn and Daphne can coexist. Daphne handles WebSocket connections while Gunicorn can handle HTTP (if desired), but typically you'll use Daphne for both.
+
+---
+
 ## 🆘 Need Help?
 
 ### Quick Fixes:
 ```bash
-# Restart everything
+# Restart everything (with Daphne)
+sudo systemctl restart nginx postgresql redis armguard-daphne
+
+# Or with Gunicorn (if not using real-time)
 sudo systemctl restart nginx postgresql armguard
 
 # Check system status
 ./deploy-master.sh status
 
 # View deployment logs
-sudo journalctl -u armguard -n 50
+sudo journalctl -u armguard-daphne -n 50  # Daphne
+sudo journalctl -u armguard -n 50         # Gunicorn
 ```
 
 ### Get Support:

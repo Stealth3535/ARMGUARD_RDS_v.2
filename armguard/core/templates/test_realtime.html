@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Real-time Features Test - ArmGuard{% endblock %}
+
+{% block content %}
+<div class="content-section">
+    <h1>🔴 Real-time Features Test</h1>
+    <p class="text-muted">Test WebSocket connections and real-time notifications</p>
+</div>
+
+<!-- Connection Status -->
+<div class="content-section">
+    <h2>Connection Status</h2>
+    <div class="card">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Channel</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Notifications</td>
+                    <td><span id="status-notifications" class="badge badge-secondary">Disconnected</span></td>
+                    <td>
+                        <button onclick="testNotificationChannel()" class="btn btn-sm btn-primary">Connect</button>
+                        <button onclick="disconnectChannel('notifications')" class="btn btn-sm btn-danger">Disconnect</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Transactions</td>
+                    <td><span id="status-transactions" class="badge badge-secondary">Disconnected</span></td>
+                    <td>
+                        <button onclick="testTransactionChannel()" class="btn btn-sm btn-primary">Connect</button>
+                        <button onclick="disconnectChannel('transactions')" class="btn btn-sm btn-danger">Disconnect</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Inventory</td>
+                    <td><span id="status-inventory" class="badge badge-secondary">Disconnected</span></td>
+                    <td>
+                        <button onclick="testInventoryChannel()" class="btn btn-sm btn-primary">Connect</button>
+                        <button onclick="disconnectChannel('inventory')" class="btn btn-sm btn-danger">Disconnect</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Presence</td>
+                    <td><span id="status-presence" class="badge badge-secondary">Disconnected</span></td>
+                    <td>
+                        <button onclick="testPresenceChannel()" class="btn btn-sm btn-primary">Connect</button>
+                        <button onclick="disconnectChannel('presence')" class="btn btn-sm btn-danger">Disconnect</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Test Notifications -->
+<div class="content-section">
+    <h2>Test Notifications</h2>
+    <div class="card">
+        <div class="btn-group">
+            <button onclick="testNotification('info')" class="btn btn-info">Info</button>
+            <button onclick="testNotification('success')" class="btn btn-success">Success</button>
+            <button onclick="testNotification('warning')" class="btn btn-warning">Warning</button>
+            <button onclick="testNotification('error')" class="btn btn-danger">Error</button>
+        </div>
+        <button onclick="notifications.clearAll()" class="btn btn-secondary" style="margin-left: 10px;">Clear All</button>
+    </div>
+</div>
+
+<!-- Live Transaction Feed -->
+<div class="content-section">
+    <h2>Live Transaction Feed</h2>
+    <div class="card">
+        <div class="feed-header">
+            <h3 class="feed-title">Recent Transactions</h3>
+            <div class="feed-status">
+                <span id="feed-status-indicator" class="status-disconnected"></span>
+                <span>Connecting...</span>
+            </div>
+        </div>
+        <div id="live-transaction-feed"></div>
+    </div>
+</div>
+
+<!-- Event Log -->
+<div class="content-section">
+    <h2>Event Log</h2>
+    <div class="card">
+        <button onclick="clearEventLog()" class="btn btn-sm btn-secondary" style="margin-bottom: 10px;">Clear Log</button>
+        <div id="event-log" style="background: #f8f9fa; padding: 15px; border-radius: 4px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px;">
+            <div class="log-entry" style="color: #999;">Waiting for events...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Update connection status indicators
+    function updateStatus(channel, connected) {
+        const badge = document.getElementById(`status-${channel}`);
+        if (badge) {
+            badge.className = connected ? 'badge badge-success' : 'badge badge-secondary';
+            badge.textContent = connected ? 'Connected' : 'Disconnected';
+        }
+        logEvent(`${channel}: ${connected ? 'Connected' : 'Disconnected'}`);
+    }
+
+    // Test notification channel
+    function testNotificationChannel() {
+        wsManager.connect('notifications', {
+            onMessage: (data) => {
+                logEvent(`Notifications: Received ${data.type}`);
+            },
+            onOpen: () => {
+                updateStatus('notifications', true);
+            },
+            onClose: () => {
+                updateStatus('notifications', false);
+            }
+        });
+    }
+
+    // Test transaction channel
+    function testTransactionChannel() {
+        wsManager.connect('transactions', {
+            onMessage: (data) => {
+                logEvent(`Transactions: Received ${data.type}`);
+            },
+            onOpen: () => {
+                updateStatus('transactions', true);
+            },
+            onClose: () => {
+                updateStatus('transactions', false);
+            }
+        });
+    }
+
+    // Test inventory channel
+    function testInventoryChannel() {
+        wsManager.connect('inventory', {
+            onMessage: (data) => {
+                logEvent(`Inventory: Received ${data.type} for item ${data.item_id}`);
+            },
+            onOpen: () => {
+                updateStatus('inventory', true);
+            },
+            onClose: () => {
+                updateStatus('inventory', false);
+            }
+        });
+    }
+
+    // Test presence channel
+    function testPresenceChannel() {
+        wsManager.connect('presence', {
+            onMessage: (data) => {
+                logEvent(`Presence: ${data.type} - User ${data.user_id} is ${data.status}`);
+            },
+            onOpen: () => {
+                updateStatus('presence', true);
+            },
+            onClose: () => {
+                updateStatus('presence', false);
+            }
+        });
+    }
+
+    // Disconnect channel
+    function disconnectChannel(channel) {
+        wsManager.disconnect(channel);
+        updateStatus(channel, false);
+    }
+
+    // Test notifications
+    function testNotification(level) {
+        const titles = {
+            info: 'Information',
+            success: 'Success',
+            warning: 'Warning',
+            error: 'Error'
+        };
+        const messages = {
+            info: 'This is an informational message',
+            success: 'Operation completed successfully',
+            warning: 'Please be cautious about this',
+            error: 'An error has occurred'
+        };
+        
+        notifications.show(titles[level], messages[level], level);
+        logEvent(`Test notification: ${level}`);
+    }
+
+    // Event logging
+    function logEvent(message) {
+        const log = document.getElementById('event-log');
+        const timestamp = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.textContent = `[${timestamp}] ${message}`;
+        
+        // Clear "waiting" message
+        if (log.querySelector('.log-entry[style*="color: #999"]')) {
+            log.innerHTML = '';
+        }
+        
+        log.insertBefore(entry, log.firstChild);
+        
+        // Limit log entries
+        const entries = log.querySelectorAll('.log-entry');
+        if (entries.length > 50) {
+            entries[entries.length - 1].remove();
+        }
+    }
+
+    function clearEventLog() {
+        document.getElementById('event-log').innerHTML = '<div class="log-entry" style="color: #999;">Waiting for events...</div>';
+    }
+
+    // Auto-check connection status on load
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            ['notifications', 'transactions', 'inventory', 'presence'].forEach(channel => {
+                const connected = wsManager.isConnected(channel);
+                updateStatus(channel, connected);
+            });
+        }, 1000);
+    });
+</script>
+
+<style>
+    .badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .badge-success {
+        background-color: #28a745;
+        color: white;
+    }
+    .badge-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+    .btn-group {
+        display: inline-flex;
+        gap: 5px;
+    }
+    .log-entry {
+        padding: 4px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .log-entry:last-child {
+        border-bottom: none;
+    }
+</style>
+
+{% endblock %}

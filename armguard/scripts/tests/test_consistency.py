@@ -13,9 +13,8 @@ django.setup()
 from django.contrib.auth.models import User
 from personnel.models import Personnel
 from users.models import UserProfile
-from admin.forms import UniversalForm
+from admin.forms import UniversalForm, PersonnelRegistrationForm
 from personnel.forms import PersonnelQuickEditForm
-from consolidated_forms import PersonnelRegistrationForm
 
 
 class EnhancedTester:
@@ -131,7 +130,6 @@ class EnhancedTester:
             'group': 'HAS',
             'tel': '09333333333',
             'status': 'Active',
-            'create_user_account': False
         }
         
         form = PersonnelRegistrationForm(form_data)

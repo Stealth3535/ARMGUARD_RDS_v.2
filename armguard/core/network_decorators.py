@@ -14,16 +14,16 @@ def lan_required(view_func):
     """
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        network_type = getattr(request, 'network_type', 'UNKNOWN')
+        network_type = getattr(request, 'network_type', 'wan')  # Default to WAN for security
         
-        if network_type != 'LAN':
+        if network_type != 'lan':
             logger.warning(f"LAN-only operation attempted via {network_type}: {request.path}")
             
             if request.headers.get('Content-Type') == 'application/json' or request.path.startswith('/api/'):
                 return JsonResponse({
                     'error': 'This operation requires LAN access',
                     'network_type': network_type,
-                    'required': 'LAN'
+                    'required': 'lan'
                 }, status=403)
             else:
                 raise PermissionDenied("This operation requires LAN access for security")

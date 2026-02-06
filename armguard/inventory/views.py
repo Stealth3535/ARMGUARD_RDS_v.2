@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import Item
 from core.network_decorators import lan_required, read_only_on_wan
+from core.notifications import broadcast_inventory_update
 
 
 class ItemListView(LoginRequiredMixin, ListView):
@@ -143,6 +144,9 @@ def update_item_status(request, pk):
     old_status = item.status
     item.status = new_status
     item.save()
+    
+    # Broadcast real-time inventory update
+    broadcast_inventory_update(item, previous_status=old_status)
     
     logger.info("Item %s status changed from %s to %s by %s", pk, old_status, new_status, request.user.username)
     messages.success(request, f'Item status changed from "{old_status}" to "{new_status}".')

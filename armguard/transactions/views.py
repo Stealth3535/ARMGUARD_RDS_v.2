@@ -15,6 +15,11 @@ from qr_manager.models import QRCodeImage
 from django.utils import timezone
 from core.network_decorators import lan_required, read_only_on_wan, network_aware_permission_required
 from admin.permissions import check_restricted_admin
+from core.notifications import (
+    send_user_notification,
+    broadcast_transaction_created,
+    broadcast_transaction_returned
+)
 
 
 def is_admin_or_armorer(user):
@@ -270,6 +275,26 @@ def create_qr_transaction(request):
                 date_time=timezone.now(),
                 issued_by=request.user
             )
+            
+            # Send real-time notifications
+            if action == 'Take':
+                broadcast_transaction_created(transaction)
+                send_user_notification(
+                    user_id=request.user.id,
+                    title='Transaction Created',
+                    message=f'✓ {item.item_type} - {item.serial} issued to {personnel.get_full_name()}',
+                    level='success',
+                    data={'transaction_id': transaction.id}
+                )
+            elif action == 'Return':
+                broadcast_transaction_returned(transaction)
+                send_user_notification(
+                    user_id=request.user.id,
+                    title='Transaction Completed',
+                    message=f'✓ {item.item_type} - {item.serial} returned by {personnel.get_full_name()}',
+                    level='success',
+                    data={'transaction_id': transaction.id}
+                )
             
             logger.info("Transaction #%d created by %s: %s %s", transaction.id, request.user.username, action, item_id)
             messages.success(request, f'✓ Transaction #{transaction.id} created: {action} {item.item_type} - {item.serial} by {personnel.get_full_name()}')

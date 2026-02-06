@@ -49,6 +49,10 @@ class NetworkBasedAccessMiddleware(MiddlewareMixin):
         
         # Skip middleware if not enabled
         if not getattr(settings, 'ENABLE_NETWORK_ACCESS_CONTROL', False):
+            # Still set default attributes for compatibility
+            request.is_lan_access = True
+            request.is_wan_access = False
+            request.network_type = 'lan'
             return None
             
         # Get client information
@@ -60,33 +64,36 @@ class NetworkBasedAccessMiddleware(MiddlewareMixin):
         # Determine network type based on port and IP
         network_type = self.determine_network_type(client_ip, server_port)
         
+        # Set request attributes for use in views and templates
+        request.network_type = network_type
+        request.is_lan_access = (network_type == 'lan')
+        request.is_wan_access = (network_type == 'wan')
+        
         # Log access attempt for security monitoring
         logger.info(f"Access attempt: {client_ip}:{server_port} -> {current_path} ({http_method}) via {network_type}")
         
         # Apply network-based restrictions
-        if network_type == 'LAN':
+        if network_type == 'lan':
             # LAN: Allow all operations
             return None
             
-        elif network_type == 'WAN':
+        elif network_type == 'wan':
             # WAN: Restrict to read-only operations
             return self.enforce_wan_restrictions(request, current_path, http_method)
             
         else:
-            # Unknown network: Block access
-            logger.warning(f"Access denied from unknown network: {client_ip}:{server_port}")
-            return self.access_denied_response(
-                "Access denied: Unknown network location"
-            )
+            # Unknown network: Treat as WAN for security (default to most restrictive)
+            logger.warning(f"Unknown network type, defaulting to WAN restrictions: {client_ip}:{server_port}")
+            return self.enforce_wan_restrictions(request, current_path, http_method)
     
     def determine_network_type(self, client_ip, server_port):
         """Determine if request is from LAN or WAN based on IP and port"""
         
         # Port-based detection (primary method)
         if server_port == '8443':
-            return 'LAN'  # LAN access port
+            return 'lan'  # LAN access port
         elif server_port == '443':
-            return 'WAN'  # WAN access port
+            return 'wan'  # WAN access port
         
         # IP-based detection (fallback method)
         try:
@@ -103,14 +110,14 @@ class NetworkBasedAccessMiddleware(MiddlewareMixin):
             # Check if IP is in LAN range
             for network in lan_networks:
                 if ip_obj in network:
-                    return 'LAN'
+                    return 'lan'
             
             # If not in LAN range, consider it WAN
-            return 'WAN'
+            return 'wan'
             
         except ValueError:
-            # Invalid IP address
-            return 'UNKNOWN'
+            # Invalid IP address - default to WAN for security
+            return 'wan'
     
     def enforce_wan_restrictions(self, request, current_path, http_method):
         """Enforce WAN read-only restrictions"""

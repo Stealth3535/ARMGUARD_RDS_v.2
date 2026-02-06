@@ -1,1 +1,0 @@
-# QR Manager commands

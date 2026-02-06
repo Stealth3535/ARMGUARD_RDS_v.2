@@ -139,6 +139,7 @@ if config('CSRF_TRUSTED_ORIGINS', default=''):
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',  # Must be first for Django Channels WebSocket support
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -158,6 +159,8 @@ INSTALLED_APPS = [
     'print_handler',
     # VPN Integration
     'vpn_integration',
+    # Real-time features
+    'channels',  # Django Channels for WebSocket support
 ]
 
 MIDDLEWARE = [
@@ -293,8 +296,41 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 
+# ============================================================================
+# Django Channels Configuration (Real-time WebSocket Support)
+# ============================================================================
+
+ASGI_APPLICATION = 'core.asgi.application'
+
+# Use in-memory channel layer for development/testing (Windows compatible)
+# For production with Redis: uncomment the Redis configuration below
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
+
+# Production Redis configuration (uncomment when Redis is available):
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#         'CONFIG': {
+#             "hosts": [(
+#                 config('REDIS_HOST', default='127.0.0.1'),
+#                 config('REDIS_PORT', default=6379, cast=int)
+#             )],
+#             "capacity": 1500,  # Max messages in channel
+#             "expiry": 60,      # Message expiry time (seconds)
+#         },
+#     },
+# }
+
+
 # Network-based Security Settings
 # LAN/WAN hybrid architecture configuration
+
+# Enable network-based access control
+ENABLE_NETWORK_ACCESS_CONTROL = config('ENABLE_NETWORK_ACCESS_CONTROL', default=True, cast=bool)
 
 # Port configuration for network detection
 NETWORK_PORTS = {
