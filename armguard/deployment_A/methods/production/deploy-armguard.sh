@@ -555,6 +555,16 @@ GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};
 EOF
             echo -e "${GREEN}✓ PostgreSQL database created${NC}"
         fi
+        
+        # Grant schema permissions (required for PostgreSQL 15+)
+        echo -e "${YELLOW}Granting schema permissions...${NC}"
+        sudo -u postgres psql -d ${DB_NAME} <<EOF
+GRANT ALL ON SCHEMA public TO ${DB_USER};
+GRANT CREATE ON SCHEMA public TO ${DB_USER};
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${DB_USER};
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${DB_USER};
+EOF
+        echo -e "${GREEN}✓ Schema permissions granted${NC}"
     else
         echo -e "${YELLOW}Using SQLite database${NC}"
     fi
