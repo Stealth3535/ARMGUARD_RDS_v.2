@@ -79,6 +79,30 @@ get_configuration() {
     echo "Press ENTER to accept defaults shown in [brackets]"
     echo ""
     
+    # Auto-detect project directory from git repository
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    DETECTED_PROJECT_DIR=""
+    SEARCH_DIR="$SCRIPT_DIR"
+    
+    # Look for manage.py in parent directories (up to 5 levels)
+    for i in {1..5}; do
+        if [ -f "$SEARCH_DIR/manage.py" ]; then
+            DETECTED_PROJECT_DIR="$SEARCH_DIR"
+            break
+        fi
+        SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+    done
+    
+    # If project detected, check if it's a git repository
+    if [ -n "$DETECTED_PROJECT_DIR" ]; then
+        if [ -d "$DETECTED_PROJECT_DIR/.git" ] || git -C "$DETECTED_PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+            echo -e "${GREEN}✓ Git repository detected at: ${DETECTED_PROJECT_DIR}${NC}"
+            echo -e "${CYAN}  Using existing repository (enables easy updates with 'git pull')${NC}"
+            echo ""
+            DEFAULT_PROJECT_DIR="$DETECTED_PROJECT_DIR"
+        fi
+    fi
+    
     # Project directory
     read -p "Project directory [${DEFAULT_PROJECT_DIR}]: " PROJECT_DIR
     PROJECT_DIR=${PROJECT_DIR:-$DEFAULT_PROJECT_DIR}
@@ -249,94 +273,10 @@ setup_project_directory() {
     echo -e "${BLUE}Step 2: Setting Up Project Directory${NC}"
     echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
     
-    # Check if project already exists in specified directory
-    if [ -d "$PROJECT_DIR" ] && [ -f "$PROJECT_DIR/manage.py" ]; then
-        echo -e "${GREEN}✓ Project directory exists: ${PROJECT_DIR}${NC}"
-        cd "$PROJECT_DIR"
-        return 0
-    fi
-    
-    # Try to detect if we're running from within the project repository
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    
-    # Look for manage.py in parent directories (likely in armguard/ folder)
-    DETECTED_PROJECT_DIR=""
-    SEARCH_DIR="$SCRIPT_DIR"
-    for i in {1..5}; do
-        if [ -f "$SEARCH_DIR/manage.py" ]; then
-            DETECTED_PROJECT_DIR="$SEARCH_DIR"
-            break
-        fi
-        SEARCH_DIR="$(dirname "$SEARCH_DIR")"
-    done
-    
-    # If project detected in current location
-    if [ -n "$DETECTED_PROJECT_DIR" ]; then
-        echo -e "${GREEN}✓ Project detected at: ${DETECTED_PROJECT_DIR}${NC}"
-        
-        # Check if it's a git repository
-        if [ -d "$DETECTED_PROJECT_DIR/.git" ] || git -C "$DETECTED_PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
-            echo -e "${CYAN}📦 Git repository detected${NC}"
-            
-            # Offer to use existing location
-            if [ "$DETECTED_PROJECT_DIR" != "$PROJECT_DIR" ]; then
-                echo ""
-                echo -e "${YELLOW}Option 1: Use existing repository location${NC}"
-                echo -e "   Path: ${DETECTED_PROJECT_DIR}"
-                echo -e "   ${GREEN}Benefits:${NC} Easy updates with 'git pull'"
-                echo ""
-                echo -e "${YELLOW}Option 2: Copy to deployment directory${NC}"
-                echo -e "   Path: ${PROJECT_DIR}"
-                echo -e "   ${GREEN}Benefits:${NC} Separate from development"
-                echo ""
-                read -p "Use existing location? [Y/n]: " USE_EXISTING
-                
-                if [[ ! "$USE_EXISTING" =~ ^[Nn]$ ]]; then
-                    PROJECT_DIR="$DETECTED_PROJECT_DIR"
-                    echo -e "${GREEN}✓ Using existing project location: ${PROJECT_DIR}${NC}"
-                    cd "$PROJECT_DIR"
-                    return 0
-                fi
-            else
-                cd "$PROJECT_DIR"
-                echo -e "${GREEN}✓ Using current project location${NC}"
-                return 0
-            fi
-        fi
-        
-        # Copy project to deployment directory
-        echo -e "${YELLOW}Copying project files to ${PROJECT_DIR}...${NC}"
-        mkdir -p "$(dirname "$PROJECT_DIR")"
-        cp -r "$DETECTED_PROJECT_DIR" "$PROJECT_DIR"
-        echo -e "${GREEN}✓ Project files copied${NC}"
-    else
-        # No project detected - prompt user
-        echo -e "${YELLOW}No project detected at current location${NC}"
-        echo ""
-        echo -e "${CYAN}Please provide the path to your ARMGUARD project:${NC}"
-        echo -e "  (The directory containing manage.py)"
-        echo ""
-        read -p "Project path (or press ENTER to create empty at ${PROJECT_DIR}): " EXISTING_PATH
-        
-        if [ -n "$EXISTING_PATH" ] && [ -f "$EXISTING_PATH/manage.py" ]; then
-            # Use existing path
-            if [[ "$EXISTING_PATH" != "$PROJECT_DIR" ]]; then
-                read -p "Use this location directly? [Y/n]: " USE_DIRECT
-                if [[ ! "$USE_DIRECT" =~ ^[Nn]$ ]]; then
-                    PROJECT_DIR="$EXISTING_PATH"
-                else
-                    cp -r "$EXISTING_PATH" "$PROJECT_DIR"
-                fi
-            else
-                PROJECT_DIR="$EXISTING_PATH"
-            fi
-        else
-            # Create empty directory  
-            echo -e "${YELLOW}Creating project directory: ${PROJECT_DIR}${NC}"
-            mkdir -p "$PROJECT_DIR"
-            echo -e "${YELLOW}Please copy your project files to ${PROJECT_DIR}${NC}"
-            read -p "Press ENTER when ready..."
-        fi
+    # Verify project directory exists and contains Django files
+    if [ ! -d "$PROJECT_DIR" ]; then
+        echo -e "${RED}ERROR: Project directory does not exist: ${PROJECT_DIR}${NC}"
+        exit 1
     fi
     
     cd "$PROJECT_DIR"
@@ -347,6 +287,13 @@ setup_project_directory() {
         echo -e "${YELLOW}Current directory contents:${NC}"
         ls -la
         exit 1
+    fi
+    
+    echo -e "${GREEN}✓ Project directory verified: ${PROJECT_DIR}${NC}"
+    
+    # Show git status if it's a repository
+    if git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+        echo -e "${CYAN}📦 Git repository - Future updates: cd ${PROJECT_DIR} && git pull${NC}"
     fi
     
     echo -e "${GREEN}✓ Project directory ready: ${PROJECT_DIR}${NC}"
