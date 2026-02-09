@@ -132,6 +132,8 @@ def reverse_database_constraints(apps, schema_editor):
             cursor.execute("DROP INDEX IF EXISTS idx_transaction_personnel_history_sqlite;")
 
 class Migration(migrations.Migration):
+    # Disable atomic transactions for CONCURRENTLY index creation
+    atomic = False
 
     dependencies = [
         ('transactions', '0002_transaction_issued_by'),
