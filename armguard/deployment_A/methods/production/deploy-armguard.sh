@@ -514,8 +514,38 @@ setup_database() {
     echo -e "${GREEN}✓ Log directories created${NC}"
     
     if [[ "$USE_POSTGRESQL" =~ ^[Yy] ]]; then
-        echo -e "${YELLOW}Creating PostgreSQL database...${NC}"
-        sudo -u postgres psql <<EOF
+        echo -e "${YELLOW}Setting up PostgreSQL database...${NC}"
+        
+        # Check if database exists
+        DB_EXISTS=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'")
+        
+        if [ "$DB_EXISTS" = "1" ]; then
+            echo -e "${YELLOW}Database ${DB_NAME} already exists${NC}"
+            read -p "Drop and recreate database? (yes/no) [no]: " DROP_DB
+            if [[ "$DROP_DB" =~ ^[Yy] ]]; then
+                echo -e "${YELLOW}Dropping existing database and user...${NC}"
+                sudo -u postgres psql <<EOF
+-- Terminate existing connections
+SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${DB_NAME}';
+-- Drop database and user
+DROP DATABASE IF EXISTS ${DB_NAME};
+DROP USER IF EXISTS ${DB_USER};
+EOF
+                DB_EXISTS="0"
+            else
+                echo -e "${YELLOW}Keeping existing database, updating user password...${NC}"
+                sudo -u postgres psql <<EOF
+ALTER USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};
+EOF
+                echo -e "${GREEN}✓ User password updated${NC}"
+            fi
+        fi
+        
+        # Create database and user if they don't exist
+        if [ "$DB_EXISTS" != "1" ]; then
+            echo -e "${YELLOW}Creating database and user...${NC}"
+            sudo -u postgres psql <<EOF
 CREATE DATABASE ${DB_NAME};
 CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';
 ALTER ROLE ${DB_USER} SET client_encoding TO 'utf8';
@@ -523,7 +553,8 @@ ALTER ROLE ${DB_USER} SET default_transaction_isolation TO 'read committed';
 ALTER ROLE ${DB_USER} SET timezone TO 'UTC';
 GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};
 EOF
-        echo -e "${GREEN}✓ PostgreSQL database created${NC}"
+            echo -e "${GREEN}✓ PostgreSQL database created${NC}"
+        fi
     else
         echo -e "${YELLOW}Using SQLite database${NC}"
     fi
