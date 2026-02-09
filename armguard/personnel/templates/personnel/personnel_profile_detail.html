@@ -32,6 +32,13 @@
             {% endif %}
             </p>
         </div>
+        {% if user.is_superuser or user.groups.all.0.name == 'Admin' %}
+        <div>
+            <a href="{% url 'armguard_admin:edit_personnel' personnel.id %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit Personnel
+            </a>
+        </div>
+        {% endif %}
     </div>
 
     <div class="grid grid-3">

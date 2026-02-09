@@ -60,8 +60,17 @@ deploy_armguard() {
     wget -O deploy-rpi-test.sh \
         "https://raw.githubusercontent.com/Stealth3535/ARMGUARD_RDS/main/armguard/deployment/deploy-rpi-test.sh"
     
-    # Make executable and run
+    # Download Redis WebSocket installer
+    log "📥 Downloading Redis WebSocket installer..."
+    wget -O install-redis-websocket.sh \
+        "https://raw.githubusercontent.com/Stealth3535/ARMGUARD_RDS/main/armguard/deployment/install-redis-websocket.sh"
+    
+    # Make executable
     chmod +x deploy-rpi-test.sh
+    chmod +x install-redis-websocket.sh
+    
+    log "🔥 Installing Redis for WebSocket performance..."
+    sudo ./install-redis-websocket.sh --verbose
     
     log "🎯 Running ArmGuard A+ deployment..."
     sudo ./deploy-rpi-test.sh
@@ -77,17 +86,23 @@ deploy_armguard() {
 main() {
     echo -e "${BLUE}╔══════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${BLUE}║           ArmGuard A+ Performance Edition                    ║${NC}"
-    echo -e "${BLUE}║           Raspberry Pi Quick Deployment                     ║${NC}"
+    echo -e "${BLUE}║           Raspberry Pi + Redis WebSocket Quick Deploy       ║${NC}"
     echo -e "${BLUE}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${CYAN}This script will install:${NC}"
+    echo -e "${CYAN}• ArmGuard application with A+ performance features${NC}"
+    echo -e "${CYAN}• Redis server for optimal WebSocket performance${NC}"
+    echo -e "${CYAN}• Enhanced real-time notifications and live updates${NC}"
     echo ""
     
     check_system
     deploy_armguard
     
     echo ""
-    echo -e "${GREEN}🎉 ArmGuard A+ deployment completed successfully!${NC}"
+    echo -e "${GREEN}🎉 ArmGuard A+ deployment with Redis WebSockets completed!${NC}"
     echo -e "${BLUE}   Access your application at: http://$(hostname -I | awk '{print $1}')${NC}"
     echo -e "${BLUE}   Admin login: admin / ArmGuard2024!${NC}"
+    echo -e "${GREEN}   ✅ Redis WebSocket optimization active for best performance${NC}"
 }
 
 main "$@"

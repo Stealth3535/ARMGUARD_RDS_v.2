@@ -9,12 +9,13 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 2rem;
+        margin-bottom: 1rem;
     }
     
     .page-header h1 {
         margin: 0;
         color: #333;
+        font-size: 2rem;
     }
     
     .btn-primary {
@@ -24,6 +25,12 @@
         border-radius: 5px;
         text-decoration: none;
         transition: all 0.3s;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
     }
     
     .btn-primary:hover {
@@ -32,11 +39,199 @@
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     
+    .btn-secondary {
+        padding: 0.5rem 1rem;
+        background: #f3f4f6;
+        color: #333;
+        border-radius: 5px;
+        text-decoration: none;
+        border: 1px solid #d1d5db;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .btn-secondary:hover {
+        background: #e5e7eb;
+        border-color: #9ca3af;
+    }
+    
+    /* Statistics Cards */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #667eea;
+        transition: transform 0.2s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card.superuser { border-left-color: #dc2626; }
+    .stat-card.admin { border-left-color: #667eea; }
+    .stat-card.armorer { border-left-color: #059669; }
+    .stat-card.personnel { border-left-color: #f59e0b; }
+    .stat-card.active { border-left-color: #10b981; }
+    
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Search and Filter Bar */
+    .filter-bar {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .filter-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .search-box {
+        flex: 1;
+        min-width: 250px;
+    }
+    
+    .search-box input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 5px;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+    
+    .search-box input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .filter-select {
+        padding: 0.75rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 5px;
+        font-size: 0.95rem;
+        background: white;
+        cursor: pointer;
+    }
+    
+    .quick-filters {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+    
+    .filter-chip {
+        padding: 0.5rem 1rem;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .filter-chip:hover {
+        background: #e5e7eb;
+    }
+    
+    .filter-chip.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    
     .user-table {
         background: white;
         border-radius: 10px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         overflow: hidden;
+    }
+    
+    .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .table-title {
+        font-weight: 600;
+        color: #333;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .table-title h3 {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+    
+    .count-badge {
+        display: inline-block;
+        background: #667eea;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    code {
+        background: #f3f4f6;
+        padding: 0.2rem 0.5rem;
+        border-radius: 3px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        color: #374151;
+    }
+    
+    .table-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .table-wrapper {
+        overflow-x: auto;
     }
     
     table {
@@ -51,6 +246,29 @@
         font-weight: 600;
         color: #333;
         border-bottom: 2px solid #dee2e6;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+    }
+    
+    th:hover {
+        background: #e9ecef;
+    }
+    
+    th.sortable::after {
+        content: ' ⇅';
+        opacity: 0.3;
+        font-size: 0.8em;
+    }
+    
+    th.sort-asc::after {
+        content: ' ▲';
+        opacity: 1;
+    }
+    
+    th.sort-desc::after {
+        content: ' ▼';
+        opacity: 1;
     }
     
     td {
@@ -58,8 +276,25 @@
         border-bottom: 1px solid #dee2e6;
     }
     
+    tr:hover {
+        background: #f9fafb;
+    }
+    
     tr:last-child td {
         border-bottom: none;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #666;
+    }
+    
+    .empty-state svg {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 1rem;
+        opacity: 0.3;
     }
     
     .badge {
@@ -152,10 +387,374 @@
         background: #f3f4f6;
         color: #6b7280;
     }
+    
+    /* Pagination */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+        padding: 1rem;
+    }
+    
+    .pagination a, .pagination span {
+        padding: 0.5rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 5px;
+        color: #333;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    .pagination a:hover {
+        background: #f3f4f6;
+        border-color: #667eea;
+    }
+    
+    .pagination .current {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    
+    /* Action Buttons */
+    .btn-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-sm {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        border-radius: 4px;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    
+    .btn-edit {
+        background: #667eea;
+        color: white;
+        border: none;
+    }
+    
+    .btn-edit:hover {
+        background: #5568d3;
+    }
+    
+    .btn-delete {
+        background: #dc2626;
+        color: white;
+        border: none;
+    }
+    
+    .btn-delete:hover {
+        background: #b91c1c;
+    }
+    
+    .btn-view {
+        background: #10b981;
+        color: white;
+        border: none;
+    }
+    
+    .btn-view:hover {
+        background: #059669;
+    }
+    
+    /* Loading State */
+    .loading {
+        text-align: center;
+        padding: 2rem;
+        color: #666;
+    }
+    
+    .spinner {
+        border: 3px solid #f3f4f6;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+        
+        .filter-row {
+            flex-direction: column;
+        }
+        
+        .search-box {
+            width: 100%;
+        }
+        
+        .stats-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Search functionality
+    const searchInput = document.getElementById('user-search');
+    const personnelSearch = document.getElementById('personnel-search');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(function() {
+            filterTable('users-table', this.value);
+        }, 300));
+    }
+    
+    if (personnelSearch) {
+        personnelSearch.addEventListener('input', debounce(function() {
+            filterTable('personnel-table', this.value);
+        }, 300));
+    }
+    
+    // Role filter
+    const roleFilter = document.getElementById('role-filter');
+    if (roleFilter) {
+        roleFilter.addEventListener('change', function() {
+            const role = this.value;
+            const rows = document.querySelectorAll('#users-table tbody tr');
+            
+            rows.forEach(row => {
+                if (!role || role === 'all') {
+                    row.style.display = '';
+                } else {
+                    const roleCell = row.querySelector('.role-badge');
+                    const roleText = roleCell ? roleCell.textContent.toLowerCase() : '';
+                    row.style.display = roleText.includes(role) ? '' : 'none';
+                }
+            });
+            updateCount('users-table', 'user-count');
+        });
+    }
+    
+    // Status filter
+    const statusFilter = document.getElementById('status-filter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', function() {
+            const status = this.value;
+            const rows = document.querySelectorAll('#users-table tbody tr');
+            
+            rows.forEach(row => {
+                if (!status || status === 'all') {
+                    row.style.display = '';
+                } else {
+                    const statusCell = row.querySelector('.status-badge');
+                    const statusText = statusCell ? statusCell.textContent.toLowerCase() : '';
+                    row.style.display = statusText.includes(status) ? '' : 'none';
+                }
+            });
+            updateCount('users-table', 'user-count');
+        });
+    }
+    
+    // Quick filter chips
+    const filterChips = document.querySelectorAll('.filter-chip');
+    filterChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+            // Toggle active class
+            const isActive = this.classList.contains('active');
+            filterChips.forEach(c => c.classList.remove('active'));
+            if (!isActive) {
+                this.classList.add('active');
+                const filterValue = this.dataset.filter;
+                if (roleFilter) {
+                    roleFilter.value = filterValue;
+                    roleFilter.dispatchEvent(new Event('change'));
+                }
+            } else {
+                if (roleFilter) {
+                    roleFilter.value = 'all';
+                    roleFilter.dispatchEvent(new Event('change'));
+                }
+            }
+        });
+    });
+    
+    // Table sorting
+    const sortableHeaders = document.querySelectorAll('th.sortable');
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const table = this.closest('table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const columnIndex = Array.from(this.parentElement.children).indexOf(this);
+            const currentSort = this.classList.contains('sort-asc') ? 'asc' : 'desc';
+            const newSort = currentSort === 'asc' ? 'desc' : 'asc';
+            
+            // Remove sort classes from all headers\n            sortableHeaders.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+            
+            // Add sort class to current header
+            this.classList.add(newSort === 'asc' ? 'sort-asc' : 'sort-desc');
+            
+            // Sort rows
+            rows.sort((a, b) => {
+                const aValue = a.children[columnIndex].textContent.trim();\n                const bValue = b.children[columnIndex].textContent.trim();
+                \n                // Try to parse as number
+                const aNum = parseFloat(aValue.replace(/[^0-9.-]/g, ''));
+                const bNum = parseFloat(bValue.replace(/[^0-9.-]/g, ''));
+                \n                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return newSort === 'asc' ? aNum - bNum : bNum - aNum;
+                }
+                \n                // String comparison
+                return newSort === 'asc' 
+                    ? aValue.localeCompare(bValue)
+                    : bValue.localeCompare(aValue);
+            });
+            
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+        });
+    });
+    
+    // Export functionality
+    const exportBtn = document.getElementById('export-btn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function() {
+            exportTableToCSV('users-table', 'users_export.csv');
+        });
+    }
+    
+    const exportPersonnelBtn = document.getElementById('export-personnel-btn');
+    if (exportPersonnelBtn) {
+        exportPersonnelBtn.addEventListener('click', function() {
+            exportTableToCSV('personnel-table', 'personnel_export.csv');
+        });
+    }
+});
+
+// Utility functions
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func.apply(this, args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function filterTable(tableId, searchTerm) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const rows = table.querySelectorAll('tbody tr');
+    const term = searchTerm.toLowerCase();
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const isVisible = text.includes(term);
+        row.style.display = isVisible ? '' : 'none';
+        if (isVisible) visibleCount++;
+    });
+    
+    // Update count
+    const countId = tableId.replace('-table', '-count');
+    updateCount(tableId, countId);
+}
+
+function updateCount(tableId, countId) {
+    const table = document.getElementById(tableId);
+    const countElement = document.getElementById(countId);
+    if (!table || !countElement) return;
+    
+    const visibleRows = Array.from(table.querySelectorAll('tbody tr')).filter(
+        row => row.style.display !== 'none'
+    );
+    countElement.textContent = visibleRows.length;
+}
+
+function exportTableToCSV(tableId, filename) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const rows = table.querySelectorAll('tr');
+    const csv = [];
+    
+    rows.forEach(row => {
+        const cols = row.querySelectorAll('td, th');
+        const rowData = Array.from(cols).map(col => {
+            let text = col.textContent.trim();
+            // Remove action links
+            if (col.querySelector('.action-links, .btn-group')) {
+                return '';
+            }
+            // Escape quotes
+            text = text.replace(/\"/g, '\"\"');
+            return `\"${text}\"`;
+        }).filter(text => text !== '\"\"');
+        csv.push(rowData.join(','));
+    });
+    
+    const csvContent = csv.join('\\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+// Show audit history in a formatted alert
+function showAuditHistory(element) {
+    const created = element.dataset.created;
+    const createdBy = element.dataset.createdBy;
+    const modified = element.dataset.modified;
+    const modifiedBy = element.dataset.modifiedBy;
+    const version = element.dataset.version;
+    const reason = element.dataset.reason;
+    const createdIp = element.dataset.createdIp;
+    const statusChanged = element.dataset.statusChanged;
+    
+    let message = '📋 AUDIT HISTORY\n';
+    message += '═══════════════════════════════════\n\n';
+    message += '📅 Created:\n';
+    message += `   ${created}\n`;
+    message += `   By: ${createdBy}\n`;
+    message += `   IP: ${createdIp}\n\n`;
+    message += '✏️ Last Modified:\n';
+    message += `   ${modified}\n`;
+    message += `   By: ${modifiedBy}\n\n`;
+    message += `🔢 Version: ${version}\n\n`;
+    if (statusChanged !== 'N/A') {
+        message += `⚡ Status Changed: ${statusChanged}\n\n`;
+    }
+    if (reason !== 'N/A') {
+        message += `📝 Change Reason:\n   ${reason}\n\n`;
+    }
+    message += '═══════════════════════════════════';
+    
+    alert(message);
+}
+</script>
 {% endblock %}
 
 {% block content %}
@@ -164,61 +763,154 @@
     <a href="{% url 'armguard_admin:create_user' %}" class="btn-primary">+ Create New User</a>
 </div>
 
-<!-- Admin Users Section (Superuser, Administrator, Armorer) -->
+<!-- Statistics Dashboard -->
+<div class="stats-container">
+    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left-color: #667eea;">
+        <div class="stat-icon">👥</div>
+        <div class="stat-value" id="total-users-count">{{ user_count }}</div>
+        <div class="stat-label">Total Users</div>
+    </div>
+    <div class="stat-card superuser">
+        <div class="stat-icon">🔐</div>
+        <div class="stat-value" id="superuser-count">{{ superuser_count }}</div>
+        <div class="stat-label">Superusers</div>
+    </div>
+    <div class="stat-card admin">
+        <div class="stat-icon">👔</div>
+        <div class="stat-value" id="admin-count">{{ admin_count }}</div>
+        <div class="stat-label">Administrators</div>
+    </div>
+    <div class="stat-card armorer">
+        <div class="stat-icon">🪖</div>
+        <div class="stat-value" id="armorer-count">{{ armorer_count }}</div>
+        <div class="stat-label">Armorers</div>
+    </div>
+    <div class="stat-card active">
+        <div class="stat-icon">✅</div>
+        <div class="stat-value" id="active-count">{{ active_count }}</div>
+        <div class="stat-label">Active Users</div>
+    </div>
+    <div class="stat-card personnel">
+        <div class="stat-icon">👤</div>
+        <div class="stat-value" id="personnel-count">{{ personnel.count }}</div>
+        <div class="stat-label">Personnel Records</div>
+    </div>
+</div>
+
+<!-- Admin Users Section (All Users with Accounts) -->
 <div class="section-divider">
     <div class="section-header">
-        <h2>🔑 System Users</h2>
-        <span style="color: #666; font-size: 0.9rem;">Administrators, Superusers, and Armorers</span>
+        <h2>🔑 User Accounts</h2>
+        <span style="color: #666; font-size: 0.9rem;">All users with login accounts (Superusers, Administrators, Armorers, and Personnel)</span>
     </div>
     
+    <!-- Search and Filter Bar -->
+    <div class="filter-bar">
+        <form method="GET" action="" class="filter-row">
+            <div class="search-box">
+                <input type="text" 
+                       id="user-search" 
+                       name="search" 
+                       placeholder="🔍 Search by username, name, or email..." 
+                       value="{{ search_query|default:'' }}">
+            </div>
+            <select name="role" id="role-filter" class="filter-select">
+                <option value="all">All Roles</option>
+                <option value="superuser" {% if role_filter == 'superuser' %}selected{% endif %}>Superuser</option>
+                <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>Admin</option>
+                <option value="armorer" {% if role_filter == 'armorer' %}selected{% endif %}>Armorer</option>
+                <option value="personnel" {% if role_filter == 'personnel' %}selected{% endif %}>Personnel</option>
+            </select>
+            <select name="status" id="status-filter" class="filter-select">
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+            <button type="submit" class="btn-primary">Search</button>
+            <button type="button" id="export-btn" class="btn-primary" style="background: #10b981;"> Export CSV</button>
+        </form>
+        
+        <!-- Quick Filters -->
+        <div class="filter-chips">
+            <span class="filter-chip" data-filter="superuser">🔐 Superusers</span>
+            <span class="filter-chip" data-filter="admin">👔 Admins</span>
+            <span class="filter-chip" data-filter="armorer">🪖Armorers</span>
+            <span class="filter-chip" data-filter="personnel">👤 Personnel</span>
+        </div>
+    </div>
+
 <div class="user-table">
-    <table>
+    <div class="table-header">
+        <div class="table-title">
+            <h3>All User Accounts</h3>
+            <span class="count-badge">Total: <span id="user-count">{{ users.count }}</span></span>
+        </div>
+    </div>
+    <table id="users-table">
         <thead>
             <tr>
-                <th>Username</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Date Joined</th>
+                <th class="sortable">Username</th>
+                <th class="sortable">Name</th>
+                <th class="sortable">Email</th>
+                <th class="sortable">Role</th>
+                <th class="sortable">Status</th>
+                <th class="sortable">Date Joined</th>
+                <th class="sortable">Last Login</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for user_item in users %}
             <tr>
-                <td><strong>{{ user_item.username }}</strong></td>
-                <td>{{ user_item.first_name }} {{ user_item.last_name }}</td>
+                <td>
+                    <strong>{{ user_item.username }}</strong>
+                    {% if user_item.personnel %}
+                    <br><small style="color: #666;">🔗 {{ user_item.personnel.id }}</small>
+                    {% endif %}
+                </td>
+                <td>
+                    {{ user_item.first_name }} {{ user_item.last_name }}
+                    {% if user_item.personnel %}
+                    <br><small style="color: #10b981;">✓ Personnel Linked</small>
+                    {% endif %}
+                </td>
                 <td>{{ user_item.email|default:"—" }}</td>
                 <td>
                     {% if user_item.is_superuser %}
-                    <span class="badge badge-superuser">Superuser</span>
+                    <span class="badge badge-superuser role-badge"> SUPERUSER</span>
                     {% elif user_item.groups.all.0.name == 'Admin' %}
-                    <span class="badge badge-staff">Admin</span>
+                    <span class="badge badge-staff role-badge"> ADMIN</span>
                     {% elif user_item.groups.all.0.name == 'Armorer' %}
-                    <span class="badge badge-user">Armorer</span>
+                    <span class="badge badge-user role-badge"> ARMORER</span>
                     {% else %}
-                    <span class="badge badge-user">User</span>
+                    <span class="badge badge-user role-badge"> PERSONNEL</span>
                     {% endif %}
                 </td>
                 <td>
                     {% if user_item.is_active %}
-                    <span class="badge badge-active">Active</span>
+                    <span class="badge badge-active status-badge"> Active</span>
                     {% else %}
-                    <span class="badge badge-inactive">Inactive</span>
+                    <span class="badge badge-inactive status-badge"> Inactive</span>
                     {% endif %}
                 </td>
                 <td>{{ user_item.date_joined|date:"M d, Y" }}</td>
                 <td>
-                    <div class="action-links">
+                    {% if user_item.last_login %}
+                    {{ user_item.last_login|date:"M d, Y H:i" }}
+                    {% else %}
+                    <span style="color: #999;">Never</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group">
                         {% if user.is_superuser or can_edit and not user_item.is_superuser and not is_restricted_admin %}
-                        <a href="{% url 'armguard_admin:edit_user' user_item.id %}">Edit</a>
+                        <a href="{% url 'armguard_admin:edit_user' user_item.id %}" class="btn-sm btn-edit"> Edit</a>
                         {% endif %}
                         {% if can_edit and user.is_superuser and user_item != user %}
-                        <a href="{% url 'armguard_admin:delete_user' user_item.id %}" class="delete">Delete</a>
+                        <a href="{% url 'armguard_admin:delete_user' user_item.id %}" class="btn-sm btn-delete" onclick="return confirm('Are you sure you want to delete this user?')"> Delete</a>
                         {% endif %}
                         {% if is_restricted_admin %}
-                        <span style="color: #666; font-size: 0.9em;">View Only</span>
+                        <span class="btn-sm" style="background: #f3f4f6; color: #666;">👁️ View Only</span>
                         {% endif %}
                     </div>
                 </td>
@@ -244,15 +936,59 @@
         <span style="color: #666; font-size: 0.9rem;">All personnel records (with or without user accounts)</span>
     </div>
 
+    <!-- Personnel Search and Filter Bar -->
+    <div class="filter-bar">
+        <form method="GET" action="" class="filter-row">
+            <div class="search-box">
+                <input type="text" 
+                       id="personnel-search" 
+                       name="personnel_search" 
+                       placeholder="🔍 Search personnel by name, ID, serial, or group..." 
+                       value="{{ request.GET.personnel_search|default:'' }}">
+            </div>
+            <select name="personnel_search_by" class="filter-select">
+                <option value="name" {% if request.GET.personnel_search_by == 'name' %}selected{% endif %}>Search by Name</option>
+                <option value="id" {% if request.GET.personnel_search_by == 'id' %}selected{% endif %}>Search by ID</option>
+                <option value="serial" {% if request.GET.personnel_search_by == 'serial' %}selected{% endif %}>Search by Serial</option>
+                <option value="group" {% if request.GET.personnel_search_by == 'group' %}selected{% endif %}>Search by Group</option>
+            </select>
+            <select name="classification" class="filter-select">
+                <option value="">All Classifications</option>
+                <option value="OFFICER">🎖️ Officers</option>
+                <option value="ENLISTED PERSONNEL">🪖 Enlisted</option>
+                <option value="SUPERUSER">🔐 Superusers</option>
+            </select>
+            <select name="personnel_status" class="filter-select">
+                <option value="">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="Suspended">Suspended</option>
+                <option value="Archived">Archived</option>
+            </select>
+            <button type="submit" class="btn-primary">Search</button>
+            <button type="button" id="export-personnel-btn" class="btn-primary" style="background: #10b981;"> Export CSV</button>
+        </form>
+    </div>
+
     <div class="user-table">
-        <table>
+        <div class="table-header">
+            <div class="table-title">
+                <h3>Personnel Records List</h3>
+                <span class="count-badge">Total: <span id="personnel-count-display">{{ personnel.count }}</span></span>
+            </div>
+        </div>
+        <table id="personnel-table">
             <thead>
                 <tr>
-                    <th>Personnel ID</th>
-                    <th>Full Name</th>
-                    <th>Rank</th>
-                    <th>Serial Number</th>
-                    <th>Group</th>
+                    <th class="sortable">Personnel ID</th>
+                    <th class="sortable">Full Name</th>
+                    <th class="sortable">Rank</th>
+                    <th class="sortable">Serial</th>
+                    <th class="sortable">Classification</th>
+                    <th class="sortable">Group</th>
+                    <th class="sortable">Status</th>
+                    <th class="sortable">Contact</th>
+                    <th class="sortable">Version</th>
                     <th>User Account</th>
                     <th>Actions</th>
                 </tr>
@@ -260,42 +996,109 @@
             <tbody>
                 {% for person in personnel %}
                 <tr>
-                    <td><strong>{{ person.id }}</strong></td>
-                    <td>{{ person.get_full_name }}</td>
                     <td>
-                        {% if person.is_officer %}
-                        <span class="badge badge-officer">{{ person.rank }}</span>
-                        {% else %}
-                        <span class="badge badge-enlisted">{{ person.rank }}</span>
+                        <strong>{{ person.id }}</strong>
+                        <br><small style="color: #666;">{{ person.qr_code }}</small>
+                    </td>
+                    <td>
+                        <strong>{{ person.get_full_name }}</strong>
+                        {% if person.email %}
+                        <br><small style="color: #666;">📧 {{ person.email }}</small>
                         {% endif %}
                     </td>
-                    <td>{{ person.get_serial_display }}</td>
-                    <td>{{ person.group }}</td>
+                    <td>
+                        {% if person.rank %}
+                            {% if person.is_officer %}
+                            <span class="badge badge-officer">🎖️ {{ person.rank }}</span>
+                            {% else %}
+                            <span class="badge badge-enlisted">🪖 {{ person.rank }}</span>
+                            {% endif %}
+                        {% else %}
+                            <span style="color: #999;">—</span>
+                        {% endif %}
+                    </td>
+                    <td><code>{{ person.get_serial_display }}</code></td>
+                    <td>
+                        {% if person.classification == 'OFFICER' %}
+                        <span class="badge badge-officer">🎖️ OFFICER</span>
+                        {% elif person.classification == 'ENLISTED PERSONNEL' %}
+                        <span class="badge badge-enlisted">🪖 ENLISTED</span>
+                        {% elif person.classification == 'SUPERUSER' %}
+                        <span class="badge badge-superuser">🔐 SUPERUSER</span>
+                        {% else %}
+                        <span class="badge" style="background: #f3f4f6; color: #666;">{{ person.classification }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge" style="background: #e0e7ff; color: #3730a3;">{{ person.group }}</span>
+                    </td>
+                    <td>
+                        {% if person.status == 'Active' %}
+                        <span class="badge badge-active">✅ Active</span>
+                        {% elif person.status == 'Inactive' %}
+                        <span class="badge badge-inactive">⚠️ Inactive</span>
+                        {% elif person.status == 'Suspended' %}
+                        <span class="badge" style="background: #fef3c7; color: #92400e;">⏸️ Suspended</span>
+                        {% elif person.status == 'Archived' %}
+                        <span class="badge" style="background: #e5e7eb; color: #374151;">📦 Archived</span>
+                        {% else %}
+                        <span class="badge" style="background: #f3f4f6; color: #666;">{{ person.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <small>
+                            {% if person.tel %}
+                            📱 {{ person.tel }}
+                            {% else %}
+                            <span style="color: #999;">—</span>
+                            {% endif %}
+                        </small>
+                    </td>
+                    <td>
+                        <span class="badge" style="background: #f3f4f6; color: #666;">v{{ person.version }}</span>
+                        {% if person.modified_by %}
+                        <br><small style="color: #666;" title="Last modified by {{ person.modified_by.username }}">👤 {{ person.modified_by.username }}</small>
+                        {% endif %}
+                    </td>
                     <td>
                         {% if person.user %}
-                        <span class="badge badge-linked">{{ person.user.username }}</span>
+                        <span class="badge badge-linked">🔗 {{ person.user.username }}</span>
                         {% else %}
-                        <span class="badge badge-no-user">No User</span>
+                        <span class="badge badge-no-user">No Account</span>
                         {% endif %}
                     </td>
                     <td>
-                        <div class="action-links">
+                        <div class="btn-group">
                             {% if can_edit and can_edit_personnel %}
-                            <a href="{% url 'armguard_admin:edit_personnel' person.id %}">Edit</a>
+                            <a href="{% url 'armguard_admin:edit_personnel' person.id %}" class="btn-sm btn-edit" title="Edit Personnel">✏️</a>
                             {% endif %}
                             {% if can_edit and request.user.is_superuser %}
-                            <a href="{% url 'armguard_admin:delete_personnel' person.id %}" class="delete">Delete</a>
+                            <a href="#" class="btn-sm btn-view" title="View Audit History" 
+                               data-created="{{ person.created_at|date:'M d, Y H:i' }}"
+                               data-created-by="{% if person.created_by %}{{ person.created_by.username }}{% else %}System{% endif %}"
+                               data-modified="{{ person.updated_at|date:'M d, Y H:i' }}"
+                               data-modified-by="{% if person.modified_by %}{{ person.modified_by.username }}{% else %}N/A{% endif %}"
+                               data-version="{{ person.version }}"
+                               data-reason="{% if person.change_reason %}{{ person.change_reason }}{% else %}N/A{% endif %}"
+                               data-created-ip="{% if person.created_ip %}{{ person.created_ip }}{% else %}N/A{% endif %}"
+                               data-status-changed="{% if person.status_changed_at %}{{ person.status_changed_at|date:'M d, Y H:i' }}{% else %}N/A{% endif %}"
+                               onclick="showAuditHistory(this); return false;">📋</a>
+                            <a href="{% url 'armguard_admin:delete_personnel' person.id %}" class="btn-sm btn-delete" title="Delete Personnel" onclick="return confirm('Are you sure you want to delete {{ person.get_full_name }}?')">🗑️</a>
                             {% endif %}
                             {% if is_restricted_admin %}
-                            <span style="color: #666; font-size: 0.9em;">View Only</span>
+                            <span class="btn-sm" style="background: #f3f4f6; color: #666;">👁️</span>
                             {% endif %}
                         </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 2rem; color: #666;">
-                        No personnel found.
+                    <td colspan="11" class="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">No Personnel Found</div>
+                        <div>Try adjusting your search or filter criteria</div>
                     </td>
                 </tr>
                 {% endfor %}

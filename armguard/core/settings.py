@@ -148,6 +148,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # Security Apps
     'axes',  # Failed login attempt tracking
+    # History tracking
+    'simple_history',  # Field-level change tracking
     # ArmGuard Apps
     'core',  # Added to register template tags
     'admin.apps.AdminConfig',
@@ -186,6 +188,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    
+    # History tracking (requires authentication)
+    'simple_history.middleware.HistoryRequestMiddleware',  # Automatic user tracking for history
     
     # Security Logging and Monitoring
     'core.middleware.RequestLoggingMiddleware',  # Security request logging
@@ -302,28 +307,43 @@ AUTHENTICATION_BACKENDS = [
 
 ASGI_APPLICATION = 'core.asgi.application'
 
-# Use in-memory channel layer for development/testing (Windows compatible)
-# For production with Redis: uncomment the Redis configuration below
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    },
-}
-
-# Production Redis configuration (uncomment when Redis is available):
-# CHANNEL_LAYERS = {
-#     'default': {
-#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
-#         'CONFIG': {
-#             "hosts": [(
-#                 config('REDIS_HOST', default='127.0.0.1'),
-#                 config('REDIS_PORT', default=6379, cast=int)
-#             )],
-#             "capacity": 1500,  # Max messages in channel
-#             "expiry": 60,      # Message expiry time (seconds)
-#         },
-#     },
-# }
+# Advanced Redis configuration for optimal WebSocket performance
+# Auto-detects if Redis is available and falls back to InMemory if needed
+try:
+    import redis
+    # Test Redis connection
+    redis_client = redis.Redis(host='127.0.0.1', port=6379, db=1, socket_connect_timeout=1)
+    redis_client.ping()
+    
+    # Redis is available - use it for optimal WebSocket performance
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                "hosts": [("127.0.0.1", 6379)],
+                "capacity": 300,  # Reasonable limit to prevent memory issues
+                "expiry": 60,     # Message expiry (1 minute)
+                "group_expiry": 86400,  # Group expiry (24 hours)
+                "prefix": "armguard:",  # Redis key prefix
+                "symmetric_encryption_keys": ["your-secret-key-here"],  # Optional encryption
+            },
+        },
+    }
+    print("✅ Using Redis for WebSocket channel layer")
+    
+except (ImportError, redis.exceptions.ConnectionError, redis.exceptions.TimeoutError):
+    # Redis not available - use improved InMemory with limits
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+            'CONFIG': {
+                "capacity": 100,  # Reduced capacity to prevent memory issues
+                "expiry": 30,    # Shorter expiry for memory management
+            },
+        },
+    }
+    print("⚠️ Redis not available - using InMemory channel layer with limits")
+    print("   For better WebSocket performance, install Redis: pip install redis")
 
 
 # Network-based Security Settings
@@ -379,7 +399,7 @@ SESSION_TIMEOUT = {
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Manila'
 
 USE_I18N = True
 
@@ -545,13 +565,17 @@ if not REDIS_AVAILABLE or not config('REDIS_URL', default=''):
     }
 
 # Session Configuration with Performance Optimization
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-SESSION_CACHE_ALIAS = 'sessions'  # Use dedicated sessions cache
+# Session Configuration - Use database backend for reliability
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # More reliable than cache
+SESSION_COOKIE_NAME = 'armguard_sessionid'  # Unique session cookie name to avoid conflicts
 SESSION_COOKIE_AGE = config('SESSION_COOKIE_AGE', default=3600, cast=int)  # 1 hour
-SESSION_SAVE_EVERY_REQUEST = False  # Performance: only save when changed
+SESSION_SAVE_EVERY_REQUEST = True  # CRITICAL: Reset timeout on each request to prevent premature logout
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = config('SESSION_SECURE', default=False, cast=bool)
 SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Keep session alive even after browser close
+SESSION_COOKIE_DOMAIN = None  # Works with localhost and 127.0.0.1
+SESSION_COOKIE_PATH = '/'  # Available across entire site
 
 # Performance: Template Caching
 if not DEBUG:
@@ -625,12 +649,7 @@ FILE_UPLOAD_PERMISSIONS = 0o644
 ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif']
 ALLOWED_DOCUMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'txt']
 
-# Enhanced Session Security
-SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='Lax')
-SESSION_COOKIE_AGE = config('SESSION_COOKIE_AGE', default=3600, cast=int)  # 1 hour
-SESSION_SAVE_EVERY_REQUEST = True  # Reset timeout on each request
-SESSION_EXPIRE_AT_BROWSER_CLOSE = config('SESSION_EXPIRE_AT_BROWSER_CLOSE', default=False, cast=bool)
+# Enhanced Session Security (Settings moved to line 553-560 - this section is redundant)
 
 # CSRF Protection
 CSRF_COOKIE_HTTPONLY = False  # Must be False for JavaScript access to CSRF token
@@ -909,3 +928,20 @@ os.makedirs(BASE_DIR / 'logs', exist_ok=True)
 # User Registration Configuration
 # SECURITY: Disabled by default for military systems - only admins can create accounts
 ALLOW_PUBLIC_REGISTRATION = config('ALLOW_PUBLIC_REGISTRATION', default=False, cast=bool)
+
+# ============================================================================
+# WebSocket Connection Management Settings
+# Configuration for optimal WebSocket performance and connection limits
+# ============================================================================
+
+WEBSOCKET_CONNECT_TIMEOUT = 5  # seconds
+WEBSOCKET_DISCONNECT_TIMEOUT = 3  # seconds  
+WEBSOCKET_MAX_CONNECTIONS_PER_USER = 3  # Limit concurrent connections
+
+# WebSocket close codes for better error handling
+WEBSOCKET_CLOSE_CODES = {
+    'UNAUTHORIZED': 4001,
+    'SERVER_ERROR': 4000,
+    'RATE_LIMITED': 4029,
+    'CONNECTION_LIMIT': 4030
+}

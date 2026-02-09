@@ -15,49 +15,77 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     """
     
     async def connect(self):
-        """Handle WebSocket connection"""
-        self.user = self.scope['user']
-        
-        # Reject anonymous users
-        if isinstance(self.user, AnonymousUser):
-            await self.close()
-            return
-        
-        # Create user-specific channel group
-        self.group_name = f'notifications_{self.user.id}'
-        
-        # Join group
-        await self.channel_layer.group_add(
-            self.group_name,
-            self.channel_name
-        )
-        
-        await self.accept()
-        
-        # Send connection confirmation
-        await self.send(text_data=json.dumps({
-            'type': 'connection_established',
-            'message': 'Connected to notification stream'
-        }))
-    
-    async def disconnect(self, close_code):
-        """Handle WebSocket disconnection"""
-        if hasattr(self, 'group_name'):
-            await self.channel_layer.group_discard(
+        """Handle WebSocket connection with improved error handling"""
+        try:
+            self.user = self.scope['user']
+            
+            # Reject anonymous users
+            if isinstance(self.user, AnonymousUser):
+                await self.close(code=4001)  # Unauthorized
+                return
+            
+            # Create user-specific channel group
+            self.group_name = f'notifications_{self.user.id}'
+            
+            # Join group with error handling
+            await self.channel_layer.group_add(
                 self.group_name,
                 self.channel_name
             )
+            
+            await self.accept()
+            
+            # Send connection confirmation
+            await self.send(text_data=json.dumps({
+                'type': 'connection_established',
+                'message': 'Connected to notification stream',
+                'user_id': self.user.id
+            }))
+            
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"WebSocket connection error: {e}")
+            await self.close(code=4000)  # Server error
+    
+    async def disconnect(self, close_code):
+        """Handle WebSocket disconnection with proper cleanup"""
+        try:
+            if hasattr(self, 'group_name'):
+                await self.channel_layer.group_discard(
+                    self.group_name,
+                    self.channel_name
+                )
+                
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Notification WebSocket disconnect error: {e}")
     
     async def receive(self, text_data):
-        """Handle incoming WebSocket messages"""
-        data = json.loads(text_data)
-        message_type = data.get('type')
-        
-        if message_type == 'ping':
-            # Respond to ping to keep connection alive
+        """Handle incoming WebSocket messages with improved error handling"""
+        try:
+            data = json.loads(text_data)
+            message_type = data.get('type')
+            
+            if message_type == 'ping':
+                # Respond to ping to keep connection alive
+                await self.send(text_data=json.dumps({
+                    'type': 'pong',
+                    'timestamp': data.get('timestamp')
+                }))
+                
+        except json.JSONDecodeError as e:
+            # Invalid JSON - send error response
             await self.send(text_data=json.dumps({
-                'type': 'pong',
-                'timestamp': data.get('timestamp')
+                'type': 'error',
+                'message': 'Invalid JSON format'
+            }))
+            
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"WebSocket receive error: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': 'Internal server error'
             }))
     
     async def notification_message(self, event):
@@ -82,35 +110,46 @@ class TransactionConsumer(AsyncWebsocketConsumer):
     """
     
     async def connect(self):
-        """Handle WebSocket connection"""
-        self.user = self.scope['user']
-        
-        if isinstance(self.user, AnonymousUser):
-            await self.close()
-            return
-        
-        # All authenticated users join the global transaction feed
-        self.group_name = 'transactions_feed'
-        
-        await self.channel_layer.group_add(
-            self.group_name,
-            self.channel_name
-        )
-        
-        await self.accept()
-        
-        await self.send(text_data=json.dumps({
-            'type': 'connection_established',
-            'message': 'Connected to live transaction feed'
-        }))
-    
-    async def disconnect(self, close_code):
-        """Handle WebSocket disconnection"""
-        if hasattr(self, 'group_name'):
-            await self.channel_layer.group_discard(
+        """Handle WebSocket connection with improved error handling"""
+        try:
+            self.user = self.scope['user']
+            
+            if isinstance(self.user, AnonymousUser):
+                await self.close(code=4001)  # Unauthorized
+                return
+            
+            # All authenticated users join the global transaction feed
+            self.group_name = 'transactions_feed'
+            
+            await self.channel_layer.group_add(
                 self.group_name,
                 self.channel_name
             )
+            
+            await self.accept()
+            
+            await self.send(text_data=json.dumps({
+                'type': 'connection_established',
+                'message': 'Connected to live transaction feed'
+            }))
+            
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Transaction WebSocket connection error: {e}")
+            await self.close(code=4000)  # Server error
+    
+    async def disconnect(self, close_code):
+        """Handle WebSocket disconnection with proper cleanup"""
+        try:
+            if hasattr(self, 'group_name'):
+                await self.channel_layer.group_discard(
+                    self.group_name,
+                    self.channel_name
+                )
+                
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Transaction WebSocket disconnect error: {e}")
     
     async def transaction_created(self, event):
         """

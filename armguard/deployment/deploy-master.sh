@@ -27,6 +27,7 @@ METHODS:
     basic-setup    Basic server setup (simple installation)
     production     Full production deployment (enterprise features)
     docker-test    Docker testing environment (containers + monitoring)
+    redis-setup    Install and configure Redis for WebSocket performance
     
     list           List all available deployment methods
     status         Show current deployment status
@@ -42,6 +43,7 @@ EXAMPLES:
     $0 vm-test                    # Deploy to VM test environment
     $0 production --verbose       # Production deployment with verbose output
     $0 docker-test --dry-run      # Preview Docker testing setup
+    $0 redis-setup                # Install Redis for WebSocket performance
     $0 status                     # Check current deployment status
 
 ENVIRONMENTS:
@@ -62,7 +64,7 @@ detect_current_environment() {
     if [ -d "/mnt/hgfs" ] && [ -d "/mnt/hgfs/Armguard" ]; then
         echo "vm-test"
     elif [ -f "/.dockerenv" ]; then
-        echo "docker-test"
+        echo "redis-setup"
     elif [ -f "/etc/systemd/system/armguard.service" ]; then
         echo "production"
     elif [ -f "/var/www/armguard/manage.py" ]; then
@@ -74,7 +76,7 @@ detect_current_environment() {
 
 validate_method() {
     local method=$1
-    local valid_methods=("vm-test" "basic-setup" "production" "docker-test")
+    local valid_methods=("vm-test" "basic-setup" "production" "docker-test" "redis-setup")
     
     for valid_method in "${valid_methods[@]}"; do
         if [ "$method" = "$valid_method" ]; then
@@ -150,6 +152,74 @@ deploy_docker_test() {
     ./run_all_tests.sh "$@"
 }
 
+deploy_redis_setup() {
+    log "INFO" "Starting Redis setup for WebSocket performance..."
+    
+    # Source the master config to get Redis functions
+    source "$SCRIPT_DIR/master-config.sh"
+    
+    echo -e "${GREEN}" 
+    echo "╔════════════════════════════════════════════════════════════╗"
+    echo "║                Redis WebSocket Setup                      ║"
+    echo "║                                                            ║"
+    echo "║  This will install and configure Redis server for:       ║"
+    echo "║  • Optimal WebSocket performance                          ║"
+    echo "║  • Real-time notification handling                        ║"
+    echo "║  • Concurrent user connection management                   ║"
+    echo "║  • Channel layer optimization                              ║"
+    echo "╚════════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+    echo
+    
+    # Check if Redis is already installed and running
+    if check_redis_health; then
+        echo -e "${GREEN}✓ Redis is already installed and running${NC}"
+        echo -e "${YELLOW}Choose an action:${NC}"
+        echo "1. Reconfigure Redis for WebSocket optimization"
+        echo "2. Restart Redis service"
+        echo "3. Test Redis connection"
+        echo "4. Exit (Redis is working)"
+        read -p "Enter your choice (1-4): " redis_action
+        
+        case $redis_action in
+            1) setup_redis "configure" ;;
+            2) manage_redis_service "restart" ;;
+            3) test_redis_connection ;;
+            4) echo "Redis setup completed - no changes made"; exit 0 ;;
+            *) echo "Invalid choice - exiting"; exit 1 ;;
+        esac
+    else
+        echo -e "${YELLOW}Redis not detected - proceeding with full installation${NC}"
+        echo
+        
+        # Check for root privileges if needed
+        if [ "$EUID" -ne 0 ] && ! sudo -n true 2>/dev/null; then
+            echo -e "${YELLOW}This script needs sudo privileges to install Redis${NC}"
+            read -p "Continue? (y/N): " confirm
+            if [[ ! $confirm =~ ^[Yy] ]]; then
+                echo "Installation cancelled"
+                exit 1
+            fi
+        fi
+        
+        # Full Redis setup
+        if [ "$EUID" -eq 0 ]; then
+            setup_redis "all"
+        else
+            sudo bash -c "source '$SCRIPT_DIR/master-config.sh'; setup_redis 'all'"
+        fi
+    fi
+    
+    echo
+    echo -e "${GREEN}🎉 Redis WebSocket setup completed!${NC}"
+    echo
+    echo "Next steps:"
+    echo "1. Restart your Django application: python manage.py runserver"
+    echo "2. You should now see: ✅ Using Redis for WebSocket channel layer"
+    echo "3. WebSocket performance is now optimized for concurrent users"
+    echo
+}
+
 # =============================================================================
 # Status and Information Commands
 # =============================================================================
@@ -187,6 +257,21 @@ EOF
             echo -e "• $service: ${RED}not installed${NC}"
         fi
     done
+    
+    # Enhanced Redis WebSocket status
+    echo
+    echo "WebSocket Performance:"
+    if command_exists redis-cli && redis-cli ping >/dev/null 2>&1; then
+        echo -e "• Redis Channel Layer: ${GREEN}optimal (Redis running)${NC}"
+        echo -e "• WebSocket Capacity: ${GREEN}high performance${NC}"
+    elif command_exists redis-cli && redis-cli -a armguard_redis_2026 ping >/dev/null 2>&1; then
+        echo -e "• Redis Channel Layer: ${GREEN}optimal (Redis with auth)${NC}"
+        echo -e "• WebSocket Capacity: ${GREEN}high performance${NC}"
+    else
+        echo -e "• Redis Channel Layer: ${YELLOW}fallback (InMemory)${NC}"
+        echo -e "• WebSocket Capacity: ${YELLOW}limited performance${NC}"
+        echo -e "  Run: './deploy-master.sh redis-setup' to optimize"
+    fi
     
     # Check Docker services if in container environment
     if [ "$current_env" = "docker-test" ]; then
@@ -313,7 +398,7 @@ main() {
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case $1 in
-            vm-test|basic-setup|production|docker-test)
+            vm-test|basic-setup|production|docker-test|redis-setup)
                 method="$1"
                 shift
                 ;;
@@ -426,6 +511,9 @@ main() {
             ;;
         "docker-test")
             deploy_docker_test "$@"
+            ;;
+        "redis-setup")
+            deploy_redis_setup "$@"
             ;;
     esac
     

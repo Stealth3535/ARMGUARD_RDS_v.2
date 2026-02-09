@@ -200,7 +200,39 @@ install_system_packages() {
         libnss3-tools \
         openssl \
         ufw \
-        fail2ban
+        fail2ban \
+        redis-server
+
+    echo -e "${YELLOW}Configuring Redis for WebSocket optimization...${NC}"
+    # Start Redis service
+    systemctl enable redis-server
+    systemctl start redis-server
+    
+    # Configure Redis for WebSocket performance
+    if [ -f /etc/redis/redis.conf ]; then
+        cp /etc/redis/redis.conf /etc/redis/redis.conf.backup.$(date +%Y%m%d_%H%M%S)
+        
+        # Apply WebSocket optimizations
+        cat >> /etc/redis/redis.conf << 'EOF'
+
+# ArmGuard WebSocket Optimizations
+maxmemory 256mb
+maxmemory-policy allkeys-lru
+timeout 300
+tcp-keepalive 300
+notify-keyspace-events Ex
+EOF
+        
+        systemctl restart redis-server
+        echo -e "${GREEN}✓ Redis configured for WebSocket performance${NC}"
+    fi
+    
+    # Test Redis connection
+    if redis-cli ping >/dev/null 2>&1; then
+        echo -e "${GREEN}✓ Redis server is running and accessible${NC}"
+    else
+        echo -e "${YELLOW}⚠ Redis connection test failed, but service is installed${NC}"
+    fi
     
     if [[ "$USE_POSTGRESQL" =~ ^[Yy] ]]; then
         echo -e "${YELLOW}Installing PostgreSQL...${NC}"

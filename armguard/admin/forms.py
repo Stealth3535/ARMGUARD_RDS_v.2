@@ -82,20 +82,69 @@ class UniversalForm(forms.Form):
     profile_picture = forms.ImageField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
     
     # === PERSONNEL FIELDS ===
-    surname = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    firstname = forms.CharField(max_length=100, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    middle_initial = forms.CharField(max_length=1, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '1'}))
-    rank = forms.ChoiceField(choices=Personnel.ALL_RANKS, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
-    serial = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control'}), help_text="Serial number (6 digits for enlisted, or O-XXXXXX for officers)")
-    personnel_group = forms.ChoiceField(choices=Personnel.GROUP_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}))
-    tel = forms.CharField(max_length=13, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '13'}), help_text="Phone number (will auto-convert 09XXXXXXXXX to +639XXXXXXXXX)")
-    personnel_status = forms.ChoiceField(choices=Personnel.STATUS_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-control'}), initial='Active')
-    personnel_picture = forms.ImageField(required=False, widget=forms.FileInput(attrs={'class': 'form-control-file'}))
+    surname = forms.CharField(
+        max_length=100, 
+        required=False, 
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Surname'})
+    )
+    firstname = forms.CharField(
+        max_length=100, 
+        required=False, 
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'})
+    )
+    middle_initial = forms.CharField(
+        max_length=1, 
+        required=False, 
+        widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '1', 'placeholder': 'M.I.'})
+    )
+    rank = forms.ChoiceField(
+        choices=[('', 'Select Rank')] + Personnel.ALL_RANKS, 
+        required=False, 
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    serial = forms.CharField(
+        max_length=20, 
+        required=False, 
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Enter serial number'}), 
+        help_text="Serial number (numeric only)"
+    )
+    personnel_group = forms.ChoiceField(
+        choices=Personnel.GROUP_CHOICES, 
+        required=False, 
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    tel = forms.CharField(
+        max_length=13, 
+        required=False, 
+        widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '13', 'placeholder': '+639XXXXXXXXX'}), 
+        help_text="Phone number (will auto-convert 09XXXXXXXXX to +639XXXXXXXXX)"
+    )
+    personnel_email = forms.EmailField(
+        required=False, 
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'email@gmail.com'}),
+        help_text="Email address (will auto-correct to @gmail.com)"
+    )
+    personnel_status = forms.ChoiceField(
+        choices=Personnel.STATUS_CHOICES, 
+        required=False, 
+        widget=forms.Select(attrs={'class': 'form-control'}), 
+        initial='Active'
+    )
+    change_reason = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Document reason for this change (optional but recommended for audit trail)'}),
+        help_text="Document the reason for this change (for audit purposes)"
+    )
+    personnel_picture = forms.ImageField(
+        required=False, 
+        widget=forms.FileInput(attrs={'class': 'form-control-file'})
+    )
     
     def __init__(self, *args, **kwargs):
         self.edit_user = kwargs.pop('edit_user', None)
         self.edit_personnel = kwargs.pop('edit_personnel', None)
         self.request_user = kwargs.pop('request_user', None)
+        self.request = kwargs.pop('request', None)  # Store request for audit context
         super().__init__(*args, **kwargs)
         
         if self.edit_user:
@@ -139,7 +188,9 @@ class UniversalForm(forms.Form):
                 'serial': self.edit_personnel.serial,
                 'personnel_group': self.edit_personnel.group,
                 'tel': self.edit_personnel.tel,
-                'personnel_status': self.edit_personnel.status
+                'personnel_email': self.edit_personnel.email,
+                'personnel_status': self.edit_personnel.status,
+                'change_reason': ''  # Always start with empty change reason for new edits
             })
     
     def clean(self):
@@ -179,6 +230,14 @@ class UniversalForm(forms.Form):
             for field in ['surname', 'firstname', 'rank', 'serial', 'personnel_group', 'tel']:
                 if not cleaned_data.get(field):
                     self.add_error(field, f'This field is required for {operation_type} operation.')
+        
+        # Email validation and auto-correction
+        personnel_email = cleaned_data.get('personnel_email')
+        if personnel_email:
+            # Auto-correct to @gmail.com if different domain
+            if not personnel_email.lower().endswith('@gmail.com'):
+                local_part = personnel_email.split('@')[0]
+                cleaned_data['personnel_email'] = f"{local_part}@gmail.com"
         
         # Tel validation and conversion
         tel = cleaned_data.get('tel')
@@ -231,6 +290,12 @@ class UniversalForm(forms.Form):
         operation_type = self.cleaned_data['operation_type']
         user = None
         personnel = None
+        
+        # Get audit context from request if available
+        audit_user = self.request_user if self.request_user else (self.request.user if self.request and hasattr(self.request, 'user') and self.request.user.is_authenticated else None)
+        audit_ip = self.request.META.get('REMOTE_ADDR') if self.request else None
+        audit_user_agent = self.request.META.get('HTTP_USER_AGENT', '') if self.request else ''
+        audit_session = self.request.session.session_key if self.request and hasattr(self.request, 'session') else ''
         
         if operation_type in ['create_user_only', 'create_user_with_personnel']:
             # For armorer/admin, use personnel names if not provided
@@ -349,11 +414,24 @@ class UniversalForm(forms.Form):
                 personnel.serial = self.cleaned_data['serial']
                 personnel.group = self.cleaned_data['personnel_group']
                 personnel.tel = self.cleaned_data['tel']
+                personnel.email = self.cleaned_data.get('personnel_email', '')
                 personnel.status = self.cleaned_data.get('personnel_status', 'Active')
+                personnel.change_reason = self.cleaned_data.get('change_reason', 'Personnel reactivated')
                 personnel.user = user
                 
                 # Clear soft delete
                 personnel.deleted_at = None
+                personnel.is_deleted = False
+                
+                # Set audit context
+                if audit_user:
+                    personnel._audit_user = audit_user
+                    personnel._audit_ip = audit_ip
+                    personnel._audit_user_agent = audit_user_agent
+                    personnel._audit_session = audit_session
+                    
+                    # CRITICAL: Set django-simple-history user context
+                    personnel._history_user = audit_user
                 
                 # Update classification
                 rank = self.cleaned_data['rank']
@@ -383,12 +461,28 @@ class UniversalForm(forms.Form):
                     serial=self.cleaned_data['serial'],
                     group=self.cleaned_data['personnel_group'],
                     tel=self.cleaned_data['tel'],
+                    email=self.cleaned_data.get('personnel_email', ''),
                     status=self.cleaned_data.get('personnel_status', 'Active'),
                     classification=classification,
+                    change_reason=self.cleaned_data.get('change_reason', 'Initial registration'),
+                    created_by=audit_user,
+                    created_ip=audit_ip,
+                    created_user_agent=audit_user_agent,
                     user=user
                 )
                 if self.cleaned_data.get('personnel_picture'):
                     personnel.picture = self.cleaned_data['personnel_picture']
+                
+                # Set audit context
+                if audit_user:
+                    personnel._audit_user = audit_user
+                    personnel._audit_ip = audit_ip
+                    personnel._audit_user_agent = audit_user_agent
+                    personnel._audit_session = audit_session
+                    
+                    # CRITICAL: Set django-simple-history user context
+                    personnel._history_user = audit_user
+                
                 personnel.save()
         
         elif operation_type in ['edit_personnel', 'edit_both']:
@@ -400,7 +494,24 @@ class UniversalForm(forms.Form):
             personnel.serial = self.cleaned_data['serial']
             personnel.group = self.cleaned_data['personnel_group']
             personnel.tel = self.cleaned_data['tel']
+            personnel.email = self.cleaned_data.get('personnel_email', '')
             personnel.status = self.cleaned_data.get('personnel_status', 'Active')
+            personnel.change_reason = self.cleaned_data.get('change_reason', '')
+            
+            # Set audit context for tracking (custom audit system)
+            if audit_user:
+                personnel._audit_user = audit_user
+                personnel._audit_ip = audit_ip
+                personnel._audit_user_agent = audit_user_agent
+                personnel._audit_session = audit_session
+                
+                # CRITICAL: Set django-simple-history user context
+                personnel._history_user = audit_user
+                
+            # Set change reason for django-simple-history
+            change_reason = self.cleaned_data.get('change_reason', '')
+            if change_reason:
+                personnel._change_reason = change_reason
             
             officer_ranks = [r[0] for r, _ in Personnel.RANKS_OFFICER]
             personnel.classification = 'OFFICER' if personnel.rank in officer_ranks else 'SUPERUSER' if (personnel.user and personnel.user.is_superuser) else 'ENLISTED PERSONNEL'
@@ -409,6 +520,7 @@ class UniversalForm(forms.Form):
             
             if self.cleaned_data.get('personnel_picture'):
                 personnel.picture = self.cleaned_data['personnel_picture']
+                
             personnel.save()
         
         return user, personnel

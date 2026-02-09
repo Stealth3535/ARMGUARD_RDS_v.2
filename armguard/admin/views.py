@@ -251,10 +251,8 @@ def registration_success(request):
 @user_passes_test(is_admin_user)
 def user_management(request):
     """User management interface"""
-    # Get only admin users (Superuser, Admin, Armorer) for User Management section
-    admin_users = User.objects.select_related('userprofile').prefetch_related('groups').filter(
-        Q(is_superuser=True) | Q(groups__name__in=['Admin', 'Armorer'])
-    ).distinct().order_by('-date_joined')
+    # Get ALL users with accounts for User Management section
+    admin_users = User.objects.select_related('userprofile').prefetch_related('groups').distinct().order_by('-date_joined')
     
     # Get only personnel users (non-admin, non-staff) for Personnel Management section
     personnel_users = User.objects.select_related('userprofile').prefetch_related('groups').filter(
@@ -288,6 +286,12 @@ def user_management(request):
             admin_users = admin_users.filter(is_superuser=True)
         elif role_filter == 'armorer':
             admin_users = admin_users.filter(groups__name='Armorer')
+        elif role_filter == 'personnel':
+            # Show only users who are NOT superuser, admin, or armorer
+            admin_users = admin_users.filter(
+                is_superuser=False,
+                is_staff=False
+            ).exclude(groups__name__in=['Admin', 'Armorer'])
     
     if search_query:
         admin_users = admin_users.filter(
@@ -332,12 +336,21 @@ def user_management(request):
     else:
         personnel_qs = personnel_qs.order_by('surname', 'firstname')
 
-    # Check if current user can edit personnel (Admin or Superuser)
+    # Check if current user can edit (Admin or Superuser, and not restricted)
     can_edit_personnel = request.user.is_superuser or request.user.groups.filter(name='Admin').exists()
+    can_edit = can_edit_personnel
+    
+    # Check if user is a restricted admin
+    is_restricted_admin = False
+    if request.user.groups.filter(name='Admin').exists():
+        try:
+            is_restricted_admin = request.user.userprofile.is_restricted_admin
+        except:
+            is_restricted_admin = False
 
     context = {
-        'users': admin_users,  # Admin users (Superuser, Admin, Armorer)
-        'personnel_users': personnel_users,  # Personnel users with accounts
+        'users': admin_users,  # All users with accounts (Superuser, Admin, Armorer, Personnel)
+        'personnel_users': personnel_users,  # Personnel users with accounts (for backward compatibility)
         'user_count': admin_users.count(),
         'personnel_user_count': personnel_users.count(),
         'admin_count': admin_users.filter(groups__name='Admin').count(),
@@ -349,6 +362,8 @@ def user_management(request):
         'role_filter': role_filter,
         'search_query': search_query,
         'can_edit_personnel': can_edit_personnel,
+        'can_edit': can_edit,
+        'is_restricted_admin': is_restricted_admin,
     }
     return render(request, 'admin/user_management.html', context)
 
@@ -390,7 +405,7 @@ def edit_user(request, user_id):
         data['edit_user_id'] = edit_user_obj.id
         
         # Pass both edit_user and edit_personnel if personnel exists
-        form_kwargs = {'edit_user': edit_user_obj, 'request_user': request.user}
+        form_kwargs = {'edit_user': edit_user_obj, 'request_user': request.user, 'request': request}
         if has_personnel:
             form_kwargs['edit_personnel'] = edit_user_obj.personnel
         form = UniversalForm(data, request.FILES, **form_kwargs)
@@ -414,7 +429,7 @@ def edit_user(request, user_id):
         has_personnel = hasattr(edit_user_obj, 'personnel') and edit_user_obj.personnel
         operation_type = 'edit_both' if has_personnel else 'edit_user'
         
-        form_kwargs = {'edit_user': edit_user_obj}
+        form_kwargs = {'edit_user': edit_user_obj, 'request': request}
         if has_personnel:
             form_kwargs['edit_personnel'] = edit_user_obj.personnel
         
@@ -427,8 +442,11 @@ def edit_user(request, user_id):
         'page_title': f'Edit User: {edit_user_obj.username}',
         'submit_text': 'Save Changes',
         'is_superuser': request.user.is_superuser,
+        'is_admin': request.user.groups.filter(name='Admin').exists(),
+        'can_edit_role': request.user.is_superuser or request.user.groups.filter(name='Admin').exists(),
     }
     return render(request, 'admin/universal_form.html', context)
+
 
 
 @login_required
@@ -446,7 +464,7 @@ def edit_personnel(request, personnel_id):
         data['operation_type'] = 'edit_personnel'
         data['edit_personnel_id'] = edit_personnel_obj.id
         
-        form = UniversalForm(data, request.FILES, edit_personnel=edit_personnel_obj)
+        form = UniversalForm(data, request.FILES, edit_personnel=edit_personnel_obj, request_user=request.user, request=request)
         
         if form.is_valid():
             try:
@@ -476,7 +494,9 @@ def edit_personnel(request, personnel_id):
         # Create form for editing personnel only
         form = UniversalForm(
             initial={'operation_type': 'edit_personnel'}, 
-            edit_personnel=edit_personnel_obj
+            edit_personnel=edit_personnel_obj,
+            request_user=request.user,
+            request=request
         )
     
     context = {
@@ -485,6 +505,9 @@ def edit_personnel(request, personnel_id):
         'is_edit': True,
         'page_title': f'Edit Personnel: {edit_personnel_obj.get_full_name()}',
         'submit_text': 'Save Changes',
+        'is_superuser': request.user.is_superuser,
+        'is_admin': request.user.groups.filter(name='Admin').exists(),
+        'can_edit_role': request.user.is_superuser or request.user.groups.filter(name='Admin').exists(),
     }
     return render(request, 'admin/universal_form.html', context)
 
@@ -838,7 +861,7 @@ def registration(request):
                 }
                 return render(request, 'admin/universal_form.html', context)
         
-        form = UniversalForm(request.POST, request.FILES)
+        form = UniversalForm(request.POST, request.FILES, request_user=request.user, request=request)
         if form.is_valid():
             try:
                 with transaction.atomic():
@@ -877,9 +900,9 @@ def registration(request):
     else:
         # Set initial operation type based on user role
         if user_is_armorer:
-            form = UniversalForm(initial={'operation_type': 'create_personnel_only'})
+            form = UniversalForm(initial={'operation_type': 'create_personnel_only'}, request_user=request.user, request=request)
         else:
-            form = UniversalForm(initial={'operation_type': 'create_user_with_personnel'})
+            form = UniversalForm(initial={'operation_type': 'create_user_with_personnel'}, request_user=request.user, request=request)
     
     context = {
         'form': form,

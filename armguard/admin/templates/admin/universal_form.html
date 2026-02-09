@@ -5,25 +5,61 @@
 
 {% block extra_css %}
 <style>
+    /* Modern Form Container */
     .form-container {
-        max-width: 900px;
+        max-width: 1100px;
         margin: 2rem auto;
-        background: white;
-        padding: 2rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2.5rem;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
     }
     
+    .form-inner {
+        background: white;
+        padding: 2.5rem;
+        border-radius: 12px;
+    }
+    
+    /* Enhanced Header */
     .form-header {
-        margin-bottom: 2rem;
-        padding-bottom: 1rem;
-        border-bottom: 2px solid #667eea;
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 3px solid #667eea;
+        position: relative;
+    }
+    
+    .form-header::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 120px;
+        height: 3px;
+        background: #f59e0b;
+        border-radius: 2px;
     }
     
     .form-header h1 {
-        margin: 0 0 0.5rem 0;
-        color: #333;
-        font-size: 1.8rem;
+        margin: 0 0 0.75rem 0;
+        color: #1f2937;
+        font-size: 2rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .form-header h1 .icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
     }
     
     .form-header .subtitle {
@@ -86,21 +122,31 @@
         border-bottom: none;
     }
     
+    /* Section Headers */
     .form-section h2 {
-        font-size: 1.25rem;
-        color: #374151;
-        margin-bottom: 1rem;
+        font-size: 1.375rem;
+        color: #1f2937;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.75rem;
+        padding: 0.875rem 1.25rem;
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
     }
     
-    .form-section h2::before {
-        content: '';
-        width: 4px;
-        height: 1.5rem;
-        background: #667eea;
-        border-radius: 2px;
+    .form-section h2 .section-icon {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.125rem;
     }
     
     .form-row {
@@ -118,11 +164,18 @@
         margin-bottom: 1.5rem;
     }
     
+    /* Enhanced Form Groups */
+    .form-group {
+        position: relative;
+    }
+    
     .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        color: #333;
-        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        color: #374151;
+        font-weight: 600;
         font-size: 0.95rem;
     }
     
@@ -131,19 +184,38 @@
         margin-left: 0.25rem;
     }
     
+    /* Enhanced Form Controls */
     .form-control {
         width: 100%;
-        padding: 0.75rem;
-        border: 1px solid #ddd;
-        border-radius: 5px;
+        padding: 0.875rem 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
         font-size: 1rem;
-        transition: border-color 0.2s;
+        transition: all 0.3s;
+        background-color: #f9fafb;
+    }
+    
+    .form-control:hover {
+        border-color: #d1d5db;
+        background-color: #fff;
     }
     
     .form-control:focus {
         outline: none;
         border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        background-color: #fff;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        transform: translateY(-1px);
+    }
+    
+    .form-control.is-valid {
+        border-color: #10b981;
+        background-color: #f0fdf4;
+    }
+    
+    .form-control.is-invalid {
+        border-color: #ef4444;
+        background-color: #fef2f2;
     }
     
     .form-control[readonly] {
@@ -167,18 +239,59 @@
         cursor: pointer;
     }
     
-    .help-text {
-        font-size: 0.875rem;
-        color: #666;
-        margin-top: 0.25rem;
-        font-style: italic;
+    /* Help Text */
+    .help-text,
+    .form-help {
+        font-size: 0.8125rem;
+        color: #6b7280;
+        margin-top: 0.375rem;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        line-height: 1.5;
     }
     
+    .help-text::before {
+        content: 'ℹ';
+        color: #667eea;
+        font-weight: bold;
+    }
+    
+    /* Validation Feedback */
     .error {
-        color: #dc3545;
+        color: #dc2626;
         font-size: 0.875rem;
-        margin-top: 0.25rem;
-        display: block;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #fef2f2;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        border-left: 3px solid #dc2626;
+    }
+    
+    .error::before {
+        content: '⚠';
+        font-size: 1rem;
+    }
+    
+    .success-feedback {
+        color: #059669;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #f0fdf4;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        border-left: 3px solid #10b981;
+    }
+    
+    .success-feedback::before {
+        content: '✓';
+        font-size: 1rem;
     }
     
     .alert {
@@ -236,15 +349,39 @@
         transition: all 0.3s;
     }
     
+    /* Enhanced Buttons */
     .btn-primary {
-        background: #667eea;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .btn-primary::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s;
+    }
+    
+    .btn-primary:hover::before {
+        left: 100%;
     }
     
     .btn-primary:hover {
-        background: #5568d3;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        background: linear-gradient(135deg, #5568d3 0%, #6a3d8f 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-primary:active {
+        transform: translateY(0);
     }
     
     .btn-secondary {
@@ -274,17 +411,157 @@
     .field-user-only,
     .field-personnel-only,
     .field-both {
-        transition: opacity 0.3s, max-height 0.3s;
+        transition: all 0.4s ease;
+    }
+    
+    /* Progress Indicator */
+    .form-progress {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    
+    .form-progress::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: #e5e7eb;
+        z-index: 0;
+    }
+    
+    .progress-step {
+        flex: 1;
+        text-align: center;
+        z-index: 1;
+    }
+    
+    .progress-step-circle {
+        width: 40px;
+        height: 40px;
+        background: white;
+        border: 3px solid #e5e7eb;
+        border-radius: 50%;
+        margin: 0 auto 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #9ca3af;
+        transition: all 0.3s;
+    }
+    
+    .progress-step.active .progress-step-circle {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+        color: white;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .progress-step.completed .progress-step-circle {
+        background: #10b981;
+        border-color: #10b981;
+        color: white;
+    }
+    
+    .progress-step-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        font-weight: 500;
+    }
+    
+    .progress-step.active .progress-step-label {
+        color: #667eea;
+        font-weight: 600;
+    }
+    
+    /* Required Field Indicator */
+    .required-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #ef4444;
+        border-radius: 50%;
+        margin-left: 4px;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    /* Tooltips */
+    .tooltip-trigger {
+        position: relative;
+        cursor: help;
+        color: #667eea;
+        margin-left: 0.25rem;
+    }
+    
+    .tooltip-content {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1f2937;
+        color: white;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.8125rem;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        margin-bottom: 0.5rem;
+        z-index: 1000;
+    }
+    
+    .tooltip-trigger:hover .tooltip-content {
+        opacity: 1;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .form-container {
+            margin: 1rem;
+            padding: 1.5rem;
+        }
+        
+        .form-inner {
+            padding: 1.5rem;
+        }
+        
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .form-header h1 {
+            font-size: 1.5rem;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="form-container">
+    <div class="form-inner">
     <!-- Messages -->
     {% if messages %}
         {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}">
+            <div class="alert alert-{{ message.tags }}" style="animation: slideDown 0.3s ease;">
+                {% if message.tags == 'success' %}
+                    <i class="fas fa-check-circle"></i>
+                {% elif message.tags == 'error' or message.tags == 'danger' %}
+                    <i class="fas fa-exclamation-circle"></i>
+                {% elif message.tags == 'warning' %}
+                    <i class="fas fa-exclamation-triangle"></i>
+                {% else %}
+                    <i class="fas fa-info-circle"></i>
+                {% endif %}
                 {{ message }}
             </div>
         {% endfor %}
@@ -293,32 +570,70 @@
     <!-- Header -->
     <div class="form-header">
         <h1>
+            <span class="icon">
+                {% if is_edit %}
+                    ✏️
+                {% else %}
+                    
+                {% endif %}
+            </span>
             {{ page_title|default:"Registration Form" }}
             {% if is_edit and edit_user %}
                 {% if edit_user.is_superuser %}
-                <span class="info-badge">Superuser</span>
+                <span class="info-badge" style="background: #fee2e2; color: #991b1b;">🔐 Superuser</span>
                 {% elif edit_user.is_staff %}
-                <span class="info-badge">Admin</span>
+                <span class="info-badge" style="background: #dbeafe; color: #1e40af;">👔 Admin</span>
                 {% else %}
-                <span class="info-badge">Personnel</span>
+                <span class="info-badge" style="background: #d1fae5; color: #065f46;">👤 Personnel</span>
                 {% endif %}
             {% endif %}
         </h1>
-        <p class="subtitle">
+        <p class="subtitle" style="color: #6b7280; font-size: 1rem;">
             {% if is_edit %}
-                Modify user account and personnel information
+                 Modify user account and personnel information with complete audit trail
             {% else %}
-                Register new users and personnel in the ArmGuard system
+                 Register new users and personnel in the ArmGuard system
             {% endif %}
         </p>
     </div>
     
+    <!-- Progress Indicator (for multi-step forms) -->
+    {% if not is_edit %}
+    <div class="form-progress">
+        <div class="progress-step active">
+            <div class="progress-step-circle">1</div>
+            <div class="progress-step-label">Role Selection</div>
+        </div>
+        <div class="progress-step">
+            <div class="progress-step-circle">2</div>
+            <div class="progress-step-label">Account Info</div>
+        </div>
+        <div class="progress-step">
+            <div class="progress-step-circle">3</div>
+            <div class="progress-step-label">Personnel Data</div>
+        </div>
+        <div class="progress-step">
+            <div class="progress-step-circle">4</div>
+            <div class="progress-step-label">Review</div>
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Personnel Link Info (if editing and has personnel) -->
     {% if is_edit and edit_user.personnel %}
-    <div class="personnel-info">
-        <strong>Linked Personnel:</strong> 
-        {{ edit_user.personnel.firstname }} {{ edit_user.personnel.surname }} 
-        ({{ edit_user.personnel.rank }} - Serial: {{ edit_user.personnel.get_serial_display }})
+    <div class="personnel-info" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); padding: 1.25rem; border-radius: 10px; margin-bottom: 2rem; border: 2px solid #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 48px; height: 48px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: white;">
+                🔗
+            </div>
+            <div>
+                <strong style="font-size: 1.0625rem; color: #065f46; display: block; margin-bottom: 0.25rem;">Linked Personnel Record</strong>
+                <span style="color: #047857; font-size: 0.9375rem;">
+                    {{ edit_user.personnel.firstname }} {{ edit_user.personnel.surname }} 
+                    ({{ edit_user.personnel.rank }} - Serial: {{ edit_user.personnel.get_serial_display }})
+                </span>
+            </div>
+        </div>
     </div>
     {% endif %}
     
@@ -331,46 +646,73 @@
         {{ form.edit_user_id }}
         {{ form.edit_personnel_id }}
         
-        <!-- Role Selection Section (show only for new registration and not for armorers) -->
-        {% if not is_edit %}
+        <!-- Role Selection Section (show for new registration or when editing with proper authorization) -->
+        {% if not is_edit or can_edit_role %}
         {% if not user_is_armorer %}
-        <div class="form-section">
-            <h2>Registration Type</h2>
+        <div class="form-section" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 2rem; border-radius: 12px; border-left: 4px solid #0284c7;">
+            <h2>
+                <span class="section-icon"></span>
+                {% if is_edit %}
+                User Role
+                {% else %}
+                Registration Type
+                {% endif %}
+            </h2>
             <div class="form-group">
                 <label for="{{ form.role.id_for_label }}">
-                    {{ form.role.label }} <span class="required">*</span>
+                    {{ form.role.label }} 
+                    <span class="required-indicator" title="Required field"></span>
+                    <span class="tooltip-trigger">ℹ️
+                        <span class="tooltip-content">{% if is_edit %}Change user's access level{% else %}Determines account access level{% endif %}</span>
+                    </span>
                 </label>
                 {{ form.role }}
-                <p class="help-text">Select the role to determine what type of registration will be performed</p>
+                <span class="help-text">
+                    {% if is_edit %}
+                        Change the role to modify user's access level (requires Superuser or Admin privileges)
+                    {% else %}
+                        Select the role to determine what type of registration will be performed
+                    {% endif %}
+                </span>
                 {% if form.role.errors %}
                     <span class="error">{{ form.role.errors }}</span>
                 {% endif %}
             </div>
             
-            <div id="operationNotification" class="alert" style="display:none; padding: 1rem; border-radius: 8px; margin-top: 1rem;">
-                <i class="fas fa-info-circle"></i>
-                <span id="operationText"></span>
+            <div id="operationNotification" class="alert" style="display:none; padding: 1.25rem; border-radius: 10px; margin-top: 1.25rem; background: white; border: 2px solid #0284c7; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);">
+                <span id="operationText" style="font-size: 0.9375rem;"></span>
             </div>
         </div>
         {% else %}
         {# Hidden role field for armorers - always set to personnel #}
         <input type="hidden" name="role" value="personnel">
-        <div class="alert alert-info" style="padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460;">
-            <i class="fas fa-info-circle"></i>
-            <strong>Armorer Mode:</strong> You can register personnel records only. Contact an administrator for user account registration.
+        <div class="alert alert-info" style="padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border: 2px solid #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="width: 48px; height: 48px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                    🔧
+                </div>
+                <div>
+                    <strong style="font-size: 1.125rem; color: #1e40af;">Armorer Mode</strong>
+                    <p style="margin: 0.25rem 0 0 0; color: #1e40af;">You can register personnel records only. Contact an administrator for user account registration.</p>
+                </div>
+            </div>
         </div>
         {% endif %}
         {% endif %}
         
         <!-- Admin Restriction Field - Shown for both create and edit when role is Administrator -->
-        <div class="form-group" id="adminRestrictionGroup" style="display:none;">
+        <div class="form-group" id="adminRestrictionGroup" style="display:none; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border-left: 4px solid #f59e0b;">
             {% if is_superuser or not is_edit %}
             {# Superusers can always edit, non-superusers can only set during creation #}
             <label for="{{ form.admin_restriction.id_for_label }}">
-                Administrator Access Level <span class="required">*</span>
+                Administrator Access Level 
+                <span class="required-indicator" title="Required field"></span>
+                <span class="tooltip-trigger">ℹ️
+                    <span class="tooltip-content">Set permission level for admin</span>
+                </span>
             </label>
             {{ form.admin_restriction }}
-            <p class="help-text">Select access level for administrator accounts</p>
+            <span class="help-text">Select access level for administrator accounts</span>
             {% if form.admin_restriction.errors %}
                 <span class="error">{{ form.admin_restriction.errors }}</span>
             {% endif %}
@@ -379,9 +721,18 @@
             <label for="{{ form.admin_restriction.id_for_label }}">
                 Administrator Access Level
             </label>
-            <div class="form-field-disabled" style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6;">
-                <p style="margin: 0 0 5px 0;"><strong>{{ form.admin_restriction.value|default:"No restriction" }}</strong></p>
-                <p class="help-text" style="color: #dc3545; margin: 0;"><i class="fas fa-lock"></i> Only superusers can modify existing admin restrictions</p>
+            <div class="form-field-disabled" style="background: white; padding: 1.25rem; border-radius: 8px; border: 2px solid #f59e0b; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 40px; height: 40px; background: #f59e0b; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                        🔒
+                    </div>
+                    <div>
+                        <strong style="font-size: 1.0625rem; color: #92400e;">{{ form.admin_restriction.value|default:"No restriction" }}</strong>
+                        <p style="margin: 0.25rem 0 0 0; color: #dc2626; font-size: 0.875rem;">
+                            <i class="fas fa-lock"></i> Only superusers can modify existing admin restrictions
+                        </p>
+                    </div>
+                </div>
             </div>
             <input type="hidden" name="admin_restriction" value="{{ form.admin_restriction.value }}">
             {% endif %}
@@ -394,14 +745,19 @@
         
         <!-- User Account Section -->
         <div class="form-section field-user-account" id="userAccountSection">
-            <h2>User Account Information</h2>
+            <h2>
+                <span class="section-icon">👤</span>
+                User Account Information
+            </h2>
             
             <div class="form-row">
                 <div class="form-group">
                     <label for="{{ form.username.id_for_label }}">
-                        {{ form.username.label }} <span class="required">*</span>
+                        {{ form.username.label }} 
+                        <span class="required-indicator" title="Required field"></span>
                     </label>
                     {{ form.username }}
+                    <span class="help-text">Unique username for login</span>
                     {% if form.username.errors %}
                         <span class="error">{{ form.username.errors }}</span>
                     {% endif %}
@@ -412,6 +768,7 @@
                         {{ form.email.label }}
                     </label>
                     {{ form.email }}
+                    <span class="help-text">Email for account notifications</span>
                     {% if form.email.errors %}
                         <span class="error">{{ form.email.errors }}</span>
                     {% endif %}
@@ -421,12 +778,17 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="{{ form.password.id_for_label }}">
-                        {{ form.password.label }} {% if not is_edit %}<span class="required">*</span>{% endif %}
+                        {{ form.password.label }} 
+                        {% if not is_edit %}<span class="required-indicator" title="Required field"></span>{% endif %}
                     </label>
                     {{ form.password }}
-                    {% if form.password.help_text %}
-                        <p class="help-text">{{ form.password.help_text }}</p>
-                    {% endif %}
+                    <span class="help-text">
+                        {% if is_edit %}
+                            Leave blank to keep current password
+                        {% else %}
+                            Minimum 8 characters with letters and numbers
+                        {% endif %}
+                    </span>
                     {% if form.password.errors %}
                         <span class="error">{{ form.password.errors }}</span>
                     {% endif %}
@@ -434,9 +796,11 @@
                 
                 <div class="form-group">
                     <label for="{{ form.confirm_password.id_for_label }}">
-                        {{ form.confirm_password.label }} {% if not is_edit %}<span class="required">*</span>{% endif %}
+                        {{ form.confirm_password.label }} 
+                        {% if not is_edit %}<span class="required-indicator" title="Required field"></span>{% endif %}
                     </label>
                     {{ form.confirm_password }}
+                    <span class="help-text">Re-enter password for confirmation</span>
                     {% if form.confirm_password.errors %}
                         <span class="error">{{ form.confirm_password.errors }}</span>
                     {% endif %}
@@ -448,9 +812,7 @@
                         {{ form.department.label }}
                     </label>
                     {{ form.department }}
-                    {% if form.department.help_text %}
-                        <p class="help-text">{{ form.department.help_text }}</p>
-                    {% endif %}
+                    <span class="help-text">Organizational unit or department</span>
                     {% if form.department.errors %}
                         <span class="error">{{ form.department.errors }}</span>
                     {% endif %}
@@ -458,13 +820,13 @@
             </div>
             
             <div class="form-group">
-                <div class="checkbox-group">
+                <div class="checkbox-group" style="display: flex; align-items: center; gap: 0.75rem; padding: 1rem; background: #f9fafb; border-radius: 8px; border: 2px solid #e5e7eb;">
                     {{ form.is_active }}
-                    <label for="{{ form.is_active.id_for_label }}">
-                        {{ form.is_active.label }}
+                    <label for="{{ form.is_active.id_for_label }}" style="margin: 0; cursor: pointer; user-select: none;">
+                        <strong>{{ form.is_active.label }}</strong>
                     </label>
                 </div>
-                <p class="help-text">Inactive users cannot log in to the system.</p>
+                <span class="help-text">Inactive users cannot log in to the system</span>
                 {% if form.is_active.errors %}
                     <span class="error">{{ form.is_active.errors }}</span>
                 {% endif %}
@@ -473,112 +835,221 @@
         
         <!-- Personnel Information Section -->
         <div class="form-section field-personnel-info" id="personnelInfoSection">
-            <h2>Personnel Information</h2>
+            <h2>
+                <span class="section-icon"></span>
+                Personnel Information
+            </h2>
             
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="{{ form.surname.id_for_label }}">
-                        {{ form.surname.label }} <span class="required">*</span>
-                    </label>
-                    {{ form.surname }}
-                    {% if form.surname.errors %}
-                        <span class="error">{{ form.surname.errors }}</span>
-                    {% endif %}
+            <!-- Basic Info Subsection -->
+            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 4px solid #10b981;">
+                <h3 style="font-size: 1.125rem; color: #065f46; margin: 0 0 1rem 0; font-weight: 600;">
+                    👤 Basic Information
+                </h3>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ form.surname.id_for_label }}">
+                            {{ form.surname.label }} 
+                            <span class="required-indicator" title="Required field"></span>
+                        </label>
+                        {{ form.surname }}
+                        <span class="help-text">Last name (all capitals)</span>
+                        {% if form.surname.errors %}
+                            <span class="error">{{ form.surname.errors }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.firstname.id_for_label }}">
+                            {{ form.firstname.label }} 
+                            <span class="required-indicator" title="Required field"></span>
+                        </label>
+                        {{ form.firstname }}
+                        <span class="help-text">First name (all capitals)</span>
+                        {% if form.firstname.errors %}
+                            <span class="error">{{ form.firstname.errors }}</span>
+                        {% endif %}
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="{{ form.firstname.id_for_label }}">
-                        {{ form.firstname.label }} <span class="required">*</span>
-                    </label>
-                    {{ form.firstname }}
-                    {% if form.firstname.errors %}
-                        <span class="error">{{ form.firstname.errors }}</span>
-                    {% endif %}
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ form.middle_initial.id_for_label }}">
+                            {{ form.middle_initial.label }}
+                        </label>
+                        {{ form.middle_initial }}
+                        <span class="help-text">Middle initial only</span>
+                        {% if form.middle_initial.errors %}
+                            <span class="error">{{ form.middle_initial.errors }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.rank.id_for_label }}">
+                            {{ form.rank.label }} 
+                            <span class="required-indicator" title="Required field"></span>
+                        </label>
+                        {{ form.rank }}
+                        <span class="help-text">Military rank</span>
+                        {% if form.rank.errors %}
+                            <span class="error">{{ form.rank.errors }}</span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
             
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="{{ form.middle_initial.id_for_label }}">
-                        {{ form.middle_initial.label }}
-                    </label>
-                    {{ form.middle_initial }}
-                    {% if form.middle_initial.errors %}
-                        <span class="error">{{ form.middle_initial.errors }}</span>
-                    {% endif %}
+            <!-- Military Info Subsection -->
+            <div style="background: #eff6ff; padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 4px solid #2563eb;">
+                <h3 style="font-size: 1.125rem; color: #1e40af; margin: 0 0 1rem 0; font-weight: 600;">
+                    🪖 Military Details
+                </h3>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ form.serial.id_for_label }}">
+                            Serial Number 
+                            <span class="required-indicator" title="Required field"></span>
+                            <span class="tooltip-trigger">ℹ️
+                                <span class="tooltip-content">Enter numeric serial number only</span>
+                            </span>
+                        </label>
+                        {{ form.serial }}
+                        <span class="help-text">Numeric serial number (digits only)</span>
+                        {% if form.serial.errors %}
+                            <span class="error">{{ form.serial.errors }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.personnel_group.id_for_label }}">
+                            {{ form.personnel_group.label }} 
+                            <span class="required-indicator" title="Required field"></span>
+                        </label>
+                        {{ form.personnel_group }}
+                        <span class="help-text">Unit or command group</span>
+                        {% if form.personnel_group.errors %}
+                            <span class="error">{{ form.personnel_group.errors }}</span>
+                        {% endif %}
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="{{ form.rank.id_for_label }}">
-                        {{ form.rank.label }} <span class="required">*</span>
-                    </label>
-                    {{ form.rank }}
-                    {% if form.rank.errors %}
-                        <span class="error">{{ form.rank.errors }}</span>
-                    {% endif %}
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ form.personnel_status.id_for_label }}">
+                            {{ form.personnel_status.label }}
+                        </label>
+                        {{ form.personnel_status }}
+                        <span class="help-text">Current duty status</span>
+                        {% if form.personnel_status.errors %}
+                            <span class="error">{{ form.personnel_status.errors }}</span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
             
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="{{ form.serial.id_for_label }}">
-                        Serial Number <span class="required">*</span>
-                    </label>
-                    {{ form.serial }}
-                    {% if form.serial.help_text %}
-                        <p class="help-text">{{ form.serial.help_text }}</p>
-                    {% endif %}
-                    {% if form.serial.errors %}
-                        <span class="error">{{ form.serial.errors }}</span>
-                    {% endif %}
-                </div>
+            <!-- Contact Info Subsection -->
+            <div style="background: #fef3c7; padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 4px solid #f59e0b;">
+                <h3 style="font-size: 1.125rem; color: #92400e; margin: 0 0 1rem 0; font-weight: 600;">
+                    📞 Contact Information
+                </h3>
                 
-                <div class="form-group">
-                    <label for="{{ form.personnel_group.id_for_label }}">
-                        {{ form.personnel_group.label }} <span class="required">*</span>
-                    </label>
-                    {{ form.personnel_group }}
-                    {% if form.personnel_group.errors %}
-                        <span class="error">{{ form.personnel_group.errors }}</span>
-                    {% endif %}
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ form.tel.id_for_label }}">
+                            {{ form.tel.label }} 
+                            <span class="required-indicator" title="Required field"></span>
+                            <span class="tooltip-trigger">ℹ️
+                                <span class="tooltip-content">Auto-formats to +639XXXXXXXXX</span>
+                            </span>
+                        </label>
+                        {{ form.tel }}
+                        <span class="help-text">Philippine mobile number (auto-formatted)</span>
+                        {% if form.tel.errors %}
+                            <span class="error">{{ form.tel.errors }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.personnel_email.id_for_label }}">
+                            {{ form.personnel_email.label }}
+                            <span class="tooltip-trigger">ℹ️
+                                <span class="tooltip-content">Auto-corrects to @gmail.com</span>
+                            </span>
+                        </label>
+                        {{ form.personnel_email }}
+                        <span class="help-text">Personnel email (auto-corrects to @gmail.com)</span>
+                        {% if form.personnel_email.errors %}
+                            <span class="error">{{ form.personnel_email.errors }}</span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
             
-            <div class="form-row">
+            <!-- Audit Documentation (Edit Only) -->
+            {% if is_edit %}
+            <div style="background: #fef2f2; padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 4px solid #dc2626;">
+                <h3 style="font-size: 1.125rem; color: #991b1b; margin: 0 0 1rem 0; font-weight: 600;">
+                    📋 Audit Documentation
+                </h3>
+                
                 <div class="form-group">
-                    <label for="{{ form.tel.id_for_label }}">
-                        {{ form.tel.label }} <span class="required">*</span>
+                    <label for="{{ form.change_reason.id_for_label }}">
+                        {{ form.change_reason.label }}
+                        <span class="tooltip-trigger">ℹ️
+                            <span class="tooltip-content">Document why changes were made</span>
+                        </span>
                     </label>
-                    {{ form.tel }}
-                    {% if form.tel.help_text %}
-                        <p class="help-text">{{ form.tel.help_text }}</p>
-                    {% endif %}
-                    {% if form.tel.errors %}
-                        <span class="error">{{ form.tel.errors }}</span>
+                    {{ form.change_reason }}
+                    <span class="help-text">{{ form.change_reason.help_text }}</span>
+                    {% if form.change_reason.errors %}
+                        <span class="error">{{ form.change_reason.errors }}</span>
                     {% endif %}
                 </div>
                 
-                <div class="form-group">
-                    <label for="{{ form.personnel_status.id_for_label }}">
-                        {{ form.personnel_status.label }}
-                    </label>
-                    {{ form.personnel_status }}
-                    {% if form.personnel_status.errors %}
-                        <span class="error">{{ form.personnel_status.errors }}</span>
-                    {% endif %}
+                <!-- Display Current Audit Context -->
+                {% if edit_user.personnel %}
+                <div style="background: white; padding: 1rem; border-radius: 6px; margin-top: 1rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; font-size: 0.875rem;">
+                        <div>
+                            <strong style="color: #6b7280;">Version:</strong>
+                            <span style="display: inline-block; background: #dbeafe; color: #1e40af; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600;">
+                                v{{ edit_user.personnel.version|default:"1" }}
+                            </span>
+                        </div>
+                        <div>
+                            <strong style="color: #6b7280;">Created By:</strong>
+                            <span>{{ edit_user.personnel.created_by|default:"System" }}</span>
+                        </div>
+                        <div>
+                            <strong style="color: #6b7280;">Modified By:</strong>
+                            <span>{{ edit_user.personnel.modified_by|default:"N/A" }}</span>
+                        </div>
+                        <div>
+                            <strong style="color: #6b7280;">Last Updated:</strong>
+                            <span>{{ edit_user.personnel.updated_at|date:"Y-m-d H:i" }}</span>
+                        </div>
+                    </div>
                 </div>
+                {% endif %}
             </div>
+            {% endif %}
             
-            <div class="form-row single">
+            <!-- Personnel Picture -->
+            <div style="background: #f3f4f6; padding: 1.5rem; border-radius: 10px; border-left: 4px solid #9ca3af;">
+                <h3 style="font-size: 1.125rem; color: #374151; margin: 0 0 1rem 0; font-weight: 600;">
+                    📷 Personnel Photo
+                </h3>
+                
                 <div class="form-group">
                     <label for="{{ form.personnel_picture.id_for_label }}">
                         {{ form.personnel_picture.label }}
                     </label>
                     {{ form.personnel_picture }}
+                    <span class="help-text">Upload a clear photo (JPG, PNG, max 2MB)</span>
                     {% if is_edit and edit_user.personnel and edit_user.personnel.picture %}
-                        <div class="current-image">
-                            <small>Current:</small>
-                            <img src="{{ edit_user.personnel.picture.url }}" alt="Personnel Photo">
+                        <div class="current-image" style="margin-top: 1rem; padding: 1rem; background: white; border-radius: 8px; border: 2px solid #e5e7eb;">
+                            <small style="display: block; color: #6b7280; margin-bottom: 0.5rem; font-weight: 600;">Current Photo:</small>
+                            <img src="{{ edit_user.personnel.picture.url }}" alt="Personnel Photo" style="max-height: 150px; border-radius: 8px; border: 3px solid #667eea; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                         </div>
                     {% endif %}
                     {% if form.personnel_picture.errors %}
@@ -589,11 +1060,20 @@
         </div>
         
         <!-- Form Actions -->
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">
-                {{ submit_text|default:"Register" }}
+        <div class="form-actions" style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2.5rem; padding-top: 2rem; border-top: 2px solid #e5e7eb;">
+            <button type="submit" class="btn btn-primary" style="min-width: 150px; padding: 1rem 2rem; font-size: 1.0625rem;">
+                {% if is_edit %}
+                    <i class="fas fa-save" style="margin-right: 0.5rem;"></i>
+                    {{ submit_text|default:"Save Changes" }}
+                {% else %}
+                    <i class="fas fa-user-plus" style="margin-right: 0.5rem;"></i>
+                 {{ submit_text|default:"Register" }}
+                {% endif %}
             </button>
-            <a href="{% if is_edit %}{% url 'armguard_admin:user_management' %}{% else %}{% url 'armguard_admin:dashboard' %}{% endif %}" class="btn btn-secondary">
+            <a href="{% if is_edit %}{% url 'armguard_admin:user_management' %}{% else %}{% url 'armguard_admin:dashboard' %}{% endif %}" 
+               class="btn btn-secondary" 
+               style="min-width: 120px; padding: 1rem 2rem; font-size: 1.0625rem; text-decoration: none; text-align: center;">
+                <i class="fas fa-times" style="margin-right: 0.5rem;"></i>
                 Cancel
             </a>
         </div>
@@ -612,6 +1092,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const adminRestrictionGroup = document.getElementById('adminRestrictionGroup');
     const hiddenRoleValue = document.getElementById('hidden_role_value');
     
+    // Check if we're in edit mode with linked personnel
+    const isEditMode = operationTypeInput && (operationTypeInput.value === 'edit_both' || operationTypeInput.value === 'edit_user' || operationTypeInput.value === 'edit_personnel');
+    const hasLinkedPersonnel = operationTypeInput && operationTypeInput.value === 'edit_both';
+    
     function updateOperationBasedOnRole() {
         // Get role from select (create mode) or hidden input (edit mode)
         let role = '';
@@ -622,9 +1106,60 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         if (!role || !operationTypeInput) return;
-        let operationType = '';
-        let notificationClass = '';
-        let notificationMessage = '';
+        
+        // In edit mode, preserve the original operation type
+        if (isEditMode) {
+            // Don't change operation_type in edit mode
+            // Just update visibility based on current operation_type
+            if (hasLinkedPersonnel) {
+                // edit_both: Show both sections
+                if (userSection) userSection.style.display = 'block';
+                if (personnelSection) personnelSection.style.display = 'block';
+            } else if (operationTypeInput.value === 'edit_user') {
+                // edit_user: Show only user section
+                if (userSection) userSection.style.display = 'block';
+                if (personnelSection) personnelSection.style.display = 'none';
+            } else if (operationTypeInput.value === 'edit_personnel') {
+                // edit_personnel: Show only personnel section
+                if (userSection) userSection.style.display = 'none';
+                if (personnelSection) personnelSection.style.display = 'block';
+            }
+        } else {
+            // Create mode: Set operation type and visibility based on role
+            let operationType = '';
+            let notificationClass = '';
+            let notificationMessage = '';
+            
+            // Set operation type and notification based on role
+            if (role === 'personnel') {
+                operationType = 'create_personnel_only';
+                notificationClass = 'alert-info';
+                notificationMessage = '<i class="fas fa-user"></i> <strong>Personnel Registration:</strong> Creating personnel record only (no user login account)';
+                // Hide user section, show personnel section
+                if (userSection) userSection.style.display = 'none';
+                if (personnelSection) personnelSection.style.display = 'block';
+            } else if (role === 'armorer' || role === 'admin') {
+                operationType = 'create_user_with_personnel';
+                notificationClass = 'alert-info';
+                const roleLabel = role === 'armorer' ? 'Armorer' : 'Administrator';
+                notificationMessage = '<i class="fas fa-user-shield"></i> <strong>' + roleLabel + ' Registration:</strong> Creating user login + personnel record';
+                // Show both sections
+                if (userSection) userSection.style.display = 'block';
+                if (personnelSection) personnelSection.style.display = 'block';
+            }
+            
+            // Update operation type hidden input
+            operationTypeInput.value = operationType;
+            
+            // Update notification
+            if (operationNotification && notificationMessage) {
+                operationNotification.className = 'alert ' + notificationClass;
+                operationText.innerHTML = notificationMessage;
+                operationNotification.style.display = 'block';
+            } else if (operationNotification) {
+                operationNotification.style.display = 'none';
+            }
+        }
         
         // Show/hide admin restriction field
         if (adminRestrictionGroup) {
@@ -634,45 +1169,262 @@ document.addEventListener('DOMContentLoaded', function() {
                 adminRestrictionGroup.style.display = 'none';
             }
         }
-        
-        // Set operation type and notification based on role
-        if (role === 'personnel') {
-            operationType = 'create_personnel_only';
-            notificationClass = 'alert-info';
-            notificationMessage = '<i class="fas fa-user"></i> <strong>Personnel Registration:</strong> Creating personnel record only (no user login account)';
-            // Hide user section, show personnel section
-            if (userSection) userSection.style.display = 'none';
-            if (personnelSection) personnelSection.style.display = 'block';
-        } else if (role === 'armorer' || role === 'admin') {
-            operationType = 'create_user_with_personnel';
-            notificationClass = 'alert-info';
-            const roleLabel = role === 'armorer' ? 'Armorer' : 'Administrator';
-            notificationMessage = '<i class="fas fa-user-shield"></i> <strong>' + roleLabel + ' Registration:</strong> Creating user login + personnel record';
-            // Show both sections
-            if (userSection) userSection.style.display = 'block';
-            if (personnelSection) personnelSection.style.display = 'block';
-        }
-        
-        // Update operation type hidden input
-        operationTypeInput.value = operationType;
-        
-        // Update notification
-        if (operationNotification && notificationMessage) {
-            operationNotification.className = 'alert ' + notificationClass;
-            operationText.innerHTML = notificationMessage;
-            operationNotification.style.display = 'block';
-        } else if (operationNotification) {
-            operationNotification.style.display = 'none';
-        }
     }
     
-    // Listen to role changes
+    // Listen to role changes (works in both create and edit modes when roleSelect exists)
     if (roleSelect) {
         roleSelect.addEventListener('change', updateOperationBasedOnRole);
     }
     
     // Set initial state (works in both create and edit modes)
     updateOperationBasedOnRole();
+    
+    // Enhanced Form Validation with Visual Feedback
+    const form = document.getElementById('universalForm');
+    const formControls = document.querySelectorAll('.form-control');
+    
+    // Real-time validation for form controls
+    formControls.forEach(control => {
+        // Add focus effect
+        control.addEventListener('focus', function() {
+            this.classList.add('field-focused');
+        });
+        
+        control.addEventListener('blur', function() {
+            this.classList.remove('field-focused');
+            validateField(this);
+        });
+        
+        control.addEventListener('input', function() {
+            // Clear error state while typing
+            if (this.classList.contains('is-invalid')) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
+    
+    function validateField(field) {
+        const value = field.value.trim();
+        const required = field.hasAttribute('required');
+        const type = field.type;
+        
+        // Check if field is required and empty
+        if (required && !value) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+            return false;
+        }
+        
+        // Email validation
+        if (type === 'email' && value) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(value)) {
+                field.classList.add('is-invalid');
+                field.classList.remove('is-valid');
+                return false;
+            }
+        }
+        
+        // Mark valid if passes all checks
+        if (value) {
+            field.classList.add('is-valid');
+            field.classList.remove('is-invalid');
+        }
+        
+        return true;
+    }
+    
+    // Progress indicator updates (for registration forms)
+    const progressSteps = document.querySelectorAll('.progress-step');
+    
+    function updateProgress(currentStep) {
+        progressSteps.forEach((step, index) => {
+            if (index < currentStep) {
+                step.classList.add('completed');
+                step.classList.remove('active');
+            } else if (index === currentStep) {
+                step.classList.add('active');
+                step.classList.remove('completed');
+            } else {
+                step.classList.remove('active', 'completed');
+            }
+        });
+    }
+    
+    // Update progress based on form interaction
+    if (roleSelect) {
+        roleSelect.addEventListener('change', function() {
+            updateProgress(1); // Move to Account Info step
+        });
+    }
+    
+    // Monitor form sections for progress
+    const usernameField = document.getElementById('id_username');
+    if (usernameField) {
+        usernameField.addEventListener('blur', function() {
+            if (this.value) {
+                updateProgress(2); // Move to Personnel Data step
+            }
+        });
+    }
+    
+    const surnameField = document.getElementById('id_surname');
+    if (surnameField) {
+        surnameField.addEventListener('blur', function() {
+            if (this.value) {
+                updateProgress(3); // Move to Review step
+            }
+        });
+    }
+    
+    // Auto-format phone number
+    const telField = document.getElementById('id_tel');
+    if (telField) {
+        telField.addEventListener('input', function() {
+            let value = this.value.replace(/\D/g, ''); // Remove non-digits
+            
+            // Auto-format to Philippine number
+            if (value.length > 0 && !value.startsWith('63')) {
+                if (value.startsWith('0')) {
+                    value = '63' + value.substring(1);
+                } else if (value.startsWith('9')) {
+                    value = '63' + value;
+                }
+            }
+            
+            // Format display (show +639XXXXXXXXX)
+            if (value.length >= 2) {
+                this.value = '+' + value;
+            }
+        });
+    }
+    
+    // Serial number numeric validation
+    const serialField = document.getElementById('id_serial');
+    if (serialField) {
+        // Allow only numeric input
+        serialField.addEventListener('input', function() {
+            // Remove non-numeric characters
+            this.value = this.value.replace(/\D/g, '');
+            
+            // Clear error state while typing
+            if (this.classList.contains('is-invalid')) {
+                this.classList.remove('is-invalid');
+                const errorSpan = this.parentElement.querySelector('.error');
+                if (errorSpan && errorSpan.textContent.includes('numeric')) {
+                    errorSpan.remove();
+                }
+            }
+        });
+        
+        serialField.addEventListener('blur', function() {
+            const value = this.value.trim();
+            
+            // Validate that it contains only numbers
+            if (value && !/^\d+$/.test(value)) {
+                this.classList.add('is-invalid');
+                const errorSpan = this.parentElement.querySelector('.error');
+                if (!errorSpan) {
+                    const newError = document.createElement('span');
+                    newError.className = 'error';
+                    newError.textContent = 'Serial number must contain only numeric digits';
+                    this.parentElement.appendChild(newError);
+                }
+            } else if (value) {
+                this.classList.add('is-valid');
+                this.classList.remove('is-invalid');
+                const errorSpan = this.parentElement.querySelector('.error');
+                if (errorSpan && errorSpan.textContent.includes('numeric')) {
+                    errorSpan.remove();
+                }
+            }
+        });
+    }
+    
+    // Email field synchronization (email and personnel_email share values)
+    const emailField = document.getElementById('id_email');
+    const personnelEmailField = document.getElementById('id_personnel_email');
+    
+    if (emailField && personnelEmailField) {
+        // When account email changes, update personnel email
+        emailField.addEventListener('input', function() {
+            if (this.value.trim()) {
+                personnelEmailField.value = this.value;
+                // Trigger validation on personnel email field
+                personnelEmailField.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+        
+        // When personnel email changes, update account email
+        personnelEmailField.addEventListener('input', function() {
+            if (this.value.trim()) {
+                emailField.value = this.value;
+                // Trigger validation on email field
+                emailField.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+        
+        // Sync on blur as well (when user leaves the field)
+        emailField.addEventListener('blur', function() {
+            if (this.value.trim() && !personnelEmailField.value.trim()) {
+                personnelEmailField.value = this.value;
+            }
+        });
+        
+        personnelEmailField.addEventListener('blur', function() {
+            if (this.value.trim() && !emailField.value.trim()) {
+                emailField.value = this.value;
+            }
+        });
+    }
+    
+    // Form submission with loading state
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            
+            // Add loading state
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                
+                // Re-enable after 5 seconds (fallback)
+                setTimeout(function() {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }, 5000);
+            }
+        });
+    }
+    
+    // Character counter for textareas
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+        const maxLength = textarea.getAttribute('maxlength');
+        if (maxLength) {
+            const counter = document.createElement('div');
+            counter.className = 'char-counter';
+            counter.style.fontSize = '0.875rem';
+            counter.style.color = '#6b7280';
+            counter.style.marginTop = '0.25rem';
+            counter.style.textAlign = 'right';
+            
+            const updateCounter = () => {
+                const remaining = maxLength - textarea.value.length;
+                counter.textContent = `${remaining} characters remaining`;
+                if (remaining < 20) {
+                    counter.style.color = '#ef4444';
+                } else {
+                    counter.style.color = '#6b7280';
+                }
+            };
+            
+            textarea.addEventListener('input', updateCounter);
+            textarea.parentElement.appendChild(counter);
+            updateCounter();
+        }
+    });
 });
 </script>
 {% endblock %}

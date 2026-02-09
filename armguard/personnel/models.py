@@ -1,11 +1,67 @@
 """
 Personnel Models for ArmGuard
 Based on APP/app/backend/database.py personnel table
+
+=== HIGH-QUALITY AUDIT LOGGING ===
+
+This model implements comprehensive audit logging that complies with military-grade 
+audit trail requirements:
+
+1. AUTOMATIC AUDIT LOGGING:
+   - All CREATE, UPDATE, DELETE operations are automatically logged
+   - Field-level change tracking (before/after values)
+   - User attribution (who performed the action)
+   - IP address and user agent tracking
+   - Timestamp for all operations
+
+2. USAGE IN VIEWS:
+   To enable automatic audit logging in your views:
+   
+   # Method 1: Set audit context manually
+   personnel._audit_user = request.user
+   personnel._audit_ip = request.META.get('REMOTE_ADDR')
+   personnel._audit_user_agent = request.META.get('HTTP_USER_AGENT', '')
+   personnel.save()
+   
+   # Method 2: Use helper method (recommended)
+   personnel.set_audit_context(request).save()
+
+3. AUDIT HISTORY RETRIEVAL:
+   # Get all audit logs for a personnel record
+   audit_logs = personnel.get_audit_history()
+   
+   # Display in template:
+   {% for log in personnel.get_audit_history %}
+       {{ log.timestamp }} - {{ log.action }} by {{ log.performed_by }}
+       Changes: {{ log.changes }}
+   {% endfor %}
+
+4. SOFT DELETE WITH AUDIT:
+   # Soft delete with audit logging
+   personnel.soft_delete(deleted_by=request.user)
+
+5. TRACKED FIELDS:
+   - surname, firstname, middle_initial
+   - rank, serial, group
+   - tel, status, classification
+   - registration_date
+   
+6. AUDIT LOG STORAGE:
+   All audit logs are stored in the AuditLog model (admin app) with:
+   - Indexed queries for performance
+   - JSON change tracking
+   - Full audit trail preservation
+   - Never deleted (permanent record)
+
+See: admin/models.py (AuditLog, DeletedRecord)
+See: admin/signals.py (personnel_post_save_with_audit, delete_personnel_with_audit)
 """
 from django.db import models
-from django.core.validators import RegexValidator, FileExtensionValidator
+from django.core.validators import RegexValidator, FileExtensionValidator, EmailValidator
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.contrib.auth.models import User
+from simple_history.models import HistoricalRecords
 
 
 class PersonnelManager(models.Manager):
@@ -28,9 +84,13 @@ class Personnel(models.Model):
     # Status choices
     STATUS_ACTIVE = 'Active'
     STATUS_INACTIVE = 'Inactive'
+    STATUS_SUSPENDED = 'Suspended'
+    STATUS_ARCHIVED = 'Archived'
     STATUS_CHOICES = [
         (STATUS_ACTIVE, 'Active'),
         (STATUS_INACTIVE, 'Inactive'),
+        (STATUS_SUSPENDED, 'Suspended'),
+        (STATUS_ARCHIVED, 'Archived'),
     ]
     
     # Classification choices
@@ -86,6 +146,39 @@ class Personnel(models.Model):
     # Link to User account (optional - personnel without login won't have this)
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='personnel')
     
+    # Comprehensive audit tracking
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='personnel_created',
+        help_text="User who created this personnel record"
+    )
+    created_ip = models.GenericIPAddressField(null=True, blank=True, help_text="IP address of the creator")
+    created_user_agent = models.TextField(blank=True, help_text="User agent of the creator")
+    
+    modified_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='personnel_modified',
+        help_text="User who last modified this personnel record"
+    )
+    updated_ip = models.GenericIPAddressField(null=True, blank=True, help_text="IP address of the last modifier")
+    updated_user_agent = models.TextField(blank=True, help_text="User agent of the last modifier")
+    
+    deleted_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='personnel_deleted_by',
+        help_text="User who deleted this personnel record"
+    )
+    deleted_ip = models.GenericIPAddressField(null=True, blank=True, help_text="IP address of the deleter")
+    
     # Personal Information
     surname = models.CharField(max_length=100)
     firstname = models.CharField(max_length=100)
@@ -102,7 +195,7 @@ class Personnel(models.Model):
     serial = models.CharField(
         max_length=20, 
         unique=True,
-        help_text="Serial number (6 digits for enlisted, or O-XXXXXX for officers)"
+        help_text="Serial number (numeric only)"
     )
     group = models.CharField(max_length=10, choices=GROUP_CHOICES, default='HAS')
     
@@ -111,6 +204,12 @@ class Personnel(models.Model):
         max_length=13,
         validators=[RegexValidator(r'^\+639\d{9}$', 'Phone must be in format +639XXXXXXXXX')],
         help_text="+639XXXXXXXXX"
+    )
+    email = models.EmailField(
+        blank=True,
+        null=True,
+        help_text="Email address (must end with @gmail.com)",
+        validators=[EmailValidator(message="Enter a valid email address")]
     )
     
     # System fields
@@ -134,6 +233,44 @@ class Personnel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True, help_text="Soft delete timestamp - record kept for reference")
+    
+    # Soft delete flag
+    is_deleted = models.BooleanField(default=False, help_text="Soft delete flag for queries")
+    
+    # Version and change tracking
+    version = models.PositiveIntegerField(default=1, help_text="Record version - increments on update")
+    change_reason = models.TextField(blank=True, help_text="Reason for this change (for audit trail)")
+    
+    # Status tracking
+    status_changed_at = models.DateTimeField(null=True, blank=True, help_text="When status was last changed")
+    status_changed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='personnel_status_changed',
+        help_text="User who last changed the status"
+    )
+    
+    # Session tracking
+    session_id = models.CharField(max_length=100, blank=True, help_text="Session ID of the last modification")
+    
+    # Data retention and compliance
+    retention_period = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Data retention period in days (for compliance)"
+    )
+    can_purge_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Date when this record can be permanently deleted (GDPR compliance)"
+    )
+    
+    # Historical tracking - automatically tracks all field changes
+    history = HistoricalRecords(
+        history_change_reason_field=models.TextField(null=True, blank=True)
+    )
     
     # Managers
     objects = PersonnelManager()  # Default manager excludes soft-deleted
@@ -165,12 +302,7 @@ class Personnel(models.Model):
         return self.rank in officer_ranks
     
     def get_serial_display(self):
-        """Return formatted serial number with O- prefix for officers"""
-        if self.is_officer():
-            # Add O- prefix if not already present
-            if not self.serial.startswith('O-'):
-                return f"O-{self.serial}"
-            return self.serial
+        """Return serial number (numeric format)"""
         return self.serial
     
     def get_classification_from_rank(self):
@@ -186,14 +318,84 @@ class Personnel(models.Model):
         """Return personnel class - EP for Enlisted, O for Officer"""
         return 'O' if self.is_officer() else 'EP'
     
+    def clean(self):
+        """
+        Validate model fields before save.
+        - Email must end with @gmail.com if provided
+        """
+        super().clean()
+        
+        # Validate email format if provided
+        if self.email and not self.email.lower().endswith('@gmail.com'):
+            # Auto-correct to @gmail.com (can be changed to raise error if preferred)
+            local_part = self.email.split('@')[0]
+            self.email = f"{local_part}@gmail.com"
+    
     def save(self, *args, **kwargs):
-        """Override save to generate ID, auto-set classification, and format names"""
+        """
+        Override save to:
+        - Generate ID and QR code
+        - Auto-set classification
+        - Format names based on officer/enlisted status
+        - Track version changes
+        - Track status changes
+        - Handle comprehensive audit context
+        - Auto-correct email format
+        
+        For automatic audit logging, set audit context before calling save():
+            personnel._audit_user = request.user
+            personnel._audit_ip = request.META.get('REMOTE_ADDR')
+            personnel._audit_user_agent = request.META.get('HTTP_USER_AGENT', '')
+            personnel._audit_session = request.session.session_key
+            personnel.save()
+        
+        Or use the set_audit_context() method:
+            personnel.set_audit_context(request)
+            personnel.save()
+        """
+        # Track if this is an update (has pk) or creation
+        is_update = bool(self.pk)
+        
+        # Set created_by on first save if not already set
+        if not is_update and not self.created_by:
+            if hasattr(self, '_audit_user') and self._audit_user:
+                self.created_by = self._audit_user
+                self.created_ip = getattr(self, '_audit_ip', None)
+                self.created_user_agent = getattr(self, '_audit_user_agent', '')
+        
+        # Update modified_by on every save if audit context is set
+        if hasattr(self, '_audit_user') and self._audit_user:
+            self.modified_by = self._audit_user
+            self.updated_ip = getattr(self, '_audit_ip', None)
+            self.updated_user_agent = getattr(self, '_audit_user_agent', '')
+            self.session_id = getattr(self, '_audit_session', '')
+        
+        # Track status changes
+        if is_update:
+            try:
+                old_instance = Personnel.objects.get(pk=self.pk)
+                if old_instance.status != self.status:
+                    self.status_changed_at = timezone.now()
+                    if hasattr(self, '_audit_user') and self._audit_user:
+                        self.status_changed_by = self._audit_user
+            except Personnel.DoesNotExist:
+                pass
+        
+        # Increment version on update
+        if is_update:
+            self.version += 1
+        
         # Auto-determine classification if not set or using old values
         if not self.classification or self.classification in ['REGULAR', 'ADMIN']:
             if hasattr(self, 'user') and self.user and self.user.is_superuser:
                 self.classification = 'SUPERUSER'
             else:
                 self.classification = self.get_classification_from_rank()
+        
+        # Auto-correct email format
+        if self.email and not self.email.lower().endswith('@gmail.com'):
+            local_part = self.email.split('@')[0]
+            self.email = f"{local_part}@gmail.com"
         
         # Format names based on classification
         if self.is_officer():
@@ -222,18 +424,127 @@ class Personnel(models.Model):
         if not self.qr_code:
             self.qr_code = self.id
         
+        # Set change reason from history if available
+        if hasattr(self, '_change_reason'):
+            self.change_reason = self._change_reason
+        
         super().save(*args, **kwargs)
     
-    def soft_delete(self):
-        """Soft delete: Mark as deleted and inactive, keep record for reference"""
+    def soft_delete(self, deleted_by=None):
+        """
+        Soft delete: Mark as deleted and inactive, keep record for reference.
+        Automatically creates audit log entry.
+        
+        Args:
+            deleted_by: User performing the deletion (for audit logging)
+        """
         self.deleted_at = timezone.now()
+        self.is_deleted = True
         self.status = self.STATUS_INACTIVE
+        
+        if deleted_by:
+            self.deleted_by = deleted_by
+            self.modified_by = deleted_by
+            self._audit_user = deleted_by
+        
         self.save()
+        
+        # Create soft delete audit log
+        if deleted_by:
+            self.create_audit_log(
+                action='DELETE',
+                personnel=self,
+                performed_by=deleted_by,
+                description=f"Soft deleted personnel: {self.get_full_name()} - marked as inactive and hidden",
+                changes={'soft_delete': {'status': self.status, 'deleted_at': str(self.deleted_at)}}
+            )
         
         # Deactivate associated QR code (keep in DB but mark as inactive)
         from qr_manager.models import QRCodeImage
         QRCodeImage.objects.filter(qr_type='personnel', reference_id=self.id).update(
             is_active=False,
             deleted_at=timezone.now()
+        )
+    
+    def set_audit_context(self, request):
+        """
+        Set audit context from Django request for automatic audit logging.
+        Call this before save() to enable comprehensive audit tracking.
+        
+        Includes: user, IP address, user agent, and session ID
+        
+        Usage:
+            personnel.set_audit_context(request)
+            personnel.save()
+        """
+        self._audit_user = request.user if request.user.is_authenticated else None
+        self._audit_ip = request.META.get('REMOTE_ADDR')
+        self._audit_user_agent = request.META.get('HTTP_USER_AGENT', '')
+        self._audit_session = request.session.session_key if hasattr(request, 'session') else ''
+        return self
+    
+    def get_audit_history(self):
+        """Get complete audit history for this personnel record"""
+        from admin.models import AuditLog
+        return AuditLog.objects.filter(
+            target_model='Personnel',
+            target_id=self.id
+        ).select_related('performed_by').order_by('-timestamp')
+    
+    def get_field_changes(self, old_instance):
+        """
+        Compare this instance with old instance and return dictionary of changes.
+        Used for audit logging.
+        """
+        changes = {}
+        
+        # Fields to track
+        tracked_fields = [
+            'surname', 'firstname', 'middle_initial', 'rank', 'serial', 'group',
+            'tel', 'email', 'status', 'classification', 'registration_date'
+        ]
+        
+        for field in tracked_fields:
+            old_value = getattr(old_instance, field, None) if old_instance else None
+            new_value = getattr(self, field, None)
+            
+            # Convert values to strings for comparison
+            old_str = str(old_value) if old_value is not None else ''
+            new_str = str(new_value) if new_value is not None else ''
+            
+            if old_str != new_str:
+                changes[field] = {
+                    'old': old_str,
+                    'new': new_str
+                }
+        
+        return changes
+    
+    @classmethod
+    def create_audit_log(cls, action, personnel, performed_by, description, changes=None, ip_address=None, user_agent=None):
+        """
+        Create audit log entry for personnel action.
+        
+        Args:
+            action: Action type (CREATE, UPDATE, DELETE, etc.)
+            personnel: Personnel instance
+            performed_by: User who performed action
+            description: Human-readable description
+            changes: Dictionary of before/after values
+            ip_address: IP address of requester
+            user_agent: User agent string
+        """
+        from admin.models import AuditLog
+        
+        return AuditLog.objects.create(
+            performed_by=performed_by,
+            action=action,
+            target_model='Personnel',
+            target_id=personnel.id,
+            target_name=personnel.get_full_name(),
+            description=description,
+            changes=changes or {},
+            ip_address=ip_address,
+            user_agent=user_agent or ''  # Provide default empty string
         )
 

@@ -1,21 +1,48 @@
 """
 Admin Signals - Centralized signal handlers for all apps
-Handles QR code generation and file cleanup on deletion
+Handles QR code generation, file cleanup, and comprehensive audit logging
 """
 
-from django.db.models.signals import post_save, pre_delete
+from django.db.models.signals import post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
+from django.utils import timezone
 import os
 
 
+# ============================================================================
+# Personnel Signals with Audit Logging
+# ============================================================================
+
+@receiver(pre_save, sender='personnel.Personnel')
+def personnel_pre_save_handler(sender, instance, **kwargs):
+    """
+    Store old instance data before save for change tracking.
+    This is called before the save() method.
+    """
+    if instance.pk:
+        # Existing record - fetch old data for comparison
+        try:
+            old_instance = sender.objects.get(pk=instance.pk)
+            # Store old instance as temporary attribute for post_save signal
+            instance._old_instance = old_instance
+        except sender.DoesNotExist:
+            instance._old_instance = None
+    else:
+        # New record
+        instance._old_instance = None
+
+
 @receiver(post_save, sender='personnel.Personnel')
-def generate_personnel_qr_code(sender, instance, created, **kwargs):
-    """Generate QR code for personnel after save"""
+def personnel_post_save_with_audit(sender, instance, created, **kwargs):
+    """
+    Generate QR code and create audit log after personnel save.
+    This integrates audit logging with QR code generation.
+    """
     from qr_manager.models import QRCodeImage
+    from admin.models import AuditLog
     
-    # Create/update QRCodeImage for this personnel
-    # Use all_objects to check for inactive QR codes too
+    # 1. Generate/update QR code (existing functionality)
     qr_obj, created_qr = QRCodeImage.all_objects.get_or_create(
         qr_type=QRCodeImage.TYPE_PERSONNEL,
         reference_id=instance.id,
@@ -32,19 +59,156 @@ def generate_personnel_qr_code(sender, instance, created, **kwargs):
             qr_obj.is_active = True
             qr_obj.deleted_at = None
         qr_obj.save()
+    
+    # 2. Create audit log entry
+    try:
+        if created:
+            # New personnel created
+            action = AuditLog.ACTION_CREATE
+            description = f"Created personnel: {instance.get_full_name()} ({instance.rank or 'No Rank'}) - {instance.serial}"
+            changes = {
+                'created': {
+                    'surname': instance.surname,
+                    'firstname': instance.firstname,
+                    'middle_initial': instance.middle_initial or '',
+                    'rank': instance.rank or '',
+                    'serial': instance.serial,
+                    'group': instance.group,
+                    'classification': instance.classification,
+                    'tel': instance.tel,
+                    'status': instance.status,
+                }
+            }
+        else:
+            # Existing personnel updated
+            action = AuditLog.ACTION_PERSONNEL_EDIT
+            old_instance = getattr(instance, '_old_instance', None)
+            
+            if old_instance:
+                # Get field-level changes
+                changes = instance.get_field_changes(old_instance)
+                
+                if changes:
+                    # Build description from changes
+                    change_list = [f"{field}: '{changes[field]['old']}' → '{changes[field]['new']}'" 
+                                   for field in changes.keys()]
+                    description = f"Updated personnel: {instance.get_full_name()}. Changes: {', '.join(change_list[:3])}"
+                    if len(change_list) > 3:
+                        description += f" and {len(change_list) - 3} more fields"
+                else:
+                    # No actual changes detected (probably just save() called)
+                    description = f"Personnel record accessed/saved: {instance.get_full_name()}"
+                    changes = {}
+            else:
+                description = f"Updated personnel: {instance.get_full_name()}"
+                changes = {}
+        
+        # Create the audit log (only if we have a performer)
+        if hasattr(instance, '_audit_user') and instance._audit_user:
+            AuditLog.objects.create(
+                performed_by=instance._audit_user,
+                action=action,
+                target_model='Personnel',
+                target_id=instance.id,
+                target_name=instance.get_full_name(),
+                description=description,
+                changes=changes,
+                ip_address=getattr(instance, '_audit_ip', None),
+                user_agent=getattr(instance, '_audit_user_agent', '')
+            )
+        elif instance.modified_by:
+            # Fallback to modified_by field
+            AuditLog.objects.create(
+                performed_by=instance.modified_by,
+                action=action,
+                target_model='Personnel',
+                target_id=instance.id,
+                target_name=instance.get_full_name(),
+                description=description,
+                changes=changes,
+                ip_address=None,
+                user_agent=''
+            )
+    except Exception as e:
+        # Don't let audit logging failure break the save operation
+        import logging
+        logger = logging.getLogger('admin.signals')
+        logger.error(f"Failed to create audit log for personnel {instance.id}: {e}")
+    
+    # Clean up temporary attribute
+    if hasattr(instance, '_old_instance'):
+        delattr(instance, '_old_instance')
 
 
 @receiver(pre_delete, sender='personnel.Personnel')
-def delete_personnel_files(sender, instance, **kwargs):
-    """Delete personnel picture and QR codes before personnel deletion"""
+def delete_personnel_with_audit(sender, instance, **kwargs):
+    """
+    Delete personnel files and create audit log before personnel deletion.
+    This is a HARD delete - rarely used since soft delete is preferred.
+    """
     from qr_manager.models import QRCodeImage
+    from admin.models import AuditLog, DeletedRecord
     
-    # Delete personnel picture file if it exists
+    # 1. Create audit log for deletion
+    try:
+        performed_by = getattr(instance, '_audit_user', None) or instance.modified_by
+        
+        if performed_by:
+            AuditLog.objects.create(
+                performed_by=performed_by,
+                action=AuditLog.ACTION_PERSONNEL_DELETE,
+                target_model='Personnel',
+                target_id=instance.id,
+                target_name=instance.get_full_name(),
+                description=f"HARD DELETE of personnel: {instance.get_full_name()} ({instance.rank or 'No Rank'}) - {instance.serial}",
+                changes={
+                    'deleted_record': {
+                        'id': instance.id,
+                        'name': instance.get_full_name(),
+                        'rank': instance.rank or '',
+                        'serial': instance.serial,
+                        'classification': instance.classification,
+                        'status': instance.status,
+                    }
+                },
+                ip_address=getattr(instance, '_audit_ip', None),
+                user_agent=getattr(instance, '_audit_user_agent', '')
+            )
+            
+            # 2. Store in DeletedRecord for recovery
+            DeletedRecord.objects.create(
+                deleted_by=performed_by,
+                deleted_at=timezone.now(),
+                model_name='Personnel',
+                record_id=instance.id,
+                record_name=instance.get_full_name(),
+                record_data={
+                    'id': instance.id,
+                    'surname': instance.surname,
+                    'firstname': instance.firstname,
+                    'middle_initial': instance.middle_initial,
+                    'rank': instance.rank,
+                    'serial': instance.serial,
+                    'group': instance.group,
+                    'tel': instance.tel,
+                    'classification': instance.classification,
+                    'status': instance.status,
+                    'registration_date': str(instance.registration_date),
+                    'qr_code': instance.qr_code,
+                },
+                reason=getattr(instance, '_deletion_reason', 'Hard delete - personnel permanently removed')
+            )
+    except Exception as e:
+        import logging
+        logger = logging.getLogger('admin.signals')
+        logger.error(f"Failed to create deletion audit log for personnel {instance.id}: {e}")
+    
+    # 3. Delete personnel picture file if it exists
     if instance.picture:
         if os.path.isfile(instance.picture.path):
             os.remove(instance.picture.path)
     
-    # Delete all QR codes associated with this personnel
+    # 4. Delete all QR codes associated with this personnel
     qr_codes = QRCodeImage.objects.filter(
         qr_type=QRCodeImage.TYPE_PERSONNEL,
         reference_id=instance.id
@@ -56,6 +220,11 @@ def delete_personnel_files(sender, instance, **kwargs):
                 os.remove(qr_code.qr_image.path)
         # Delete QR code record
         qr_code.delete()
+
+
+# ============================================================================
+# Inventory/Item Signals with Audit Logging
+# ============================================================================
 
 
 @receiver(post_save, sender='inventory.Item')
