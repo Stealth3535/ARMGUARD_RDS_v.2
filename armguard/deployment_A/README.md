@@ -118,6 +118,71 @@ NETWORK_TYPE=lan  # or wan, hybrid
 # ... 50+ configuration options automatically generated
 ```
 
+---
+
+## 🔐 **NEW: DEVICE AUTHORIZATION SYSTEM v2.0**
+
+**✅ Military-Grade Device Authorization now integrated!**
+
+### 🛡️ **Enhanced Security Features**
+- **Production Security Mode**: Only authorized devices can access sensitive operations
+- **Device Fingerprinting**: SHA-256 hashing with MAC address validation
+- **Transaction-Level Authorization**: Granular control over who can perform transactions
+- **Compliance Ready**: NIST 800-53, FISMA Moderate, OWASP 2021, DoD 8500.01
+- **Real-time Monitoring**: All unauthorized attempts logged and monitored
+
+### 🔧 **Device Authorization Integration**
+The deployment system automatically configures device authorization:
+
+```bash
+# Automatically created during deployment:
+authorized_devices.json      → Production device configuration
+device_authorization_deployment_summary.txt → Deployment summary
+
+# Key Features:
+✅ Production Security Mode (allow_all = false)
+✅ 15+ Protected Endpoints (transactions, admin, inventory)
+✅ 7+ High-Security Paths (/admin/, /delete/ operations)
+✅ Lockout Protection (3 attempts, 30-minute lockout)
+✅ Comprehensive Audit Logging
+```
+
+### 🎯 **Device Authorization in Deployment**
+```
+01_setup.sh       → System prerequisites + Redis (required for device auth)
+02_config.sh      → Network configuration + SSL setup
+03_services.sh    → Django deployment + Device Authorization System ←NEW
+04_monitoring.sh  → Health checks + Device Authorization validation
+```
+
+### 📋 **Production Device Management**
+```bash
+# Device management commands (available after deployment):
+python manage.py device_auth --list                    # List authorized devices
+python manage.py device_auth --add --name "PC-1" --ip "192.168.0.50"  # Add device
+python manage.py device_auth --revoke "192.168.0.50"   # Revoke device access
+python manage.py device_auth --status                   # System status
+python manage.py device_auth --production              # Enable production mode
+```
+
+### 🔐 **Security Architecture**
+```
+Layer 1: Network Segregation (LAN-only transactions)
+Layer 2: User Authentication + RBAC
+Layer 3: Single Session Enforcement  
+Layer 4: Device Authorization (NEW) ← THIS SYSTEM
+Layer 5: Rate Limiting + Attack Prevention
+Layer 6: Comprehensive Audit Logging
+```
+
+### ⚠️ **Important Security Notes**
+- **Default Configuration**: 2 devices pre-configured (Server + Armory PC)
+- **MAC Address Updates**: Update MAC addresses in `authorized_devices.json` with actual hardware
+- **Network Configuration**: Device IPs must match your network configuration
+- **Production Mode**: Never set `allow_all = true` in production environments
+
+---
+
 ## ⚠️ **DEPRECATED SCRIPT MIGRATION GUIDE**
 
 **If you're upgrading from older ArmGuard deployments:**

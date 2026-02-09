@@ -3,107 +3,318 @@
 
 {% block title %}{{ item.item_type }} {{ item.serial }} - Item Detail{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'inventory/inventory.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    .item-detail-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 1rem;
+    }
+    
+    .breadcrumb {
+        background: none;
+        padding: 1rem 0;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .breadcrumb a {
+        color: #7f8c8d;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+    
+    .breadcrumb a:hover {
+        color: #1b5ad1;
+    }
+    
+    .detail-header {
+        background: linear-gradient(135deg, #1b5ad1 0%, #143e8f 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        box-shadow: 0 6px 25px rgba(27, 90, 209, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .detail-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(30px, -30px);
+    }
+    
+    .header-main {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 2rem;
+    }
+    
+    .item-info {
+        flex: 1;
+    }
+    
+    .item-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .item-title i {
+        font-size: 2rem;
+        opacity: 0.9;
+    }
+    
+    .item-id {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 1rem;
+        display: inline-block;
+        margin-top: 0.5rem;
+    }
+    
+    .header-status {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 1rem;
+    }
+    
+    .primary-status {
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        text-align: center;
+        min-width: 150px;
+    }
+    
+    .status-available {
+        background: rgba(39, 174, 96, 0.2);
+        color: #ffffff;
+        border: 2px solid rgba(39, 174, 96, 0.5);
+    }
+    
+    .status-issued {
+        background: rgba(243, 156, 18, 0.2);
+        color: #ffffff;
+        border: 2px solid rgba(243, 156, 18, 0.5);
+    }
+    
+    .status-maintenance {
+        background: rgba(231, 76, 60, 0.2);
+        color: #ffffff;
+        border: 2px solid rgba(231, 76, 60, 0.5);
+    }
+    
+    .status-retired {
+        background: rgba(149, 165, 166, 0.2);
+        color: #ffffff;
+        border: 2px solid rgba(149, 165, 166, 0.5);
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .detail-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f0f0f0;
+        transition: all 0.3s ease;
+    }
+    
+    .detail-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .card-title {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .card-title i {
+        color: #1b5ad1;
+        font-size: 1.2rem;
+    }
+    
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .detail-item:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-label {
+        font-weight: 600;
+        color: #4a5568;
+        font-size: 0.95rem;
+    }
+    
+    .detail-value {
+        font-weight: 500;
+        color: #2c3e50;
+        text-align: right;
+    }
+    
+    .category-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    
+    .serial-display {
+        font-family: 'Courier New', monospace;
+        background: #f8f9fa;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: 2px solid #e9ecef;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    .wide-card {
+        grid-column: 1 / -1;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <!-- Breadcrumb -->
-    <div style="margin-bottom: 1rem;">
-        <a href="{% url 'dashboard' %}" style="color: var(--text-light);">Dashboard</a> / 
-        <a href="{% url 'inventory:item_list' %}" style="color: var(--text-light);">Inventory</a> / 
+<div class="item-detail-container">
+    <!-- Breadcrumb Navigation -->
+    <nav class="breadcrumb">
+        <a href="{% url 'dashboard' %}"><i class="fas fa-home"></i> Dashboard</a> / 
+        <a href="{% url 'inventory:item_list' %}"><i class="fas fa-boxes-stacked"></i> Inventory</a> / 
         <strong>{{ item.item_type }} - {{ item.serial }}</strong>
-    </div>
+    </nav>
 
-    <!-- Page Header -->
-    <div class="page-header">
-        <div>
-            <h1 class="page-title">{{ item.item_type }} - {{ item.serial }}</h1>
-            <p class="page-subtitle">{{ item.id }}</p>
-        </div>
-        <div style="display: flex; gap: 10px;">
-            <a href="{% url 'inventory:item_list' %}" class="btn btn-secondary">Back to Inventory</a>
-            {% if is_admin %}
-            <a href="{% url 'armguard_admin:edit_item' item.id %}" class="btn btn-warning">Edit Item</a>
-            <a href="{% url 'armguard_admin:delete_item' item.id %}" class="btn btn-danger">Delete Item</a>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="grid grid-2">
-        <!-- Item Information -->
-        <div class="card">
-            <h2 class="card-title">Item Information</h2>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Item Type</div>
-                <div class="detail-value">{{ item.item_type }}</div>
-            </div>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Category</div>
-                <div class="detail-value">
+    <!-- Enhanced Page Header -->
+    <div class="detail-header">
+        <div class="header-main">
+            <div class="item-info">
+                <h1 class="item-title">
                     {% if item.is_rifle %}
-                    <span class="badge badge-available">Rifle</span>
+                        <i class="fas fa-crosshairs"></i>
                     {% else %}
-                    <span class="badge badge-issued">Pistol</span>
+                        <i class="fas fa-bullseye"></i>
+                    {% endif %}
+                    {{ item.item_type }} - {{ item.serial }}
+                </h1>
+                <div class="item-id">{{ item.id }}</div>
+            </div>
+            <div class="header-status">
+                <div class="primary-status status-{{ item.status|lower }}">
+                    {{ item.status }}
+                    {% if item.status == 'Issued' and last_take %}
+                        <div style="font-size: 0.85rem; margin-top: 0.25rem; opacity: 0.9;">
+                            to {{ last_take.personnel.get_full_name }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="action-buttons">
+                    <a href="{% url 'inventory:item_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Inventory
+                    </a>
+                    {% if is_admin %}
+                    <a href="{% url 'armguard_admin:edit_item' item.id %}" class="btn btn-warning">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <a href="{% url 'armguard_admin:delete_item' item.id %}" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Delete
+                    </a>
                     {% endif %}
                 </div>
             </div>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Serial Number</div>
-                <div class="detail-value" style="font-family: monospace;">{{ item.serial }}</div>
-            </div>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Description</div>
-                <div class="detail-value">{{ item.description|default:"No description provided" }}</div>
-            </div>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Status</div>
-                <div class="detail-value">
-                    {% if item.status == 'Available' %}
-                        <span class="badge badge-available">{{ item.status }}</span>
-                    {% elif item.status == 'Issued' %}
-                        <span class="badge badge-issued">{{ item.status }}</span>
-                        {# Show to whom it was issued #}
-                        {% if last_take %}
-                            <span style="margin-left: 10px; color: #555; font-size: 0.95em;">
-                                to <strong>{{ last_take.personnel.get_full_name }}</strong>
-                                <small class="text-muted">({{ last_take.personnel.rank }})</small>
-                            </span>
-                        {% endif %}
-                    {% elif item.status == 'Maintenance' %}
-                        <span class="badge badge-maintenance">{{ item.status }}</span>
-                    {% else %}
-                        <span class="badge badge-inactive">{{ item.status }}</span>
-                    {% endif %}
+        </div>
+    </div>
 
-                    {% if item.status != 'Issued' and user.is_staff %}
-                    <div class="status-dropdown" style="display: inline-block; margin-left: 10px;">
-                        <button class="status-btn" onclick="toggleStatusDropdown(event)">
-                            Change Status ▼
-                        </button>
-                        <div class="status-dropdown-content" id="statusDropdown">
-                            <form method="post" action="{% url 'inventory:update_item_status' item.pk %}" style="margin: 0;">
-                                {% csrf_token %}
-                                {% if item.status != 'Available' %}
-                                <button type="submit" name="status" value="Available" class="status-option status-available">
-                                    <span class="status-icon">✓</span> Available
-                                </button>
-                                {% endif %}
-                                {% if item.status != 'Maintenance' %}
-                                <button type="submit" name="status" value="Maintenance" class="status-option status-maintenance">
-                                    <span class="status-icon">🔧</span> Maintenance
-                                </button>
-                                {% endif %}
-                                {% if item.status != 'Retired' %}
-                                <button type="submit" name="status" value="Retired" class="status-option status-retired">
-                                    <span class="status-icon">📦</span> Retired
-                                </button>
-                                {% endif %}
-                            </form>
-                        </div>
+    <!-- Main Content Grid -->
+    <div class="detail-grid">
+        <!-- Item Information Card -->
+        <div class="detail-card">
+            <h2 class="card-title">
+                <i class="fas fa-info-circle"></i>
+                Item Information
+            </h2>
+            
+            <div class="detail-item">
+                <div class="detail-label">Item Type</div>
+                <div class="detail-value">
+                    <strong>{{ item.item_type }}</strong>
+                </div>
+            </div>
+            
+            <div class="detail-item">
+                <div class="detail-label">Category</div>
+                <div class="detail-value">
+                    <div class="category-indicator">
+                        {% if item.is_rifle %}
+                            <i class="fas fa-crosshairs"></i> Rifle
+                        {% else %}
+                            <i class="fas fa-bullseye"></i> Pistol
+                        {% endif %}
                     </div>
+                </div>
+            </div>
+            
+            <div class="detail-item">
+                <div class="detail-label">Serial Number</div>
+                <div class="detail-value">
+                    <div class="serial-display">{{ item.serial }}</div>
+                </div>
+            </div>
+            
+            <div class="detail-item">
+                <div class="detail-label">Description</div>
+                <div class="detail-value">
+                    {% if item.description %}
+                        {{ item.description }}
+                    {% else %}
+                        <em style="color: #7f8c8d;">No description provided</em>
                     {% endif %}
                 </div>
             </div>
@@ -111,212 +322,245 @@
             <div class="detail-item">
                 <div class="detail-label">Condition</div>
                 <div class="detail-value">
-                    {% if item.condition == 'Good' %}
-                    <span class="badge badge-available">{{ item.condition }}</span>
-                    {% elif item.condition == 'Fair' %}
-                    <span class="badge badge-issued">{{ item.condition }}</span>
-                    {% elif item.condition == 'Poor' %}
-                    <span class="badge badge-maintenance">{{ item.condition }}</span>
-                    {% else %}
-                    <span class="badge badge-inactive">{{ item.condition }}</span>
-                    {% endif %}
+                    <span class="condition-badge condition-{{ item.condition|lower }}">
+                        {{ item.condition }}
+                    </span>
                 </div>
             </div>
         </div>
-
-        <!-- System Information -->
-        <div class="card">
-            <h2 class="card-title">System Information</h2>
+        <!-- System Information Card -->
+        <div class="detail-card">
+            <h2 class="card-title">
+                <i class="fas fa-microchip"></i>
+                System Information
+            </h2>
             
-            <div class="detail-item mb-2">
+            <div class="detail-item">
                 <div class="detail-label">Item ID</div>
-                <div class="detail-value" style="font-family: monospace;">{{ item.id }}</div>
+                <div class="detail-value">
+                    <div class="serial-display">{{ item.id }}</div>
+                </div>
             </div>
             
-            <div class="detail-item mb-2">
+            <div class="detail-item">
                 <div class="detail-label">QR Code</div>
-                <div class="detail-value" style="font-family: monospace; font-size: 0.9rem;">{{ item.qr_code }}</div>
+                <div class="detail-value">
+                    <div class="serial-display">{{ item.qr_code }}</div>
+                </div>
             </div>
             
-            <div class="detail-item mb-2">
+            <div class="detail-item">
                 <div class="detail-label">Registration Date</div>
-                <div class="detail-value">{{ item.registration_date|date:"d/m/y" }}</div>
+                <div class="detail-value">
+                    <i class="fas fa-calendar-alt" style="margin-right: 0.5rem; color: #1b5ad1;"></i>
+                    {{ item.registration_date|date:"F d, Y" }}
+                </div>
             </div>
             
-            <div class="detail-item mb-2">
+            <div class="detail-item">
                 <div class="detail-label">Created</div>
-                <div class="detail-value">{{ item.created_at|date:"d/m/y H:i" }}</div>
+                <div class="detail-value">
+                    <i class="fas fa-clock" style="margin-right: 0.5rem; color: #1b5ad1;"></i>
+                    {{ item.created_at|date:"M d, Y H:i" }}
+                </div>
             </div>
             
             <div class="detail-item">
                 <div class="detail-label">Last Updated</div>
-                <div class="detail-value">{{ item.updated_at|date:"d/m/y H:i" }}</div>
+                <div class="detail-value">
+                    <i class="fas fa-sync" style="margin-right: 0.5rem; color: #1b5ad1;"></i>
+                    {{ item.updated_at|date:"M d, Y H:i" }}
+                </div>
             </div>
+            
+            <!-- Status Change Controls for Staff -->
+            {% if item.status != 'Issued' and user.is_staff %}
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #e9ecef;">
+                <div class="detail-label" style="margin-bottom: 1rem;">Quick Status Change</div>
+                <div class="status-change-buttons">
+                    <form method="post" action="{% url 'inventory:update_item_status' item.pk %}" style="display: inline;">
+                        {% csrf_token %}
+                        {% if item.status != 'Available' %}
+                        <button type="submit" name="status" value="Available" class="btn btn-sm" style="background: #27ae60; color: white; margin-right: 0.5rem;">
+                            <i class="fas fa-check-circle"></i> Mark Available
+                        </button>
+                        {% endif %}
+                        {% if item.status != 'Maintenance' %}
+                        <button type="submit" name="status" value="Maintenance" class="btn btn-sm" style="background: #e74c3c; color: white; margin-right: 0.5rem;">
+                            <i class="fas fa-wrench"></i> Send to Maintenance
+                        </button>
+                        {% endif %}
+                        {% if item.status != 'Retired' %}
+                        <button type="submit" name="status" value="Retired" class="btn btn-sm" style="background: #95a5a6; color: white;">
+                            <i class="fas fa-archive"></i> Retire Item
+                        </button>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 
-    <!-- Transaction History -->
-    <div class="card">
-        <h2 class="card-title">Transaction History</h2>
-        <div class="table-container">
-            <table class="table">
+    <!-- Transaction History Card -->
+    <div class="detail-card wide-card">
+        <h2 class="card-title">
+            <i class="fas fa-history"></i>
+            Transaction History
+            <span style="font-size: 0.9rem; color: #7f8c8d; font-weight: normal; margin-left: auto;">
+                {{ item.transactions.count }} transaction{{ item.transactions.count|pluralize }}
+            </span>
+        </h2>
+        
+        {% if item.transactions.exists %}
+        <div class="table-container" style="margin-top: 1.5rem; border-radius: 12px; overflow: hidden;">
+            <table class="inventory-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Personnel</th>
-                        <th>Action</th>
-                        <th>Date/Time</th>
-                        <th>Duty Type</th>
-                        <th>Notes</th>
+                        <th><i class="fas fa-hashtag"></i> Transaction ID</th>
+                        <th><i class="fas fa-user"></i> Personnel</th>
+                        <th><i class="fas fa-exchange-alt"></i> Action</th>
+                        <th><i class="fas fa-calendar"></i> Date/Time</th>
+                        <th><i class="fas fa-briefcase"></i> Duty Type</th>
+                        <th><i class="fas fa-sticky-note"></i> Notes</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for transaction in item.transactions.all %}
                     <tr>
-                        <td><strong>#{{ transaction.id }}</strong></td>
                         <td>
-                            {{ transaction.personnel.get_full_name }}<br>
-                            <small class="text-muted">{{ transaction.personnel.rank }}</small>
+                            <span class="id-badge">#{{ transaction.id }}</span>
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div class="personnel-avatar">
+                                    <i class="fas fa-user-circle" style="font-size: 1.5rem; color: #1b5ad1;"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600;">{{ transaction.personnel.get_full_name }}</div>
+                                    <small style="color: #7f8c8d;">{{ transaction.personnel.rank }}</small>
+                                </div>
+                            </div>
                         </td>
                         <td>
                             {% if transaction.action == 'Take' %}
-                            <span class="badge badge-issued">Withdraw</span>
+                            <span class="status-badge" style="background: #fff3cd; color: #856404; border: 1px solid #ffeaa7;">
+                                <i class="fas fa-arrow-right"></i> Withdraw
+                            </span>
                             {% else %}
-                            <span class="badge badge-available">Return</span>
+                            <span class="status-badge" style="background: #d4edda; color: #155724; border: 1px solid #c3e6cb;">
+                                <i class="fas fa-arrow-left"></i> Return
+                            </span>
                             {% endif %}
                         </td>
-                        <td>{{ transaction.date_time|date:"d/m/y H:i:s" }}</td>
-                        <td>{{ transaction.duty_type|default:"-" }}</td>
-                        <td>{{ transaction.notes|default:"-" }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center text-muted">No transaction history</td>
+                        <td>
+                            <div style="font-weight: 500;">{{ transaction.date_time|date:"M d, Y" }}</div>
+                            <div style="color: #7f8c8d; font-size: 0.9rem;">{{ transaction.date_time|date:"H:i:s" }}</div>
+                        </td>
+                        <td>
+                            {% if transaction.duty_type %}
+                                <span style="background: #f8f9fa; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.9rem;">
+                                    {{ transaction.duty_type }}
+                                </span>
+                            {% else %}
+                                <em style="color: #7f8c8d;">-</em>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if transaction.notes %}
+                                <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="{{ transaction.notes }}">
+                                    {{ transaction.notes|truncatechars:50 }}
+                                </div>
+                            {% else %}
+                                <em style="color: #7f8c8d;">-</em>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <div class="empty-state" style="padding: 3rem 1rem; text-align: center;">
+            <div class="empty-icon" style="font-size: 3rem; color: #bdc3c7; margin-bottom: 1rem;">
+                <i class="fas fa-history"></i>
+            </div>
+            <h3 style="color: #2c3e50; margin-bottom: 0.5rem;">No Transaction History</h3>
+            <p style="color: #7f8c8d;">This item has no recorded transactions yet.</p>
+        </div>
+        {% endif %}
     </div>
 
-    <!-- QR Code Section -->
-    <div class="card">
-        <h2 class="card-title">QR Code</h2>
-        <div class="qr-code-container">
-            <p class="text-muted">Item QR Code: {{ item.qr_code }}</p>
-            {% if qr_code_obj and qr_code_obj.qr_image %}
-            <div style="display: flex; justify-content: center; margin: 1rem 0;">
-                <img src="{{ qr_code_obj.qr_image.url }}?v={{ qr_code_obj.updated_at|date:'U' }}" alt="QR Code for {{ item.item_type }}" style="width: 256px; height: 256px; border-radius: 8px; background: #f8f8f8;">
-            </div>
-            {% else %}
-            <div style="display: flex; justify-content: center; margin: 1rem 0; padding: 128px 0; background: #f0f0f0; border-radius: 8px;">
-                <p style="margin: 0; color: #999;">No QR Code Available</p>
-            </div>
-            {% endif %}
-            <p class="mt-2 text-center">
-                {% if qr_code_obj %}
-                <a href="{% url 'print_handler:print_single_qr' qr_code_obj.id %}" class="btn btn-primary btn-sm" target="_blank">🖨️ Print QR Code</a>
+    <!-- QR Code Card -->
+    <div class="detail-card wide-card">
+        <h2 class="card-title">
+            <i class="fas fa-qrcode"></i>
+            QR Code & Printing
+        </h2>
+        
+        <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 2rem; align-items: center;">
+            <!-- QR Code Display -->
+            <div class="qr-code-display">
+                {% if qr_code_obj and qr_code_obj.qr_image %}
+                <div style="text-align: center;">
+                    <img src="{{ qr_code_obj.qr_image.url }}?v={{ qr_code_obj.updated_at|date:'U' }}" 
+                         alt="QR Code for {{ item.item_type }}" 
+                         style="width: 200px; height: 200px; border: 2px solid #e9ecef; border-radius: 12px; background: #f8f9fa; padding: 1rem;">
+                </div>
                 {% else %}
-                <button class="btn btn-secondary btn-sm" disabled>🖨️ Print QR Code</button>
+                <div style="width: 200px; height: 200px; border: 2px dashed #bdc3c7; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #7f8c8d; text-align: center; font-size: 0.9rem; background: #f8f9fa;">
+                    <div>
+                        <i class="fas fa-qrcode" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                        No QR Code Available
+                    </div>
+                </div>
                 {% endif %}
-            </p>
+            </div>
+            
+            <!-- QR Code Information -->
+            <div class="qr-info">
+                <h3 style="color: #2c3e50; margin-bottom: 1rem; font-size: 1.2rem;">QR Code Information</h3>
+                <div class="detail-item" style="padding: 0.75rem 0;">
+                    <div class="detail-label">QR Code Data:</div>
+                    <div class="detail-value">
+                        <span class="serial-display" style="font-size: 0.9rem;">{{ item.qr_code }}</span>
+                    </div>
+                </div>
+                {% if qr_code_obj %}
+                <div class="detail-item" style="padding: 0.75rem 0;">
+                    <div class="detail-label">Generated:</div>
+                    <div class="detail-value">{{ qr_code_obj.created_at|date:"M d, Y H:i" }}</div>
+                </div>
+                <div class="detail-item" style="padding: 0.75rem 0;">
+                    <div class="detail-label">Last Updated:</div>
+                    <div class="detail-value">{{ qr_code_obj.updated_at|date:"M d, Y H:i" }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Print Actions -->
+            <div class="print-actions" style="text-align: right;">
+                {% if qr_code_obj %}
+                <a href="{% url 'print_handler:print_single_qr' qr_code_obj.id %}" 
+                   class="btn btn-primary" 
+                   target="_blank" 
+                   style="padding: 1rem 1.5rem; font-size: 1rem;">
+                    <i class="fas fa-print"></i> Print QR Code
+                </a>
+                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #7f8c8d;">
+                    Opens in new window
+                </div>
+                {% else %}
+                <button class="btn btn-secondary" disabled style="padding: 1rem 1.5rem; font-size: 1rem;">
+                    <i class="fas fa-print"></i> Print QR Code
+                </button>
+                <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #7f8c8d;">
+                    QR Code not available
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
-
-<style>
-    .status-dropdown {
-        position: relative;
-    }
-    
-    .status-btn {
-        background: #3b82f6;
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.875rem;
-        font-weight: 500;
-        transition: background 0.2s;
-    }
-    
-    .status-btn:hover {
-        background: #2563eb;
-    }
-    
-    .status-dropdown-content {
-        display: none;
-        position: absolute;
-        background: white;
-        min-width: 180px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
-        border-radius: 6px;
-        z-index: 1000;
-        margin-top: 4px;
-        border: 1px solid #e5e7eb;
-        overflow: hidden;
-    }
-    
-    .status-dropdown-content.show {
-        display: block;
-    }
-    
-    .status-option {
-        width: 100%;
-        padding: 10px 16px;
-        border: none;
-        background: white;
-        text-align: left;
-        cursor: pointer;
-        font-size: 0.875rem;
-        transition: background 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .status-option:hover {
-        background: #f3f4f6;
-    }
-    
-    .status-option:not(:last-child) {
-        border-bottom: 1px solid #e5e7eb;
-    }
-    
-    .status-icon {
-        font-size: 1rem;
-    }
-    
-    .status-available:hover {
-        background: #dcfce7;
-    }
-    
-    .status-maintenance:hover {
-        background: #fef3c7;
-    }
-    
-    .status-retired:hover {
-        background: #fee2e2;
-    }
-</style>
-
-<script>
-    function toggleStatusDropdown(event) {
-        event.stopPropagation();
-        const dropdown = document.getElementById('statusDropdown');
-        dropdown.classList.toggle('show');
-    }
-    
-    // Close dropdown when clicking outside
-    window.onclick = function(event) {
-        if (!event.target.matches('.status-btn')) {
-            const dropdown = document.getElementById('statusDropdown');
-            if (dropdown && dropdown.classList.contains('show')) {
-                dropdown.classList.remove('show');
-            }
-        }
-    }
-</script>
 {% endblock %}
 

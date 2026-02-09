@@ -489,6 +489,8 @@ main() {
     
     # Phase 4: Security and Optimization
     setup_basic_firewall
+    setup_device_authorization_prerequisites
+    verify_device_authorization_integration
     optimize_system
     
     echo ""

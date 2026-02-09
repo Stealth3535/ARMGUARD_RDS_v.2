@@ -1,0 +1,3 @@
+"""
+Device authorization management commands
+"""

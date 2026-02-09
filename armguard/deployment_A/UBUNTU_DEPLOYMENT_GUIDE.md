@@ -27,6 +27,68 @@ sudo bash methods/production/master-deploy.sh --network-type lan
 sudo bash methods/production/deploy-armguard.sh
 ```
 
+## 🔐 **NEW: DEVICE AUTHORIZATION SYSTEM**
+
+**✅ Ubuntu deployments now include Military-Grade Device Authorization!**
+
+### **🛡️ Enhanced Ubuntu Security**
+The Ubuntu deployment automatically configures:
+
+```bash
+✅ Production Device Authorization (authorized_devices.json)
+✅ Redis-based device caching and lockout protection  
+✅ Ubuntu-specific network interface detection
+✅ Firewall rules for authorized device IPs only
+✅ Systemd service protection with device validation
+✅ Ubuntu audit logging integration
+```
+
+### **🔧 Ubuntu Device Authorization Setup**
+During Ubuntu deployment, the system:
+
+1. **Detects Network Configuration**: Ubuntu network interfaces (eth0, enp0s3, etc.)
+2. **Configures Device IPs**: Maps to Ubuntu network ranges (192.168.x.x, 10.0.x.x)
+3. **Sets Up Redis Caching**: Ubuntu Redis configuration with authentication
+4. **Creates Firewall Rules**: UFW rules for authorized devices only
+5. **Enables Audit Logging**: Ubuntu syslog integration for security events
+
+### **📋 Ubuntu Device Management**
+```bash
+# After Ubuntu deployment, manage devices with:
+cd /var/www/armguard
+
+# List authorized devices
+sudo -u www-data python3 manage.py device_auth --list
+
+# Add new Ubuntu device  
+sudo -u www-data python3 manage.py device_auth --add --name "Ubuntu-Workstation" --ip "192.168.0.150"
+
+# Check Ubuntu system status
+sudo -u www-data python3 manage.py device_auth --status
+
+# View Ubuntu device logs
+sudo journalctl -u armguard-device-auth -f
+```
+
+### **⚙️ Ubuntu Network Configuration**
+```bash
+# Ubuntu-specific device authorization features:
+
+# Network Detection: Automatic Ubuntu interface detection
+Ubuntu Network Interfaces: eth0, enp0s3, wlan0, etc.
+Default Gateway Detection: Ubuntu route table analysis
+IP Range Detection: 192.168.x.x, 10.0.x.x, 172.16.x.x
+
+# Firewall Integration: UFW rules for device authorization
+sudo ufw allow from 192.168.0.100 to any port 8443 comment "Authorized Device - Server"
+sudo ufw allow from 192.168.0.101 to any port 8443 comment "Authorized Device - Armory PC"
+
+# Service Integration: Systemd protection
+systemctl status gunicorn-armguard  # Main application with device auth
+systemctl status redis-server       # Required for device caching
+systemctl status postgresql         # Database with device audit logs
+```
+
 ## 🖥️ **UBUNTU-SPECIFIC OPTIMIZATIONS**
 
 ### **Automatic Ubuntu Detection**

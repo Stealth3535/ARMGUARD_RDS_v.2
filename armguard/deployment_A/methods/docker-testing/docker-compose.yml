@@ -58,6 +58,12 @@ services:
       - REDIS_URL=redis://armguard-redis:6379/1
       - SESSION_COOKIE_AGE=3600
       - ALLOW_PUBLIC_REGISTRATION=False
+      # Device Authorization System v2.0 Configuration
+      - DEVICE_AUTHORIZATION_ENABLED=True
+      - DEVICE_AUTH_SECURITY_MODE=TESTING
+      - DEVICE_AUTH_ALLOW_ALL=True
+      - DEVICE_AUTH_LOG_ALL_ATTEMPTS=True
+      - DEVICE_AUTH_REDIS_URL=redis://armguard-redis:6379/2
     volumes:
       - app_static:/app/staticfiles
       - app_media:/app/core/media

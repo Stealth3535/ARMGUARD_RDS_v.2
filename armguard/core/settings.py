@@ -189,6 +189,10 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     
+    # Audit Context Management (requires authentication)
+    'core.middleware.audit_middleware.CurrentRequestMiddleware',  # Thread-local request storage
+    'core.middleware.audit_middleware.AuditContextMiddleware',   # Automatic audit context
+    
     # History tracking (requires authentication)
     'simple_history.middleware.HistoryRequestMiddleware',  # Automatic user tracking for history
     

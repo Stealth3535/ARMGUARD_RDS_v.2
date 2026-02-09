@@ -1,6 +1,28 @@
-# 🛡️ Secure Django Deployment on Ubuntu VM (LAN, VMware, Shared Folder)
+# 🛡️ Secure Django Deployment on Ubuntu VM (LAN, VMware, Device Authorization)
 
-This guide explains how to securely deploy your Django app on an Ubuntu Server VM (running in VMware Workstation), using a Windows host shared folder for code, and enabling HTTPS access over your LAN.
+This guide explains how to securely deploy your Django app on an Ubuntu Server VM (running in VMware Workstation), using a Windows host shared folder for code, enabling HTTPS access over your LAN, and implementing military-grade device authorization.
+
+## 🔐 **NEW: Device Authorization Updates**
+
+**✅ This deployment now includes Device Authorization System v2.0!**
+
+### 🛡️ Enhanced Security Features
+- **Device Registration Required**: Only authorized devices can access armory operations
+- **VMware VM Detection**: Automatic detection and configuration for VMware environments
+- **LAN Security**: Device authorization optimized for LAN-only deployments
+- **Ubuntu Integration**: Native Ubuntu systemd and UFW firewall integration
+- **Shared Folder Security**: Device authorization works with VMware shared folders
+
+### 🔧 Device Authorization for VMware VMs
+```bash
+# Device authorization automatically detects VMware environment
+# and configures appropriate security settings:
+
+VMware VM Detection: Automatic guest tools detection
+Shared Folder Security: Device authorization with /mnt/hgfs paths
+Ubuntu Network Config: Device IPs configured for VMware bridged/NAT networks
+Firewall Integration: UFW rules for authorized devices only
+```
 
 ---
 

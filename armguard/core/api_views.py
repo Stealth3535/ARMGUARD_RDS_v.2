@@ -1,9 +1,11 @@
 """
-API Views for AJAX requests
+API Views for AJAX requests - Enhanced with Atomic Transactions and Audit Context
 """
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db import transaction
 from personnel.models import Personnel
 from inventory.models import Item
 from transactions.models import Transaction
@@ -15,6 +17,7 @@ from .utils import (
 )
 from .api_forms import TransactionCreateForm, PersonnelLookupForm, ItemLookupForm
 from .rate_limiting import api_rate_limit
+from .middleware.audit_middleware import TransactionAuditContext, audit_operation
 import json
 import logging
 import os
@@ -69,12 +72,11 @@ def get_item(request, item_id):
     else:
         return JsonResponse({'error': result['error']}, status=404)
 
-from django.contrib import messages
-
 @require_http_methods(["POST"])
 @login_required
+@audit_operation('CREATE_TRANSACTION')
 def create_transaction(request):
-    """Create a new transaction"""
+    """Create a new transaction with full atomicity and comprehensive audit logging"""
     # Validate Content-Type
     if request.content_type != 'application/json':
         return JsonResponse({'error': 'Content-Type must be application/json'}, status=415)
@@ -89,101 +91,161 @@ def create_transaction(request):
         rounds = data.get('rounds', 0)
         duty_type = data.get('duty_type', '')
         
-        # Validate required fields
+        # Enhanced validation
         if not personnel_id or not item_id or not action:
             messages.error(request, 'Missing required fields')
             return JsonResponse({'error': 'Missing required fields'}, status=400)
         
-        # Get personnel using utility function
-        personnel_result = parse_qr_code(personnel_id)
-        if not personnel_result['success'] or personnel_result['type'] != 'personnel':
-            messages.error(request, personnel_result.get('error', 'Personnel not found'))
-            return JsonResponse({'error': personnel_result.get('error', 'Personnel not found')}, status=404)
+        if action not in ['Take', 'Return']:
+            messages.error(request, 'Invalid action type')
+            return JsonResponse({'error': 'Action must be "Take" or "Return"'}, status=400)
         
-        personnel = Personnel.objects.get(id=personnel_result['data']['id'])
-        
-        # Get item using utility function
-        item_result = parse_qr_code(item_id)
-        if not item_result['success'] or item_result['type'] != 'item':
-            messages.error(request, item_result.get('error', 'Item not found'))
-            return JsonResponse({'error': item_result.get('error', 'Item not found')}, status=404)
-        
-        item = Item.objects.get(id=item_result['data']['id'])
-        
-        # Validate transaction action
-        validation = validate_transaction_action(item, action)
-        if not validation['valid']:
-            messages.error(request, validation['message'])
-            return JsonResponse({'error': validation['message']}, status=400)
-        
-        # Create transaction
-        transaction = Transaction.objects.create(
-            personnel=personnel,
-            item=item,
-            action=action,
-            notes=notes,
-            mags=mags,
-            rounds=rounds,
-            duty_type=duty_type,
-            issued_by=request.user
-        )
-        
-        # Item status is automatically updated by Transaction.save() method
-        
-        # Auto-generate and save PDF form only for withdrawals (Take)
-        if action == "Take":
-            try:
-                form_filler = TransactionFormFiller()
-                filled_pdf = form_filler.fill_transaction_form(transaction)
+        # Use atomic transaction with audit context
+        with transaction.atomic():
+            with TransactionAuditContext(
+                request, 
+                f'{action.upper()}_ITEM',
+                {'personnel_id': personnel_id, 'item_id': item_id}
+            ) as audit_ctx:
                 
-                # Save to media folder
-                date_str = transaction.date_time.strftime('%Y%m%d_%H%M%S')
-                filename = f"Transaction_{transaction.id}_{date_str}.pdf"
-                output_path = os.path.join(settings.MEDIA_ROOT, 'transaction_forms', filename)
+                # Get personnel using utility function
+                personnel_result = parse_qr_code(personnel_id)
+                if not personnel_result['success'] or personnel_result['type'] != 'personnel':
+                    error_msg = personnel_result.get('error', 'Personnel not found')
+                    messages.error(request, error_msg)
+                    logger.warning(f"Personnel lookup failed: {error_msg}")
+                    return JsonResponse({'error': error_msg}, status=404)
                 
-                # Ensure directory exists
-                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                try: 
+                    personnel = Personnel.objects.select_for_update().get(id=personnel_result['data']['id'])
+                    if personnel.status != Personnel.STATUS_ACTIVE:
+                        error_msg = f'Personnel {personnel_id} is not active (status: {personnel.status})'
+                        messages.error(request, error_msg)
+                        return JsonResponse({'error': error_msg}, status=400)
+                except Personnel.DoesNotExist:
+                    error_msg = 'Personnel not found'
+                    messages.error(request, error_msg)
+                    return JsonResponse({'error': error_msg}, status=404)
                 
-                with open(output_path, 'wb') as f:
-                    f.write(filled_pdf.read())
+                # Get item using utility function
+                item_result = parse_qr_code(item_id)
+                if not item_result['success'] or item_result['type'] != 'item':
+                    error_msg = item_result.get('error', 'Item not found')
+                    messages.error(request, error_msg)
+                    logger.warning(f"Item lookup failed: {error_msg}")
+                    return JsonResponse({'error': error_msg}, status=404)
+                
+                try:
+                    item = Item.objects.select_for_update().get(id=item_result['data']['id'])
+                except Item.DoesNotExist:
+                    error_msg = 'Item not found'
+                    messages.error(request, error_msg)
+                    return JsonResponse({'error': error_msg}, status=404)
+                
+                # Validate transaction action (but let the model handle detailed business logic)
+                validation = validate_transaction_action(item, action)
+                if not validation['valid']:
+                    error_msg = validation['message']
+                    messages.error(request, error_msg)
+                    logger.warning(f"Transaction validation failed: {error_msg}")
+                    return JsonResponse({'error': error_msg}, status=400)
+                
+                # Set audit context for the transaction
+                transaction_data = {
+                    'personnel': personnel,
+                    'item': item,
+                    'action': action,
+                    'notes': notes,
+                    'mags': mags,
+                    'rounds': rounds,
+                    'duty_type': duty_type,
+                    'issued_by': request.user
+                }
+                
+                # Create transaction - model's atomic save() handles all validation and status updates
+                try:
+                    transaction_obj = Transaction.objects.create(**transaction_data)
+                    logger.info(f"Transaction {transaction_obj.id} created: {action} {item_id} by {personnel_id}")
                     
-                logger.info(f"PDF form auto-generated for transaction {transaction.id}: {filename}")
-            except Exception as e:
-                logger.error(f"Failed to auto-generate PDF for transaction {transaction.id}: {str(e)}")
-                # Don't fail the transaction if PDF generation fails
-        
-        # Add success message (PDF can be downloaded from transaction detail page)
-        action_text = "withdrawn" if action == "Take" else "returned"
-        messages.success(request, f'✓ Transaction #{transaction.id} completed: {item.item_type} {item.serial} {action_text} by {personnel.get_full_name()}')
-        
-        response_data = {
-            'success': True,
-            'transaction_id': transaction.id,
-            'message': f'Transaction completed successfully',
-            'item_new_status': item.status,  # Return updated status
-            'action': action  # Return action for client-side logic
-        }
-        
-        # Only include PDF URL for withdrawals
-        if action == "Take":
-            response_data['pdf_url'] = f'/print/transaction/{transaction.id}/pdf/'
-        
-        return JsonResponse(response_data)
+                except ValueError as ve:
+                    # Business rule violation (from model validation)
+                    error_msg = str(ve)
+                    messages.error(request, error_msg)
+                    logger.warning(f"Business rule violation: {error_msg}")
+                    return JsonResponse({'error': error_msg}, status=400)
+                
+                except Exception as e:
+                    # Unexpected error
+                    logger.error(f"Transaction creation failed: {e}", exc_info=True)
+                    messages.error(request, 'Transaction creation failed')
+                    return JsonResponse({'error': 'Internal server error'}, status=500)
+                
+                # Auto-generate PDF form only for withdrawals (Take)
+                pdf_url = None
+                if action == "Take":
+                    try:
+                        form_filler = TransactionFormFiller()
+                        filled_pdf = form_filler.fill_transaction_form(transaction_obj)
+                        
+                        # Save to media folder
+                        date_str = transaction_obj.date_time.strftime('%Y%m%d_%H%M%S')
+                        filename = f"Transaction_{transaction_obj.id}_{date_str}.pdf"
+                        output_path = os.path.join(settings.MEDIA_ROOT, 'transaction_forms', filename)
+                        
+                        # Ensure directory exists
+                        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                        
+                        with open(output_path, 'wb') as f:
+                            f.write(filled_pdf.read())
+                        
+                        pdf_url = f'/print/transaction/{transaction_obj.id}/pdf/'
+                        logger.info(f"PDF form auto-generated for transaction {transaction_obj.id}: {filename}")
+                        
+                    except Exception as e:
+                        logger.error(f"Failed to auto-generate PDF for transaction {transaction_obj.id}: {str(e)}")
+                        # Don't fail the transaction if PDF generation fails
+                        pdf_url = None
+                
+                # Success message
+                action_text = "withdrawn" if action == "Take" else "returned"
+                success_msg = f'✓ Transaction #{transaction_obj.id} completed: {item.item_type} {item.serial} {action_text} by {personnel.get_full_name()}'
+                messages.success(request, success_msg)
+                
+                # Comprehensive response data
+                response_data = {
+                    'success': True,
+                    'transaction_id': transaction_obj.id,
+                    'message': 'Transaction completed successfully',
+                    'transaction': {
+                        'id': transaction_obj.id,
+                        'personnel': {
+                            'id': personnel.id,
+                            'name': personnel.get_full_name(),
+                            'rank': personnel.rank or 'N/A'
+                        },
+                        'item': {
+                            'id': item.id,
+                            'type': item.item_type,
+                            'serial': item.serial,
+                            'status': item.status  # Updated status
+                        },
+                        'action': action,
+                        'datetime': transaction_obj.date_time.isoformat(),
+                        'issued_by': request.user.username
+                    },
+                    'item_new_status': item.status,
+                    'action': action
+                }
+                
+                if pdf_url:
+                    response_data['pdf_url'] = pdf_url
+                
+                return JsonResponse(response_data)
         
     except json.JSONDecodeError:
         messages.error(request, 'Invalid JSON data')
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
-    except Personnel.DoesNotExist:
-        messages.error(request, 'Personnel not found')
-        return JsonResponse({'error': 'Personnel not found'}, status=404)
-    except Item.DoesNotExist:
-        messages.error(request, 'Item not found')
-        return JsonResponse({'error': 'Item not found'}, status=404)
-    except ValueError as e:
-        logger.warning(f"Transaction validation error: {str(e)}")
-        messages.error(request, str(e))
-        return JsonResponse({'error': str(e)}, status=400)
     except Exception as e:
-        logger.error(f"Transaction creation failed: {str(e)}", exc_info=True)
-        messages.error(request, f'Transaction failed: {str(e)}')
+        logger.error(f"Unexpected error in create_transaction: {e}", exc_info=True)
+        messages.error(request, 'Internal server error')
         return JsonResponse({'error': 'Internal server error'}, status=500)

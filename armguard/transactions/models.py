@@ -2,11 +2,15 @@
 Transaction Models for ArmGuard
 Based on APP/app/backend/database.py transactions table
 """
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from django.conf import settings
+from django.db.models import F, Q, Exists, OuterRef
 from personnel.models import Personnel
 from inventory.models import Item
+import logging
+
+logger = logging.getLogger('transactions')
 
 
 class Transaction(models.Model):
@@ -96,43 +100,114 @@ class Transaction(models.Model):
         """Check if transaction is a return"""
         return self.action == self.ACTION_RETURN
     
+    @transaction.atomic
     def save(self, *args, **kwargs):
-        """Override save to update item status based on action"""
+        """Override save to update item status based on action with full atomicity"""
         is_new = self.pk is None
         
         # Validate transaction before saving
         if is_new:
-            if self.action == self.ACTION_TAKE:
-                # Item cannot be taken — personnel already has an issued item
-                current_issued_items = Item.objects.filter(status=Item.STATUS_ISSUED)
-                for item in current_issued_items:
-                    # Check if this item was last taken by this personnel
-                    last_transaction = item.transactions.order_by('-date_time').first()
-                    if (last_transaction and 
-                        last_transaction.action == self.ACTION_TAKE and 
-                        last_transaction.personnel == self.personnel):
-                        raise ValueError(f"Item cannot be taken — personnel {self.personnel} already has an issued item: {item}")
+            # Lock related records to prevent race conditions
+            try:
+                # Lock the item for update to prevent concurrent access
+                locked_item = Item.objects.select_for_update().get(pk=self.item.pk)
                 
-                # Cannot take item that's already issued
-                if self.item.status == Item.STATUS_ISSUED:
-                    raise ValueError(f"Cannot take item {self.item.id} - already issued")
-                # Cannot take item in maintenance or retired
-                if self.item.status in [Item.STATUS_MAINTENANCE, Item.STATUS_RETIRED]:
-                    raise ValueError(f"Cannot take item {self.item.id} - status is {self.item.status}")
-            
-            elif self.action == self.ACTION_RETURN:
-                # Cannot return item that's not issued
-                if self.item.status != Item.STATUS_ISSUED:
-                    raise ValueError(f"Cannot return item {self.item.id} - not currently issued")
+                # Lock personnel record to check for existing issued items
+                locked_personnel = Personnel.objects.select_for_update().get(pk=self.personnel.pk)
+                
+                if self.action == self.ACTION_TAKE:
+                    # Check if personnel already has any issued item (atomic check)
+                    active_items_query = Transaction.objects.filter(
+                        personnel=self.personnel,
+                        action=self.ACTION_TAKE
+                    ).exclude(
+                        # Exclude items that have been returned by same personnel
+                        Exists(
+                            Transaction.objects.filter(
+                                personnel=self.personnel,
+                                item=OuterRef('item'),
+                                action=self.ACTION_RETURN,
+                                date_time__gt=OuterRef('date_time')
+                            )
+                        )
+                    )
+                    
+                    if active_items_query.exists():
+                        active_item = active_items_query.first().item
+                        raise ValueError(
+                            f"Personnel {self.personnel} already has an active item: {active_item}"
+                        )
+                    
+                    # Validate item availability
+                    if locked_item.status != Item.STATUS_AVAILABLE:
+                        if locked_item.status == Item.STATUS_ISSUED:
+                            raise ValueError(
+                                f"Cannot take item {locked_item.id} - already issued to another personnel"
+                            )
+                        elif locked_item.status in [Item.STATUS_MAINTENANCE, Item.STATUS_RETIRED]:
+                            raise ValueError(
+                                f"Cannot take item {locked_item.id} - status is {locked_item.status}"
+                            )
+                        else:
+                            raise ValueError(
+                                f"Cannot take item {locked_item.id} - invalid status: {locked_item.status}"
+                            )
+                    
+                    # Update item status within the same transaction
+                    locked_item.status = Item.STATUS_ISSUED
+                    locked_item.save()
+                    
+                    logger.info(
+                        f"Item {locked_item.id} issued to {self.personnel} by user {self.issued_by}"
+                    )
+                
+                elif self.action == self.ACTION_RETURN:
+                    # Validate item is currently issued
+                    if locked_item.status != Item.STATUS_ISSUED:
+                        raise ValueError(
+                            f"Cannot return item {locked_item.id} - not currently issued (status: {locked_item.status})"
+                        )
+                    
+                    # Verify this personnel was the one who took the item
+                    last_take_transaction = Transaction.objects.filter(
+                        item=locked_item,
+                        action=self.ACTION_TAKE
+                    ).exclude(
+                        Exists(
+                            Transaction.objects.filter(
+                                item=locked_item,
+                                action=self.ACTION_RETURN,
+                                date_time__gt=OuterRef('date_time')
+                            )
+                        )
+                    ).first()
+                    
+                    if not last_take_transaction or last_take_transaction.personnel != self.personnel:
+                        current_holder = last_take_transaction.personnel if last_take_transaction else "Unknown"
+                        raise ValueError(
+                            f"Cannot return item {locked_item.id} - was issued to {current_holder}, not {self.personnel}"
+                        )
+                    
+                    # Update item status within the same transaction
+                    locked_item.status = Item.STATUS_AVAILABLE
+                    locked_item.save()
+                    
+                    logger.info(
+                        f"Item {locked_item.id} returned by {self.personnel} via user {self.issued_by}"
+                    )
+                
+            except Item.DoesNotExist:
+                raise ValueError(f"Item {self.item.pk} does not exist")
+            except Personnel.DoesNotExist:
+                raise ValueError(f"Personnel {self.personnel.pk} does not exist")
+            except Exception as e:
+                logger.error(f"Transaction validation failed: {e}")
+                raise
         
+        # Save the transaction record
         super().save(*args, **kwargs)
         
-        # Update item status after saving transaction
-        if is_new:
-            if self.action == self.ACTION_TAKE:
-                self.item.status = Item.STATUS_ISSUED
-                self.item.save()
-            elif self.action == self.ACTION_RETURN:
-                self.item.status = Item.STATUS_AVAILABLE
-                self.item.save()
+        logger.info(
+            f"Transaction {self.id} created: {self.action} {self.item} by {self.personnel}"
+        )
 

@@ -1,17 +1,40 @@
 # ArmGuard Testing Environment
 
-**Version:** 2.0.1  
-**Last Updated:** February 1, 2026  
+**Version:** 2.1.0  
+**Last Updated:** February 9, 2026  
 **Docker Compose Version:** 3.8+  
 **Minimum Docker:** 24.0+
 
-A comprehensive Docker-based testing environment for the ArmGuard military armory management system. This environment simulates real-world conditions and enables testing of functionality, security, and operational resilience.
+A comprehensive Docker-based testing environment for the ArmGuard military armory management system. This environment simulates real-world conditions and enables testing of functionality, security, device authorization, and operational resilience.
 
 ## 📋 Version History
 
+- **v2.1.0** (Feb 2026) - 🔐 Added Device Authorization System v2.0 integration for testing
 - **v2.0.1** (Feb 2026) - Added container registry support, enhanced secrets management
 - **v2.0.0** (Jan 2026) - Complete testing infrastructure with monitoring stack
 - **v1.x** (2025) - Basic Docker testing environment
+
+## 🔐 NEW: Device Authorization Testing
+
+**✅ Military-Grade Device Authorization now testable in Docker!**
+
+### 🛡️ Device Authorization Test Features
+- **Testing Mode**: `allow_all = true` for test environment flexibility
+- **Device Simulation**: Containerized authorized device simulation
+- **Redis Integration**: Device caching and lockout testing
+- **Security Testing**: Unauthorized access attempt simulation
+- **Audit Logging**: Comprehensive test logging and monitoring
+- **OWASP ZAP Integration**: Security scanning with device authorization awareness
+
+### 🔧 Device Authorization Test Configuration
+```bash
+# Docker environment variables for device authorization testing:
+DEVICE_AUTHORIZATION_ENABLED=True    # Enable device authorization system
+DEVICE_AUTH_SECURITY_MODE=TESTING    # Testing mode (vs PRODUCTION)
+DEVICE_AUTH_ALLOW_ALL=True          # Allow all devices in test environment
+DEVICE_AUTH_LOG_ALL_ATTEMPTS=True   # Log all access attempts for testing
+DEVICE_AUTH_REDIS_URL=redis://armguard-redis:6379/2  # Dedicated Redis DB
+```
 
 ## 🏗️ Architecture Overview
 

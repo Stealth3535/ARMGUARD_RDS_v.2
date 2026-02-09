@@ -270,6 +270,35 @@ echo -e "${GREEN}✓ Database ready${NC}"
 record_phase "Database Setup" "PASS"
 
 # ============================================================================
+# DEVICE AUTHORIZATION SYSTEM INTEGRATION
+# ============================================================================
+print_phase "4.5" "Device Authorization System"
+
+# Source device authorization integration functions
+DEVICE_AUTH_SCRIPT="$SCRIPT_DIR/device_auth_integration.sh"
+if [ -f "$DEVICE_AUTH_SCRIPT" ]; then
+    source "$DEVICE_AUTH_SCRIPT"
+    
+    # Configure device authorization for production
+    if configure_device_authorization_production; then
+        echo -e "${GREEN}✓ Device Authorization System configured${NC}"
+        
+        # Create deployment summary
+        create_device_authorization_summary
+        echo -e "${GREEN}✓ Device Authorization deployment summary created${NC}"
+        record_phase "Device Authorization" "PASS"
+    else
+        echo -e "${RED}✗ Device Authorization System configuration failed${NC}"
+        record_phase "Device Authorization" "FAIL"
+        exit 1
+    fi
+else
+    echo -e "${RED}✗ Device authorization integration script not found: $DEVICE_AUTH_SCRIPT${NC}"
+    record_phase "Device Authorization" "FAIL"
+    exit 1
+fi
+
+# ============================================================================
 # PHASE 5: Gunicorn Service
 # ============================================================================
 print_phase "5" "Gunicorn Service Installation"
