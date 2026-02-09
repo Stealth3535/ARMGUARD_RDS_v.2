@@ -307,43 +307,48 @@ AUTHENTICATION_BACKENDS = [
 
 ASGI_APPLICATION = 'core.asgi.application'
 
-# Advanced Redis configuration for optimal WebSocket performance
-# Auto-detects if Redis is available and falls back to InMemory if needed
+# Import unified Redis configuration
 try:
-    import redis
-    # Test Redis connection
-    redis_client = redis.Redis(host='127.0.0.1', port=6379, db=1, socket_connect_timeout=1)
-    redis_client.ping()
-    
-    # Redis is available - use it for optimal WebSocket performance
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {
-                "hosts": [("127.0.0.1", 6379)],
-                "capacity": 300,  # Reasonable limit to prevent memory issues
-                "expiry": 60,     # Message expiry (1 minute)
-                "group_expiry": 86400,  # Group expiry (24 hours)
-                "prefix": "armguard:",  # Redis key prefix
-                "symmetric_encryption_keys": ["your-secret-key-here"],  # Optional encryption
+    from .redis_settings import CHANNEL_LAYERS, CACHES, WEBSOCKET_SETTINGS
+    print("✅ Using unified Redis configuration for WebSockets")
+except ImportError:
+    # Fallback configuration if unified Redis not available
+    try:
+        import redis
+        # Test Redis connection
+        redis_client = redis.Redis(host='127.0.0.1', port=6379, db=1, socket_connect_timeout=1)
+        redis_client.ping()
+        
+        # Redis is available - use it for optimal WebSocket performance
+        CHANNEL_LAYERS = {
+            'default': {
+                'BACKEND': 'channels_redis.core.RedisChannelLayer',
+                'CONFIG': {
+                    "hosts": [("127.0.0.1", 6379)],
+                    "capacity": 300,  # Reasonable limit to prevent memory issues
+                    "expiry": 60,     # Message expiry (1 minute)
+                    "group_expiry": 86400,  # Group expiry (24 hours)
+                    "prefix": "armguard:",  # Redis key prefix
+                    "symmetric_encryption_keys": ["your-secret-key-here"],  # Optional encryption
+                },
             },
-        },
-    }
-    print("✅ Using Redis for WebSocket channel layer")
-    
-except (ImportError, redis.exceptions.ConnectionError, redis.exceptions.TimeoutError):
-    # Redis not available - use improved InMemory with limits
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels.layers.InMemoryChannelLayer',
-            'CONFIG': {
-                "capacity": 100,  # Reduced capacity to prevent memory issues
-                "expiry": 30,    # Shorter expiry for memory management
+        }
+        print("✅ Using Redis for WebSocket channel layer")
+        
+    except (ImportError, redis.exceptions.ConnectionError, redis.exceptions.TimeoutError):
+        # Redis not available - use improved InMemory with limits
+        CHANNEL_LAYERS = {
+            'default': {
+                'BACKEND': 'channels.layers.InMemoryChannelLayer',
+                'CONFIG': {
+                    "capacity": 100,  # Reduced capacity to prevent memory issues
+                    "expiry": 30,    # Shorter expiry for memory management
+                },
             },
-        },
-    }
-    print("⚠️ Redis not available - using InMemory channel layer with limits")
-    print("   For better WebSocket performance, install Redis: pip install redis")
+        }
+        print("⚠️ Redis not available - using InMemory channel layer with limits")
+        print("   For better WebSocket performance, install Redis: pip install redis")
+        print("   Or run the unified Redis manager: deployment/unified-redis-manager.sh")
 
 
 # Network-based Security Settings

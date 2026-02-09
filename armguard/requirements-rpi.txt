@@ -11,4 +11,4 @@ psutil==5.9.8                # System monitoring and thermal detection
 # RPi.GPIO==0.7.1            # Uncomment for GPIO hardware control
 
 # Additional RPi performance packages
-redis==5.0.0                 # For enhanced caching on 4GB+ systems
+redis==5.0.1                 # For enhanced caching on 4GB+ systems

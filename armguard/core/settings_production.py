@@ -66,8 +66,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Database - PostgreSQL for production
-if config('USE_POSTGRESQL', default=False, cast=bool):
+# Database - PostgreSQL for production with complete optimization
+if config('USE_POSTGRESQL', default=True, cast=bool):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -76,7 +76,15 @@ if config('USE_POSTGRESQL', default=False, cast=bool):
             'PASSWORD': config('DB_PASSWORD'),
             'HOST': config('DB_HOST', default='localhost'),
             'PORT': config('DB_PORT', default='5432'),
-            'CONN_MAX_AGE': 600,  # Connection pooling
+            'OPTIONS': {
+                'connect_timeout': 20,
+                'sslmode': config('DB_SSL_MODE', default='prefer'),
+                'MAX_CONNS': config('DB_MAX_CONNS', default=100, cast=int),
+                'cursor_factory': 'psycopg2.extras.RealDictCursor',
+                'isolation_level': 'psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED',
+            },
+            'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=600, cast=int),
+            'CONN_HEALTH_CHECKS': True,
         }
     }
 else:
@@ -88,9 +96,9 @@ else:
         }
     }
 
-# Static and Media Files (served by Nginx in production)
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-MEDIA_ROOT = BASE_DIR / 'core' / 'media'  # Match development settings
+# Static and Media Files (production paths for deployment compatibility)
+STATIC_ROOT = config('STATIC_ROOT', default='/var/www/armguard/static')
+MEDIA_ROOT = config('MEDIA_ROOT', default='/var/www/armguard/media')
 
 # Logging Configuration
 LOGGING = {
