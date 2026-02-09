@@ -256,7 +256,7 @@ get_configuration() {
     echo "Server IP:            ${SERVER_IP}"
     echo "Run User:             ${RUN_USER}:${RUN_GROUP}"
     echo "SSL:                  ${USE_SSL} (${SSL_TYPE})"
-    echo "Database:             $([ "$USE_POSTGRESQL" =~ ^[Yy] ] && echo "PostgreSQL" || echo "SQLite")"
+    echo "Database:             $([[ "$USE_POSTGRESQL" =~ ^[Yy] ]] && echo "PostgreSQL" || echo "SQLite")"
     echo "Firewall:             ${CONFIGURE_FIREWALL}"
     echo "Workers:              ${WORKERS}"
     echo "Admin URL:            /${ADMIN_URL}/"
