@@ -27,6 +27,7 @@ django-ratelimit==4.1.0      # ARM64 compatible
 django-axes==8.0.0           # ARM64 compatible
 django-csp==3.8              # ARM64 compatible
 django-security==0.12.0      # ARM64 compatible (latest available version)
+django-simple-history==3.4.0 # Model history tracking (ARM64 compatible)
 
 # Cache backends (ARM64 Optimized)
 redis==5.0.1                 # ARM64 native support
