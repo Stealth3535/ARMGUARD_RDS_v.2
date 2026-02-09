@@ -21,9 +21,21 @@ NC='\033[0m'
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Try to detect project directory (look for manage.py in parent dirs)
+DETECTED_PROJECT_DIR=""
+SEARCH_DIR="$SCRIPT_DIR"
+for i in {1..5}; do
+    if [ -f "$SEARCH_DIR/manage.py" ]; then
+        DETECTED_PROJECT_DIR="$SEARCH_DIR"
+        break
+    fi
+    SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+done
+
 # Default configuration for Ubuntu
 PROJECT_NAME="armguard"
-PROJECT_DIR="/var/www/armguard"
+# Use detected project directory if found, otherwise default to /var/www/armguard
+PROJECT_DIR="${DETECTED_PROJECT_DIR:-/var/www/armguard}"
 DOMAIN="armguard.local"
 NETWORK_TYPE="lan"
 QUICK_MODE="no"
@@ -379,6 +391,13 @@ main() {
     if [ "$EUID" -ne 0 ]; then 
         echo -e "${RED}❌ This script must be run as root (use sudo)${NC}"
         exit 1
+    fi
+    
+    # Show detected project location
+    if [ -n "$DETECTED_PROJECT_DIR" ]; then
+        echo -e "${CYAN}📦 Project auto-detected at: ${GREEN}$DETECTED_PROJECT_DIR${NC}"
+        echo -e "${CYAN}   (Will use this location for deployment)${NC}"
+        echo ""
     fi
     
     # System checks
