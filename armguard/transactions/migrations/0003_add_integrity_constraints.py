@@ -12,18 +12,21 @@ def apply_database_constraints(apps, schema_editor):
     if db_vendor == 'postgresql':
         # PostgreSQL-specific indexes and constraints
         with connection.cursor() as cursor:
-            # Create unique partial index for personnel (PostgreSQL)
+            # Note: We use a trigger function for complex business rule validation
+            # because PostgreSQL doesn't support subqueries in index predicates
+            # The trigger (below) prevents personnel from having multiple active items
+            
+            # Partial indexes are more optimal (smaller size, faster queries)
             cursor.execute("""
-                CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS personnel_single_active_item_idx 
-                ON transactions (personnel_id) 
-                WHERE action = 'Take' 
-                AND NOT EXISTS (
-                    SELECT 1 FROM transactions t2 
-                    WHERE t2.item_id = transactions.item_id 
-                    AND t2.personnel_id = transactions.personnel_id
-                    AND t2.action = 'Return' 
-                    AND t2.date_time > transactions.date_time
-                );
+                CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_transaction_active_takes
+                ON transactions (personnel_id, item_id, date_time DESC) 
+                WHERE action = 'Take';
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_transaction_returns
+                ON transactions (item_id, personnel_id, date_time DESC) 
+                WHERE action = 'Return';
             """)
             
             # Performance indexes with INCLUDE (PostgreSQL only)
