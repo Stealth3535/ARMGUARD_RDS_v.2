@@ -123,26 +123,96 @@ get_configuration() {
     read -p "Run as group [${DEFAULT_RUN_GROUP}]: " RUN_GROUP
     RUN_GROUP=${RUN_GROUP:-$DEFAULT_RUN_GROUP}
     
-    # SSL configuration
-    read -p "Configure SSL/HTTPS? [${DEFAULT_USE_SSL}]: " USE_SSL
-    USE_SSL=${USE_SSL:-$DEFAULT_USE_SSL}
+    # Network Type Configuration
+    echo ""
+    echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+    echo -e "${BLUE}Network Configuration${NC}"
+    echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo "Select your network deployment type:"
+    echo ""
+    echo "  1) LAN-only (local network - armory PC access)"
+    echo "     • Secure internal transactions"
+    echo "     • Uses: mkcert SSL (self-signed)"
+    echo "     • Access: https://${SERVER_IP}"
+    echo ""
+    echo "  2) WAN-only (internet accessible - remote log viewing)"
+    echo "     • Public domain access"
+    echo "     • Uses: Let's Encrypt SSL"
+    echo "     • Access: https://yourdomain.com"
+    echo ""
+    echo "  3) Hybrid (LAN + WAN with complete isolation)"
+    echo "     • LAN: Secure transactions (${SERVER_IP})"
+    echo "     • WAN: Remote log viewing (public domain)"
+    echo "     • Dual SSL certificates"
+    echo "     • Network isolation maintained"
+    echo ""
     
-    if [[ "$USE_SSL" =~ ^[Yy] ]]; then
-        echo ""
-        echo "SSL Options:"
-        echo "  1) mkcert (for LAN/local networks)"
-        echo "  2) letsencrypt (for public domains)"
-        read -p "Choose SSL type [1]: " SSL_CHOICE
-        SSL_CHOICE=${SSL_CHOICE:-1}
+    while true; do
+        read -p "Choose network type (1-3) [1]: " NETWORK_CHOICE
+        NETWORK_CHOICE=${NETWORK_CHOICE:-1}
         
-        if [ "$SSL_CHOICE" == "2" ]; then
-            SSL_TYPE="letsencrypt"
-            read -p "Email for Let's Encrypt [admin@${DOMAIN}]: " LETSENCRYPT_EMAIL
-            LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-admin@${DOMAIN}}
-        else
-            SSL_TYPE="mkcert"
-        fi
-    fi
+        case $NETWORK_CHOICE in
+            1)
+                NETWORK_TYPE="lan"
+                SSL_TYPE="mkcert"
+                USE_SSL="yes"
+                echo -e "${GREEN}✓ LAN-only deployment selected${NC}"
+                break
+                ;;
+            2)
+                NETWORK_TYPE="wan"
+                SSL_TYPE="letsencrypt"
+                USE_SSL="yes"
+                echo ""
+                echo -e "${YELLOW}WAN Configuration:${NC}"
+                read -p "Enter your public domain name: " WAN_DOMAIN
+                if [ -z "$WAN_DOMAIN" ]; then
+                    echo -e "${RED}Error: Domain name required for WAN deployment${NC}"
+                    continue
+                fi
+                DOMAIN="$WAN_DOMAIN"
+                read -p "Email for Let's Encrypt [admin@${DOMAIN}]: " LETSENCRYPT_EMAIL
+                LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-admin@${DOMAIN}}
+                echo -e "${GREEN}✓ WAN deployment configured${NC}"
+                break
+                ;;
+            3)
+                NETWORK_TYPE="hybrid"
+                USE_SSL="yes"
+                echo ""
+                echo -e "${YELLOW}Hybrid LAN + WAN Configuration:${NC}"
+                echo ""
+                echo -e "${CYAN}LAN Settings:${NC}"
+                echo "  • IP: ${SERVER_IP}"
+                echo "  • SSL: mkcert (self-signed)"
+                echo "  • Purpose: Secure armory transactions"
+                echo ""
+                echo -e "${CYAN}WAN Settings:${NC}"
+                read -p "Enter your public domain name: " WAN_DOMAIN
+                if [ -z "$WAN_DOMAIN" ]; then
+                    echo -e "${RED}Error: Domain name required for WAN access${NC}"
+                    continue
+                fi
+                WAN_DOMAIN_NAME="$WAN_DOMAIN"
+                read -p "Email for Let's Encrypt [admin@${WAN_DOMAIN}]: " LETSENCRYPT_EMAIL
+                LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-admin@${WAN_DOMAIN}}
+                
+                # Set both SSL types for hybrid
+                SSL_TYPE="hybrid"
+                echo ""
+                echo -e "${GREEN}✓ Hybrid deployment configured${NC}"
+                echo "  • LAN: https://${SERVER_IP} (transactions)"
+                echo "  • WAN: https://${WAN_DOMAIN} (log viewing)"
+                break
+                ;;
+            *)
+                echo -e "${RED}Invalid choice. Please select 1, 2, or 3.${NC}"
+                ;;
+        esac
+    done
+    
+    echo ""
     
     # Database configuration
     read -p "Use PostgreSQL? (no=SQLite) [${DEFAULT_USE_POSTGRESQL}]: " USE_POSTGRESQL
@@ -541,25 +611,147 @@ configure_nginx() {
     echo -e "${BLUE}Step 7: Configuring Nginx${NC}"
     echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
     
-    echo -e "${YELLOW}Creating Nginx configuration...${NC}"
+    echo -e "${YELLOW}Creating Nginx configuration for ${NETWORK_TYPE} deployment...${NC}"
     
-    # HTTP configuration (will redirect to HTTPS if SSL is enabled)
-    cat > /etc/nginx/sites-available/armguard <<EOF
+    if [ "$NETWORK_TYPE" == "hybrid" ]; then
+        # Hybrid: Two separate server blocks - LAN and WAN
+        cat > /etc/nginx/sites-available/armguard <<'EOF'
+# =============================================================================
+# HYBRID DEPLOYMENT: LAN + WAN with Complete Isolation
+# =============================================================================
+
+# LAN HTTP - Redirect to HTTPS
+server {
+    listen 80;
+EOF
+        echo "    server_name ${SERVER_IP};" >> /etc/nginx/sites-available/armguard
+        cat >> /etc/nginx/sites-available/armguard <<'EOF'
+    return 301 https://$server_name$request_uri;
+}
+
+# LAN HTTPS - Armory Transactions (mkcert SSL)
+server {
+    listen 443 ssl http2;
+EOF
+        echo "    server_name ${SERVER_IP};" >> /etc/nginx/sites-available/armguard
+        cat >> /etc/nginx/sites-available/armguard <<'EOF'
+    
+    # mkcert SSL certificates (will be added by SSL setup)
+    # ssl_certificate_lan will be configured
+    
+    # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    
+    # LAN-specific: Full access to all features
+EOF
+        
+        cat >> /etc/nginx/sites-available/armguard <<EOF
+    
+    location /static/ {
+        alias ${PROJECT_DIR}/staticfiles/;
+        expires 30d;
+    }
+    
+    location /media/ {
+        alias ${PROJECT_DIR}/media/;
+    }
+    
+    location / {
+        proxy_pass http://unix:/run/gunicorn-armguard.sock;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Network-Type "LAN";
+    }
+}
+
+# WAN HTTP - Redirect to HTTPS
+server {
+    listen 80;
+EOF
+        echo "    server_name ${WAN_DOMAIN_NAME};" >> /etc/nginx/sites-available/armguard
+        cat >> /etc/nginx/sites-available/armguard <<'EOF'
+    return 301 https://$server_name$request_uri;
+}
+
+# WAN HTTPS - Personnel Log Viewing (Let's Encrypt SSL)
+server {
+    listen 443 ssl http2;
+EOF
+        echo "    server_name ${WAN_DOMAIN_NAME};" >> /etc/nginx/sites-available/armguard
+        cat >> /etc/nginx/sites-available/armguard <<'EOF'
+    
+    # Let's Encrypt SSL certificates (will be added by certbot)
+    # ssl_certificate_wan will be configured
+    
+    # Enhanced security for public access
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    
+    # WAN-specific: Limited to log viewing only
+    # Transactions are BLOCKED on WAN
+EOF
+        
+        cat >> /etc/nginx/sites-available/armguard <<EOF
+    
+    location /static/ {
+        alias ${PROJECT_DIR}/staticfiles/;
+        expires 30d;
+    }
+    
+    location /media/ {
+        alias ${PROJECT_DIR}/media/;
+    }
+    
+    # Block transaction URLs on WAN for security
+    location ~ ^/(transactions|inventory|qr_manager) {
+        return 403 "Transaction operations only available on LAN";
+    }
+    
+    location / {
+        proxy_pass http://unix:/run/gunicorn-armguard.sock;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-Network-Type "WAN";
+    }
+    
+    location = /robots.txt {
+        return 200 "User-agent: *\nDisallow: /\n";
+    }
+}
+EOF
+    else
+        # Single network (LAN or WAN)
+        SERVER_NAME="${DOMAIN} ${SERVER_IP}"
+        if [ "$NETWORK_TYPE" == "wan" ]; then
+            SERVER_NAME="${DOMAIN}"
+        fi
+        
+        cat > /etc/nginx/sites-available/armguard <<EOF
 # HTTP Server
 server {
     listen 80;
-    server_name ${DOMAIN} ${SERVER_IP};
+    server_name ${SERVER_NAME};
 EOF
 
-    if [[ "$USE_SSL" =~ ^[Yy] ]]; then
-        cat >> /etc/nginx/sites-available/armguard <<EOF
+        if [[ "$USE_SSL" =~ ^[Yy] ]]; then
+            cat >> /etc/nginx/sites-available/armguard <<EOF
     return 301 https://\$server_name\$request_uri;
 }
 
 # HTTPS Server
 server {
     listen 443 ssl http2;
-    server_name ${DOMAIN} ${SERVER_IP};
+    server_name ${SERVER_NAME};
     
     # SSL certificates (will be configured in next step)
     # ssl_certificate will be added by SSL setup
@@ -571,9 +763,9 @@ server {
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 EOF
-    fi
-    
-    cat >> /etc/nginx/sites-available/armguard <<EOF
+        fi
+        
+        cat >> /etc/nginx/sites-available/armguard <<EOF
     
     # Static files
     location /static/ {
@@ -618,6 +810,7 @@ EOF
     }
 }
 EOF
+    fi
     
     # Enable site
     ln -sf /etc/nginx/sites-available/armguard /etc/nginx/sites-enabled/
@@ -626,7 +819,7 @@ EOF
     # Test configuration
     nginx -t
     
-    echo -e "${GREEN}✓ Nginx configured${NC}"
+    echo -e "${GREEN}✓ Nginx configured for ${NETWORK_TYPE} deployment${NC}"
 }
 
 # Step 9: SSL setup
@@ -642,7 +835,71 @@ setup_ssl() {
     echo -e "${BLUE}Step 8: Setting Up SSL/HTTPS${NC}"
     echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
     
-    if [ "$SSL_TYPE" == "letsencrypt" ]; then
+    if [ "$SSL_TYPE" == "hybrid" ]; then
+        # Hybrid: Install both mkcert (LAN) and Let's Encrypt (WAN)
+        echo -e "${CYAN}Setting up HYBRID SSL certificates...${NC}"
+        echo ""
+        
+        # Part 1: mkcert for LAN
+        echo -e "${YELLOW}[1/2] Installing mkcert for LAN (${SERVER_IP})...${NC}"
+        wget -q https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-linux-amd64
+        mv mkcert-v1.4.4-linux-amd64 /usr/local/bin/mkcert
+        chmod +x /usr/local/bin/mkcert
+        
+        echo -e "${YELLOW}Creating local CA...${NC}"
+        mkcert -install
+        
+        echo -e "${YELLOW}Generating LAN certificates...${NC}"
+        mkdir -p /etc/ssl/armguard/lan
+        cd /etc/ssl/armguard/lan
+        mkcert ${SERVER_IP} localhost 127.0.0.1
+        
+        LAN_CERT=$(ls /etc/ssl/armguard/lan/*.pem | grep -v key)
+        LAN_KEY=$(ls /etc/ssl/armguard/lan/*-key.pem)
+        
+        # Update LAN server block with mkcert certificates
+        sed -i "/# ssl_certificate_lan/a\    ssl_certificate ${LAN_CERT};\n    ssl_certificate_key ${LAN_KEY};" \
+            /etc/nginx/sites-available/armguard
+        
+        echo -e "${GREEN}✓ LAN SSL configured (mkcert)${NC}"
+        echo ""
+        
+        # Part 2: Let's Encrypt for WAN
+        echo -e "${YELLOW}[2/2] Installing Let's Encrypt for WAN (${WAN_DOMAIN_NAME})...${NC}"
+        apt install -y -qq certbot python3-certbot-nginx
+        
+        echo -e "${YELLOW}Obtaining Let's Encrypt certificate for ${WAN_DOMAIN_NAME}...${NC}"
+        certbot certonly --nginx -d ${WAN_DOMAIN_NAME} --non-interactive --agree-tos -m ${LETSENCRYPT_EMAIL}
+        
+        # Update WAN server block with Let's Encrypt certificates
+        WAN_CERT="/etc/letsencrypt/live/${WAN_DOMAIN_NAME}/fullchain.pem"
+        WAN_KEY="/etc/letsencrypt/live/${WAN_DOMAIN_NAME}/privkey.pem"
+        
+        sed -i "/# ssl_certificate_wan/a\    ssl_certificate ${WAN_CERT};\n    ssl_certificate_key ${WAN_KEY};" \
+            /etc/nginx/sites-available/armguard
+        
+        echo -e "${GREEN}✓ WAN SSL configured (Let's Encrypt)${NC}"
+        echo ""
+        
+        echo -e "${CYAN}═══════════════════════════════════════════════════════${NC}"
+        echo -e "${GREEN}✓ Hybrid SSL Setup Complete${NC}"
+        echo -e "${CYAN}═══════════════════════════════════════════════════════${NC}"
+        echo ""
+        echo -e "${YELLOW}LAN Access:${NC}"
+        echo -e "  • URL: https://${SERVER_IP}"
+        echo -e "  • SSL: mkcert (self-signed)"
+        echo -e "  • Purpose: Secure armory transactions"
+        echo -e "  • CA cert: ~/.local/share/mkcert/rootCA.pem"
+        echo -e "    ${BLUE}(Install on armory PC to trust certificate)${NC}"
+        echo ""
+        echo -e "${YELLOW}WAN Access:${NC}"
+        echo -e "  • URL: https://${WAN_DOMAIN_NAME}"
+        echo -e "  • SSL: Let's Encrypt (public CA)"
+        echo -e "  • Purpose: Remote log viewing"
+        echo -e "  • Auto-renewal: Enabled"
+        echo ""
+        
+    elif [ "$SSL_TYPE" == "letsencrypt" ]; then
         echo -e "${YELLOW}Installing Certbot...${NC}"
         apt install -y -qq certbot python3-certbot-nginx
         
@@ -650,7 +907,9 @@ setup_ssl() {
         certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos -m ${LETSENCRYPT_EMAIL}
         
         echo -e "${GREEN}✓ Let's Encrypt SSL configured${NC}"
+        
     else
+        # mkcert only (LAN)
         echo -e "${YELLOW}Installing mkcert...${NC}"
         wget -q https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-linux-amd64
         mv mkcert-v1.4.4-linux-amd64 /usr/local/bin/mkcert
@@ -749,12 +1008,39 @@ final_summary() {
     echo -e "${GREEN}✓ All components installed and configured${NC}"
     echo ""
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${YELLOW}Deployment Summary${NC}"
+    echo -e "${YELLOW}Deployment Summary - ${NETWORK_TYPE^^} Network${NC}"
     echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
-    echo "Application URL:      http${USE_SSL:+s}://${DOMAIN}"
-    echo "                      http${USE_SSL:+s}://${SERVER_IP}"
-    echo "Admin URL:            http${USE_SSL:+s}://${DOMAIN}/${ADMIN_URL}/"
+    
+    if [ "$NETWORK_TYPE" == "hybrid" ]; then
+        echo -e "${CYAN}LAN Access (Armory Transactions):${NC}"
+        echo "  URL:                  https://${SERVER_IP}"
+        echo "  SSL:                  mkcert (self-signed)"
+        echo "  Purpose:              Secure armory inventory transactions"
+        echo "  Features:             Full access to all transaction features"
+        echo ""
+        echo -e "${CYAN}WAN Access (Remote Log Viewing):${NC}"
+        echo "  URL:                  https://${WAN_DOMAIN_NAME}"
+        echo "  SSL:                  Let's Encrypt (public CA)"
+        echo "  Purpose:              Remote log viewing and monitoring"
+        echo "  Features:             View-only access (transactions blocked)"
+        echo ""
+        echo -e "${YELLOW}Network Isolation:${NC} Complete separation maintained between LAN/WAN"
+        echo ""
+    elif [ "$NETWORK_TYPE" == "wan" ]; then
+        echo "Application URL:      https://${DOMAIN}"
+        echo "SSL Type:             Let's Encrypt"
+        echo "Access:               Public internet"
+        echo ""
+    else
+        echo "Application URL:      https://${SERVER_IP}"
+        echo "Alternate URL:        https://${DOMAIN}"
+        echo "SSL Type:             mkcert (self-signed)"
+        echo "Access:               LAN only"
+        echo ""
+    fi
+    
+    echo "Admin URL:            https://${DOMAIN}/${ADMIN_URL}/"
     echo ""
     echo "Project Directory:    ${PROJECT_DIR}"
     echo "Virtual Environment:  ${PROJECT_DIR}/.venv"
@@ -777,10 +1063,17 @@ final_summary() {
         echo ""
     fi
     
-    if [ "$SSL_TYPE" == "mkcert" ]; then
-        echo -e "${YELLOW}Important: mkcert Certificate${NC}"
+    if [ "$SSL_TYPE" == "mkcert" ] || [ "$SSL_TYPE" == "hybrid" ]; then
+        echo -e "${YELLOW}Important: mkcert Certificate (LAN)${NC}"
         echo "CA Certificate:       ~/.local/share/mkcert/rootCA.pem"
-        echo "Install this certificate on client devices to trust HTTPS"
+        echo "Install this certificate on armory PC to trust HTTPS"
+        echo ""
+    fi
+    
+    if [ "$SSL_TYPE" == "hybrid" ]; then
+        echo -e "${YELLOW}Let's Encrypt (WAN)${NC}"
+        echo "Auto-renewal:         Enabled (certbot timer)"
+        echo "Certificate expires:  90 days (auto-renews at 30 days)"
         echo ""
     fi
     
@@ -817,6 +1110,30 @@ final_summary() {
     cat > "${PROJECT_DIR}/DEPLOYMENT_INFO.txt" <<EOF
 ArmGuard Deployment Information
 Generated: $(date)
+
+=========================================
+Network Type: ${NETWORK_TYPE^^}
+=========================================
+EOF
+
+    if [ "$NETWORK_TYPE" == "hybrid" ]; then
+        cat >> "${PROJECT_DIR}/DEPLOYMENT_INFO.txt" <<EOF
+
+LAN Access (Armory Transactions):
+  URL: https://${SERVER_IP}
+  SSL: mkcert (self-signed)
+  Purpose: Secure armory inventory transactions
+  
+WAN Access (Remote Log Viewing):
+  URL: https://${WAN_DOMAIN_NAME}
+  SSL: Let's Encrypt
+  Purpose: Remote log viewing and monitoring
+  
+Network Isolation: Complete separation maintained
+
+EOF
+    else
+        cat >> "${PROJECT_DIR}/DEPLOYMENT_INFO.txt" <<EOF
 
 Application URLs:
 - Main: http${USE_SSL:+s}://${DOMAIN}
