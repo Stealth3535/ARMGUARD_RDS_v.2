@@ -79,9 +79,8 @@ if config('USE_POSTGRESQL', default=True, cast=bool):
             'OPTIONS': {
                 'connect_timeout': 20,
                 'sslmode': config('DB_SSL_MODE', default='prefer'),
-                'MAX_CONNS': config('DB_MAX_CONNS', default=100, cast=int),
-                'cursor_factory': 'psycopg2.extras.RealDictCursor',
-                'isolation_level': 'psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED',
+                # MAX_CONNS removed - not a valid psycopg2 option
+                # cursor_factory and isolation_level removed - Django 5.2+ handles these automatically
             },
             'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=600, cast=int),
             'CONN_HEALTH_CHECKS': True,
