@@ -1133,6 +1133,7 @@ Network Isolation: Complete separation maintained
 
 EOF
     else
+        # Build deployment info for non-hybrid deployments
         cat >> "${PROJECT_DIR}/DEPLOYMENT_INFO.txt" <<EOF
 
 Application URLs:
@@ -1146,30 +1147,51 @@ Configuration:
 - Django Secret Key: ${DJANGO_SECRET_KEY}
 - Admin URL Path: /${ADMIN_URL}/
 
-Database:
-$(if [[ "$USE_POSTGRESQL" =~ ^[Yy] ]]; then
-    echo "- Type: PostgreSQL"
-    echo "- Name: ${DB_NAME}"
-    echo "- User: ${DB_USER}"
-    echo "- Password: ${DB_PASSWORD}"
-else
-    echo "- Type: SQLite"
-    echo "- File: ${PROJECT_DIR}/db.sqlite3"
-fi)
+EOF
 
+        # Add database configuration
+        if [[ "$USE_POSTGRESQL" =~ ^[Yy] ]]; then
+            cat >> "${PROJECT_DIR}/DEPLOYMENT_INFO.txt" <<EOF
+Database:
+- Type: PostgreSQL
+- Name: ${DB_NAME}
+- User: ${DB_USER}
+- Password: ${DB_PASSWORD}
+
+EOF
+        else
+            cat >> "${PROJECT_DIR}/DEPLOYMENT_INFO.txt" <<EOF
+Database:
+- Type: SQLite
+- File: ${PROJECT_DIR}/db.sqlite3
+
+EOF
+        fi
+
+        # Add services info
+        cat >> "${PROJECT_DIR}/DEPLOYMENT_INFO.txt" <<EOF
 Services:
 - Gunicorn: /etc/systemd/system/gunicorn-armguard.service
 - Nginx: /etc/nginx/sites-available/armguard
 - Logs: /var/log/armguard/
 
-$(if [ "$SSL_TYPE" == "mkcert" ]; then
-    echo "SSL (mkcert):"
-    echo "- CA Certificate: ~/.local/share/mkcert/rootCA.pem"
-    echo "- Install CA on client devices for trusted HTTPS"
-fi)
+EOF
 
+        # Add SSL configuration if mkcert
+        if [ "$SSL_TYPE" == "mkcert" ]; then
+            cat >> "${PROJECT_DIR}/DEPLOYMENT_INFO.txt" <<EOF
+SSL (mkcert):
+- CA Certificate: ~/.local/share/mkcert/rootCA.pem
+- Install CA on client devices for trusted HTTPS
+
+EOF
+        fi
+
+        # Add security notice
+        cat >> "${PROJECT_DIR}/DEPLOYMENT_INFO.txt" <<EOF
 IMPORTANT: Keep this file secure! It contains sensitive credentials.
 EOF
+    fi
     
     chmod 600 "${PROJECT_DIR}/DEPLOYMENT_INFO.txt"
     echo -e "${YELLOW}Deployment info saved to: ${PROJECT_DIR}/DEPLOYMENT_INFO.txt${NC}"
