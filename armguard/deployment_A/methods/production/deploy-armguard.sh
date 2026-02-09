@@ -493,6 +493,7 @@ ADMIN_RESTRICTION_LOG_PATH=${PROJECT_DIR}/logs/admin_restrictions.log
 EOF
     
     chmod 600 .env
+    chown ${RUN_USER}:${RUN_GROUP} .env
     echo -e "${GREEN}✓ Environment configured${NC}"
 }
 
