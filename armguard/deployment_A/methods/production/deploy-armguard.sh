@@ -383,31 +383,31 @@ setup_python_environment() {
         python3 -m venv .venv
     fi
     
-    echo -e "${YELLOW}Installing Python packages...${NC}"
-    .venv/bin/pip install --upgrade pip -q
+    echo -e "${YELLOW}Installing Python packages (this may take 2-5 minutes)...${NC}"
+    .venv/bin/pip install --upgrade pip --quiet
     
     # Detect environment and install appropriate requirements
     if [ -f /proc/device-tree/model ] && grep -q "Raspberry Pi" /proc/device-tree/model 2>/dev/null; then
         echo -e "${GREEN}🥧 Raspberry Pi detected - installing full RPi requirements${NC}"
         if [ -f "requirements-rpi.txt" ]; then
-            .venv/bin/pip install -r requirements-rpi.txt -q
+            .venv/bin/pip install -r requirements-rpi.txt --progress-bar on
         else
             # Fallback to base requirements + psutil for RPi
-            .venv/bin/pip install -r requirements.txt -q
+            .venv/bin/pip install -r requirements.txt --progress-bar on
             echo -e "${YELLOW}Installing psutil for enhanced RPi monitoring...${NC}"
-            .venv/bin/pip install psutil==5.9.8 -q
+            .venv/bin/pip install psutil==5.9.8
         fi
     elif [[ $(uname -m) =~ ^(aarch64|arm64)$ ]]; then
         echo -e "${GREEN}🏗️ ARM64 architecture detected - installing ARM64 optimized requirements${NC}"
         if [ -f "requirements-rpi.txt" ]; then
-            .venv/bin/pip install -r requirements-rpi.txt -q
+            .venv/bin/pip install -r requirements-rpi.txt --progress-bar on
         else
-            .venv/bin/pip install -r requirements.txt -q
-            .venv/bin/pip install psutil==5.9.8 -q
+            .venv/bin/pip install -r requirements.txt --progress-bar on
+            .venv/bin/pip install psutil==5.9.8
         fi
     else
         echo -e "${BLUE}💻 Standard environment detected - installing base requirements${NC}"
-        .venv/bin/pip install -r requirements.txt -q
+        .venv/bin/pip install -r requirements.txt --progress-bar on
         echo -e "${YELLOW}📝 Note: psutil not installed - some monitoring features will use fallbacks${NC}"
     fi
     
