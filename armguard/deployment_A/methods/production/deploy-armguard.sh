@@ -107,6 +107,17 @@ get_configuration() {
     read -p "Project directory [${DEFAULT_PROJECT_DIR}]: " PROJECT_DIR
     PROJECT_DIR=${PROJECT_DIR:-$DEFAULT_PROJECT_DIR}
     
+    # Auto-detect run user based on project location
+    # If project is in /home/username/, use that username instead of www-data
+    if [[ "$PROJECT_DIR" =~ ^/home/([^/]+)/ ]]; then
+        DETECTED_USER="${BASH_REMATCH[1]}"
+        if id "$DETECTED_USER" >/dev/null 2>&1; then
+            DEFAULT_RUN_USER="$DETECTED_USER"
+            DEFAULT_RUN_GROUP="$DETECTED_USER"
+            echo -e "${YELLOW}ℹ Project in home directory - using user: ${DETECTED_USER}${NC}"
+        fi
+    fi
+    
     # Domain name
     read -p "Domain name [${DEFAULT_DOMAIN}]: " DOMAIN
     DOMAIN=${DOMAIN:-$DEFAULT_DOMAIN}
