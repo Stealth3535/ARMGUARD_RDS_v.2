@@ -95,9 +95,12 @@ else:
         }
     }
 
-# Static and Media Files (production paths for deployment compatibility)
-STATIC_ROOT = config('STATIC_ROOT', default='/home/rds/ARMGUARD_RDS_v.2/armguard/staticfiles')
-MEDIA_ROOT = config('MEDIA_ROOT', default='/home/rds/ARMGUARD_RDS_v.2/armguard/media')
+# Static and Media Files
+# Use environment variables first, fallback to sensible defaults based on BASE_DIR
+STATIC_ROOT = config('STATIC_ROOT', default=str(BASE_DIR / 'staticfiles'))
+MEDIA_ROOT = config('MEDIA_ROOT', default=str(BASE_DIR / 'media'))
+STATIC_URL = config('STATIC_URL', default='/static/')
+MEDIA_URL = config('MEDIA_URL', default='/media/')
 
 # Logging Configuration
 LOGGING = {

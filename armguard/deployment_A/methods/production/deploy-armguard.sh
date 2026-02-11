@@ -501,6 +501,12 @@ SECURITY_LOG_PATH=${PROJECT_DIR}/logs/security.log
 ERROR_LOG_PATH=${PROJECT_DIR}/logs/errors.log
 DJANGO_LOG_PATH=${PROJECT_DIR}/logs/django.log
 ADMIN_RESTRICTION_LOG_PATH=${PROJECT_DIR}/logs/admin_restrictions.log
+
+# Static and Media Files
+STATIC_ROOT=${PROJECT_DIR}/staticfiles
+MEDIA_ROOT=${PROJECT_DIR}/media
+STATIC_URL=/static/
+MEDIA_URL=/media/
 EOF
     
     chmod 600 .env
@@ -517,13 +523,22 @@ setup_database() {
     
     cd "$PROJECT_DIR"
     
-    # Create log directories FIRST (before running any Django commands)
-    echo -e "${YELLOW}Creating log directories...${NC}"
+    # Create necessary directories FIRST (before running any Django commands)
+    echo -e "${YELLOW}Creating directories...${NC}"
     mkdir -p "${PROJECT_DIR}/logs"
+    mkdir -p "${PROJECT_DIR}/staticfiles"
+    mkdir -p "${PROJECT_DIR}/media"
     mkdir -p "/var/log/armguard"
+    
+    # Set ownership to the run user
     chown -R ${RUN_USER}:${RUN_GROUP} "${PROJECT_DIR}/logs"
+    chown -R ${RUN_USER}:${RUN_GROUP} "${PROJECT_DIR}/staticfiles"
+    chown -R ${RUN_USER}:${RUN_GROUP} "${PROJECT_DIR}/media"
     chown -R ${RUN_USER}:${RUN_GROUP} "/var/log/armguard"
-    echo -e "${GREEN}✓ Log directories created${NC}"
+    
+    # Ensure the entire project directory has correct ownership
+    chown -R ${RUN_USER}:${RUN_GROUP} "${PROJECT_DIR}"
+    echo -e "${GREEN}✓ Directories created and permissions set${NC}"
     
     if [[ "$USE_POSTGRESQL" =~ ^[Yy] ]]; then
         echo -e "${YELLOW}Setting up PostgreSQL database...${NC}"
@@ -1250,10 +1265,41 @@ EOF
     echo -e "${YELLOW}Deployment info saved to: ${PROJECT_DIR}/DEPLOYMENT_INFO.txt${NC}"
 }
 
+# Cleanup function for failed deployments
+cleanup_failed_deployment() {
+    echo ""
+    echo -e "${YELLOW}Cleaning up failed deployment...${NC}"
+    
+    # Stop and disable service if it exists
+    systemctl stop gunicorn-armguard 2>/dev/null || true
+    systemctl disable gunicorn-armguard 2>/dev/null || true
+    
+    # Remove service file
+    rm -f /etc/systemd/system/gunicorn-armguard.service 2>/dev/null || true
+    
+    # Reload systemd
+    systemctl daemon-reload
+    
+    echo -e "${GREEN}✓ Cleanup complete${NC}"
+}
+
 # Main execution
 main() {
     print_banner
     check_root
+    
+    # Offer to cleanup if service already exists and is failed
+    if systemctl list-unit-files | grep -q gunicorn-armguard.service; then
+        if ! systemctl is-active --quiet gunicorn-armguard; then
+            echo -e "${YELLOW}⚠ Detected existing failed gunicorn-armguard service${NC}"
+            read -p "Clean up failed deployment before continuing? (yes/no) [yes]: " CLEANUP
+            CLEANUP=${CLEANUP:-yes}
+            if [[ "$CLEANUP" =~ ^[Yy] ]]; then
+                cleanup_failed_deployment
+            fi
+        fi
+    fi
+    
     get_configuration
     
     install_system_packages
