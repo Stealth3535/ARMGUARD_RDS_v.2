@@ -6,22 +6,22 @@ After=network.target
 [Service]
 Type=exec
 # The specific user and group that should run Gunicorn
-User=www-data
-Group=www-data
+User=rds
+Group=rds
 
 # Working directory where your Django project is located
-WorkingDirectory=/var/www/armguard
+WorkingDirectory=/home/rds/ARMGUARD_RDS_v.2/armguard
 
 # Environment variables
-Environment="PATH=/var/www/armguard/.venv/bin"
+Environment="PATH=/home/rds/ARMGUARD_RDS_v.2/armguard/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Environment="DJANGO_SETTINGS_MODULE=core.settings_production"
 
 # Load environment variables from .env file (optional with -)
-EnvironmentFile=-/var/www/armguard/.env
+EnvironmentFile=-/home/rds/ARMGUARD_RDS_v.2/armguard/.env
 
 # Gunicorn execution command
 # Adjust paths and worker count based on your server
-ExecStart=/var/www/armguard/.venv/bin/gunicorn \
+ExecStart=/home/rds/ARMGUARD_RDS_v.2/armguard/.venv/bin/gunicorn \
           --workers 3 \
           --bind unix:/run/gunicorn-armguard.sock \
           --timeout 60 \
@@ -42,8 +42,8 @@ RestartSec=3
 # Security settings
 PrivateTmp=true
 NoNewPrivileges=true
-ProtectSystem=strict
-ReadWritePaths=/var/www/armguard /var/log/armguard /run
+ProtectSystem=full
+ReadWritePaths=/home/rds/ARMGUARD_RDS_v.2/armguard /var/log/armguard /run
 
 # Process management
 KillMode=mixed

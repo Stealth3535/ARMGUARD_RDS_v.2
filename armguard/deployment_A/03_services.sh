@@ -125,11 +125,11 @@ setup_django_application() {
     export DJANGO_SETTINGS_MODULE=core.settings_production
     
     # Create necessary directories
-    sudo mkdir -p /var/www/armguard/static
-    sudo mkdir -p /var/www/armguard/media
+    sudo mkdir -p ${ARMGUARD_ROOT}/staticfiles
+    sudo mkdir -p ${ARMGUARD_ROOT}/media
     sudo mkdir -p /var/log/armguard
-    sudo chown -R www-data:www-data /var/www/armguard
-    sudo chown -R www-data:www-data /var/log/armguard
+    sudo chown -R rds:rds ${ARMGUARD_ROOT}
+    sudo chown -R rds:rds /var/log/armguard
     
     # Database migrations
     log_info "Running database migrations..."
@@ -179,15 +179,15 @@ Requires=postgresql.service redis.service
 
 [Service]
 Type=notify
-User=www-data
-Group=www-data
+User=rds
+Group=rds
 RuntimeDirectory=armguard
 WorkingDirectory=${ARMGUARD_ROOT}
 Environment=DJANGO_SETTINGS_MODULE=core.settings_production
 Environment=PATH=${venv_path}/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=${venv_path}/bin/gunicorn \\
-    --user www-data \\
-    --group www-data \\
+    --user rds \\
+    --group rds \\
     --bind 127.0.0.1:8000 \\
     --workers ${GUNICORN_WORKERS} \\
     --worker-class sync \\

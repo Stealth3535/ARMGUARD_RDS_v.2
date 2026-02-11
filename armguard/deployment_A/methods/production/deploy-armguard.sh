@@ -29,10 +29,10 @@ NC='\033[0m' # No Color
 
 # Default configuration
 PROJECT_NAME="armguard"
-DEFAULT_PROJECT_DIR="/var/www/armguard"
+DEFAULT_PROJECT_DIR="/home/rds/ARMGUARD_RDS_v.2/armguard"
 DEFAULT_DOMAIN="armguard.local"
-DEFAULT_RUN_USER="www-data"
-DEFAULT_RUN_GROUP="www-data"
+DEFAULT_RUN_USER="rds"
+DEFAULT_RUN_GROUP="rds"
 DEFAULT_USE_SSL="yes"
 DEFAULT_SSL_TYPE="mkcert"  # or "letsencrypt"
 DEFAULT_USE_POSTGRESQL="no"

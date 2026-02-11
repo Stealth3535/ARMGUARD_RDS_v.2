@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 # ArmGuard Deployment Location Detection & Configuration
 ############################################################
 PROJECT_NAME="armguard"
-DEFAULT_PROJECT_DIR="/var/www/armguard"
+DEFAULT_PROJECT_DIR="/home/rds/ARMGUARD_RDS_v.2/armguard"
 ALT_PROJECT_DIR="/home/ubuntu/ARMGUARD_RDS/armguard"
 DEFAULT_VENV_DIR="${DEFAULT_PROJECT_DIR}/.venv"
 ALT_VENV_DIR="/home/ubuntu/ARMGUARD_RDS/venv"
@@ -37,12 +37,12 @@ else
     PROJECT_DIR="$DEFAULT_PROJECT_DIR"
     VENV_DIR="$DEFAULT_VENV_DIR"
     LOG_DIR="$DEFAULT_LOG_DIR"
-    RUN_USER="www-data"
-    RUN_GROUP="www-data"
+    RUN_USER="rds"
+    RUN_GROUP="rds"
     SERVICE_NAME="gunicorn-armguard"
     SERVICE_FILE="${SERVICE_NAME}.service"
     SOCKET_PATH="/run/gunicorn-armguard.sock"
-    echo -e "${YELLOW}Using default deployment at $DEFAULT_PROJECT_DIR${NC}"
+    echo -e "${YELLOW}Using deployment at $DEFAULT_PROJECT_DIR${NC}"
 fi
 
 # Create socket directory if needed

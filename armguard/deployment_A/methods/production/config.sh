@@ -9,14 +9,14 @@
 
 # Project Configuration
 export PROJECT_NAME="armguard"
-export PROJECT_DIR="${ARMGUARD_PROJECT_DIR:-/var/www/armguard}"
+export PROJECT_DIR="${ARMGUARD_PROJECT_DIR:-/home/rds/ARMGUARD_RDS_v.2/armguard}"
 export VENV_DIR="${PROJECT_DIR}/.venv"
 
 # Service Configuration
 export SERVICE_NAME="gunicorn-armguard"
 export SOCKET_PATH="${ARMGUARD_SOCKET_PATH:-/run/gunicorn-armguard.sock}"
-export RUN_USER="${ARMGUARD_RUN_USER:-www-data}"
-export RUN_GROUP="${ARMGUARD_RUN_GROUP:-armguard}"
+export RUN_USER="${ARMGUARD_RUN_USER:-rds}"
+export RUN_GROUP="${ARMGUARD_RUN_GROUP:-rds}"
 
 # Network Configuration
 export DEFAULT_DOMAIN="${ARMGUARD_DOMAIN:-armguard.local}"

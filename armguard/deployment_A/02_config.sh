@@ -756,11 +756,11 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # Static files
 STATIC_URL = '/static/'
-STATIC_ROOT = '/var/www/armguard/static/'
+STATIC_ROOT = '${ARMGUARD_ROOT}/staticfiles/'
 
 # Media files
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/var/www/armguard/media/'
+MEDIA_ROOT = '${ARMGUARD_ROOT}/media/'
 
 # Logging
 LOGGING = {
@@ -798,11 +798,11 @@ EOF
     log_success "Django production settings created"
     
     # Create directory for static and media files
-    sudo mkdir -p /var/www/armguard/static
-    sudo mkdir -p /var/www/armguard/media  
+    sudo mkdir -p ${ARMGUARD_ROOT}/staticfiles
+    sudo mkdir -p ${ARMGUARD_ROOT}/media
     sudo mkdir -p /var/log/armguard
-    sudo chown -R www-data:www-data /var/www/armguard
-    sudo chown -R www-data:www-data /var/log/armguard
+    sudo chown -R rds:rds ${ARMGUARD_ROOT}
+    sudo chown -R rds:rds /var/log/armguard
     
     log_success "Django directories created with proper permissions"
 }
