@@ -91,6 +91,7 @@ def dashboard(request):
     unlinked_personnel = Personnel.objects.filter(user__isnull=True).count()
     
     context = {
+        'enable_realtime': True,
         'total_items': total_items,
         'total_personnel': total_personnel,
         'active_personnel': active_personnel,
@@ -230,6 +231,7 @@ def universal_registration(request):
         'is_edit': False,
         'page_title': 'Universal Registration',
         'submit_text': 'Register',
+        'enable_realtime': False,
     }
     return render(request, 'admin/universal_form.html', context)
 
@@ -444,6 +446,7 @@ def edit_user(request, user_id):
         'is_superuser': request.user.is_superuser,
         'is_admin': request.user.groups.filter(name='Admin').exists(),
         'can_edit_role': request.user.is_superuser or request.user.groups.filter(name='Admin').exists(),
+        'enable_realtime': False,  # Disable WebSocket on form pages
     }
     return render(request, 'admin/universal_form.html', context)
 
@@ -508,6 +511,7 @@ def edit_personnel(request, personnel_id):
         'is_superuser': request.user.is_superuser,
         'is_admin': request.user.groups.filter(name='Admin').exists(),
         'can_edit_role': request.user.is_superuser or request.user.groups.filter(name='Admin').exists(),
+        'enable_realtime': False,
     }
     return render(request, 'admin/universal_form.html', context)
 

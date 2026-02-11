@@ -1195,11 +1195,20 @@ document.addEventListener('DOMContentLoaded', function() {
             validateField(this);
         });
         
+        // Debounced input handler to prevent performance issues
+        let inputTimeout;
         control.addEventListener('input', function() {
-            // Clear error state while typing
+            // Clear error state while typing (immediate)
             if (this.classList.contains('is-invalid')) {
                 this.classList.remove('is-invalid');
             }
+            
+            // Debounce validation to avoid excessive processing
+            clearTimeout(inputTimeout);
+            inputTimeout = setTimeout(() => {
+                // Optional: You can add validation here if needed
+                // For now, we just clear the error state
+            }, 300);
         });
     });
     

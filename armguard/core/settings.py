@@ -215,6 +215,11 @@ MIDDLEWARE = [
     'core.network_middleware.UserRoleNetworkMiddleware',  # User role network restrictions
 ]
 
+# Disable history tracking with SQLite to prevent database locks
+if DEBUG or 'sqlite' in config('DB_ENGINE', default='django.db.backends.sqlite3'):
+    MIDDLEWARE = [m for m in MIDDLEWARE if 'HistoryRequestMiddleware' not in m]
+    logger.warning("⚠️ HistoryRequestMiddleware disabled (SQLite or DEBUG mode) to prevent database locks")
+
 ROOT_URLCONF = 'core.urls'
 
 TEMPLATES = [
@@ -270,9 +275,11 @@ if not config('DB_PASSWORD', default=''):
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
             'OPTIONS': {
-                'timeout': 20,
+                'timeout': 30,  # Increased from 20 to prevent hangs
                 'check_same_thread': False,
+                'isolation_level': None,  # Autocommit mode - prevents locks
             },
+            'CONN_MAX_AGE': 0,  # Don't reuse connections with SQLite
         }
     }
 

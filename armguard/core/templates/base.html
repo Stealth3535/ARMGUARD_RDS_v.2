@@ -49,16 +49,16 @@
 
     <script src="{% static 'js/main.js' %}"></script>
     
-    <!-- Real-time Features -->
-    {% if user.is_authenticated %}
+    <!-- Real-time Features (Only load on dashboard/monitoring pages) -->
+    {% if user.is_authenticated and enable_realtime|default:False %}
     <script>
         // Pass authentication status to JavaScript
         var userAuthenticated = true;
         var userId = {{ user.id }};
     </script>
-    <script src="{% static 'js/websocket-manager.js' %}"></script>
-    <script src="{% static 'js/notifications.js' %}"></script>
-    <script src="{% static 'js/live-feed.js' %}"></script>
+    <script src="{% static 'js/websocket-manager.js' %}" defer></script>
+    <script src="{% static 'js/notifications.js' %}" defer></script>
+    <script src="{% static 'js/live-feed.js' %}" defer></script>
     {% endif %}
     
         <script>
