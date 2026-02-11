@@ -29,10 +29,6 @@ class PerformanceOptimizationMiddleware(MiddlewareMixin):
         request._performance_start_time = time.time()
         request._performance_query_count = len(connection.queries)
         
-        # Skip caching in development/debug mode to avoid hangs
-        if settings.DEBUG:
-            return None
-        
         # Check cache for GET requests (only if user is available and not authenticated)
         if request.method == 'GET' and hasattr(request, 'user') and not request.user.is_authenticated:
             cache_key = self._get_cache_key(request)
@@ -67,9 +63,7 @@ class PerformanceOptimizationMiddleware(MiddlewareMixin):
             response = self._compress_response(response)
         
         # Cache successful GET responses for anonymous users (check if user exists)
-        # Skip caching in debug mode
-        if (not settings.DEBUG and
-            request.method == 'GET' and 
+        if (request.method == 'GET' and 
             response.status_code == 200 and 
             hasattr(request, 'user') and not request.user.is_authenticated and
             'no-cache' not in response.get('Cache-Control', '')):
