@@ -39,6 +39,10 @@ def personnel_post_save_with_audit(sender, instance, created, **kwargs):
     Generate QR code and create audit log after personnel save.
     This integrates audit logging with QR code generation.
     """
+    # Skip if this is a recursive call from QR save
+    if getattr(instance, '_skip_post_save', False):
+        return
+        
     from qr_manager.models import QRCodeImage
     from admin.models import AuditLog
     
@@ -58,7 +62,8 @@ def personnel_post_save_with_audit(sender, instance, created, **kwargs):
         if not instance.deleted_at:
             qr_obj.is_active = True
             qr_obj.deleted_at = None
-        qr_obj.save()
+        # Use update_fields to avoid triggering additional signals
+        qr_obj.save(update_fields=['qr_data', 'is_active', 'deleted_at'])
     
     # 2. Create audit log entry
     try:
@@ -230,6 +235,10 @@ def delete_personnel_with_audit(sender, instance, **kwargs):
 @receiver(post_save, sender='inventory.Item')
 def generate_item_qr_code(sender, instance, created, **kwargs):
     """Generate QR code for item after save"""
+    # Skip if this is a recursive call
+    if getattr(instance, '_skip_post_save', False):
+        return
+        
     from qr_manager.models import QRCodeImage
     
     # Create/update QRCodeImage for this item
@@ -244,7 +253,7 @@ def generate_item_qr_code(sender, instance, created, **kwargs):
     # Update qr_data if needed
     if qr_obj.qr_data != instance.id:
         qr_obj.qr_data = instance.id
-        qr_obj.save()
+        qr_obj.save(update_fields=['qr_data'])
 
 
 @receiver(pre_delete, sender='inventory.Item')
@@ -302,5 +311,14 @@ def save_user_profile(sender, instance, **kwargs):
     """Save user profile when user is saved"""
     from users.models import UserProfile
     
+    # Skip if this is a recursive call
+    if getattr(instance, '_skip_profile_save', False):
+        return
+    
     if hasattr(instance, 'userprofile'):
-        instance.userprofile.save()
+        # Prevent recursive signal firing
+        instance._skip_profile_save = True
+        try:
+            instance.userprofile.save()
+        finally:
+            instance._skip_profile_save = False

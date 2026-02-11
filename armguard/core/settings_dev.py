@@ -27,8 +27,19 @@ CACHES = {
 # Disable Redis in development
 REDIS_ENABLED = False
 
+# Disable simple_history in development to prevent database locks
+MIDDLEWARE = [m for m in MIDDLEWARE if 'history' not in m.lower()]
+
+# Faster database for development
+DATABASES['default']['CONN_MAX_AGE'] = 0  # Don't reuse connections
+DATABASES['default']['OPTIONS'] = {
+    'timeout': 5,  # Reduce timeout to catch hangs faster
+}
+
 print("=" * 70)
 print("DEVELOPMENT SETTINGS LOADED")
 print("Minimal middleware enabled for faster development")
 print("Network controls disabled")
+print("Database optimized for development")
+print("History tracking disabled")
 print("=" * 70)
