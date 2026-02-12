@@ -25,6 +25,8 @@ from .forms import (
     UniversalForm, ItemRegistrationForm, SystemSettingsForm
 )
 from .permissions import unrestricted_admin_required, check_restricted_admin
+from core.cache_utils import DashboardCache, invalidate_dashboard_cache
+from core.decorators import handle_database_errors, safe_database_operation, with_audit_context
 
 def is_admin_user(user):
     """Check if user is admin or superuser - only they can register users"""
@@ -60,53 +62,31 @@ def is_armorer(user):
 @user_passes_test(is_admin_or_armorer)
 def dashboard(request):
     """Admin dashboard with system overview and centralized registration access"""
-    # Get statistics
-    total_items = Item.objects.count()
-    total_personnel = Personnel.objects.count()
-    active_personnel = Personnel.objects.filter(status='Active').count()
-    officers_count = Personnel.objects.filter(classification='OFFICER').count()
-    enlisted_count = Personnel.objects.filter(classification='ENLISTED PERSONNEL').count()
-    total_transactions = Transaction.objects.count()
-    total_users = User.objects.count()
-    active_users = User.objects.filter(is_active=True).count()
+    # OPTIMIZED: Use cached statistics to reduce database queries
+    stats = DashboardCache.get_stats()
     
-    # Recent transactions
+    # Recent transactions (not cached as they change frequently)
     recent_transactions = Transaction.objects.select_related(
         'personnel', 'item'
     ).order_by('-date_time')[:10]
     
-    # Items by type
-    items_by_type = Item.objects.values('item_type').annotate(count=Count('id'))
-    
-    # Users by role
-    admins_count = User.objects.filter(groups__name='Admin').count()
-    superusers_count = User.objects.filter(is_superuser=True).count()
-    # Total administrators = Admin group + Superusers (combined, avoiding duplicates)
-    administrators_count = User.objects.filter(
-        Q(groups__name='Admin') | Q(is_superuser=True)
-    ).distinct().count()
-    armorers_count = User.objects.filter(groups__name='Armorer').count()
-    
-    # Unlinked personnel count
-    unlinked_personnel = Personnel.objects.filter(user__isnull=True).count()
-    
     context = {
         'enable_realtime': True,
-        'total_items': total_items,
-        'total_personnel': total_personnel,
-        'active_personnel': active_personnel,
-        'officers_count': officers_count,
-        'enlisted_count': enlisted_count,
-        'total_transactions': total_transactions,
-        'total_users': total_users,
-        'active_users': active_users,
-        'admins_count': admins_count,
-        'administrators_count': administrators_count,
-        'superusers_count': superusers_count,
-        'armorers_count': armorers_count,
-        'unlinked_personnel': unlinked_personnel,
+        'total_items': stats['total_items'],
+        'available_items': stats.get('available_items', 0),
+        'issued_items': stats.get('issued_items', 0),
+        'total_personnel': stats['total_personnel'],
+        'active_personnel': stats['active_personnel'],
+        'officers_count': stats['officers_count'],
+        'enlisted_count': stats['enlisted_count'],
+        'total_transactions': stats['total_transactions'],
+        'total_users': stats['total_users'],
+        'active_users': stats['active_users'],
+        'administrators_count': stats['administrators_count'],
+        'armorers_count': stats['armorers_count'],
+        'unlinked_personnel': stats['unlinked_personnel'],
         'recent_transactions': recent_transactions,
-        'items_by_type': items_by_type,
+        'items_by_type': stats['items_by_type'],
     }
     
     return render(request, 'admin/dashboard.html', context)
@@ -253,29 +233,26 @@ def registration_success(request):
 @user_passes_test(is_admin_user)
 def user_management(request):
     """User management interface"""
+    # OPTIMIZED: Use Prefetch to avoid N+1 queries for personnel
+    from django.db.models import Prefetch
+    
     # Get ALL users with accounts for User Management section
-    admin_users = User.objects.select_related('userprofile').prefetch_related('groups').distinct().order_by('-date_joined')
+    # Prefetch personnel to avoid N+1 queries
+    admin_users = User.objects.select_related('userprofile').prefetch_related(
+        'groups',
+        Prefetch('personnel', queryset=Personnel.objects.all())
+    ).distinct().order_by('-date_joined')
     
     # Get only personnel users (non-admin, non-staff) for Personnel Management section
-    personnel_users = User.objects.select_related('userprofile').prefetch_related('groups').filter(
+    personnel_users = User.objects.select_related('userprofile').prefetch_related(
+        'groups',
+        Prefetch('personnel', queryset=Personnel.objects.all())
+    ).filter(
         is_staff=False,
         is_superuser=False
     ).exclude(
         groups__name__in=['Admin', 'Armorer']
     ).order_by('-date_joined')
-    
-    # Add personnel linking info for both groups
-    for user in admin_users:
-        try:
-            user.personnel = Personnel.objects.get(user=user)
-        except Personnel.DoesNotExist:
-            user.personnel = None
-    
-    for user in personnel_users:
-        try:
-            user.personnel = Personnel.objects.get(user=user)
-        except Personnel.DoesNotExist:
-            user.personnel = None
     
     # Filter options
     role_filter = request.GET.get('role')
@@ -519,6 +496,7 @@ def edit_personnel(request, personnel_id):
 @login_required
 @user_passes_test(is_superuser)
 @unrestricted_admin_required
+@handle_database_errors(redirect_url='armguard_admin:user_management', error_message='Failed to delete personnel')
 def delete_personnel(request, personnel_id):
     """Delete personnel record - Only Superuser can delete"""
     from personnel.models import Personnel
@@ -531,50 +509,48 @@ def delete_personnel(request, personnel_id):
         if not reason:
             messages.error(request, 'Deletion reason is required.')
             return redirect('armguard_admin:delete_personnel', personnel_id=personnel_id)
-        
-        try:
-            with transaction.atomic():
-                # Save personnel data before deletion
-                personnel_data = {
-                    'id': personnel_obj.id,
-                    'firstname': personnel_obj.firstname,
-                    'surname': personnel_obj.surname,
-                    'middle_initial': personnel_obj.middle_initial,
-                    'rank': personnel_obj.rank,
-                    'serial': personnel_obj.serial,
-                    'group': personnel_obj.group,
-                    'has_user_account': hasattr(personnel_obj, 'user'),
-                }
-                
-                # Create DeletedRecord
-                DeletedRecord.objects.create(
-                    deleted_by=request.user,
-                    model_name='Personnel',
-                    record_id=personnel_obj.id,
-                    record_data=personnel_data,
-                    reason=reason
-                )
-                
-                # Create AuditLog
-                AuditLog.objects.create(
-                    performed_by=request.user,
-                    action='DELETE',
-                    target_model='Personnel',
-                    target_id=personnel_obj.id,
-                    target_name=personnel_obj.get_full_name(),
-                    description=f'Soft-deleted personnel record: {personnel_obj.get_full_name()}. Reason: {reason}',
-                    ip_address=request.META.get('REMOTE_ADDR')
-                )
-                
-                # Soft delete the personnel record (keeps in DB, deletes QR)
-                full_name = personnel_obj.get_full_name()
-                personnel_obj.soft_delete()
-                
-                messages.success(request, f'Personnel record for "{full_name}" has been archived. The record is kept for reference but QR code has been removed.')
-                return redirect('armguard_admin:user_management')
-                
-        except Exception as e:
-            messages.error(request, f'Error deleting personnel: {str(e)}')
+        # Use atomic transaction for deletion
+        with transaction.atomic():
+            # Save personnel data before deletion
+            personnel_data = {
+                'id': personnel_obj.id,
+                'firstname': personnel_obj.firstname,
+                'surname': personnel_obj.surname,
+                'middle_initial': personnel_obj.middle_initial,
+                'rank': personnel_obj.rank,
+                'serial': personnel_obj.serial,
+                'group': personnel_obj.group,
+                'has_user_account': hasattr(personnel_obj, 'user'),
+            }
+            
+            # Create DeletedRecord
+            DeletedRecord.objects.create(
+                deleted_by=request.user,
+                model_name='Personnel',
+                record_id=personnel_obj.id,
+                record_data=personnel_data,
+                reason=reason
+            )
+            
+            # Create AuditLog
+            AuditLog.objects.create(
+                performed_by=request.user,
+                action='DELETE',
+                target_model='Personnel',
+                target_id=personnel_obj.id,
+                target_name=personnel_obj.get_full_name(),
+                description=f'Soft-deleted personnel record: {personnel_obj.get_full_name()}. Reason: {reason}',
+                ip_address=request.META.get('REMOTE_ADDR')
+            )
+            
+            # Soft delete the personnel record (keeps in DB, deletes QR)
+            full_name = personnel_obj.get_full_name()
+            personnel_obj.soft_delete()
+            
+            # Invalidate cache after deletion
+            invalidate_dashboard_cache()
+            
+            messages.success(request, f'Personnel record for "{full_name}" has been archived. The record is kept for reference but QR code has been removed.')
             return redirect('armguard_admin:user_management')
     
     # GET request - show confirmation page
@@ -638,6 +614,8 @@ def register_item(request):
 @user_passes_test(is_admin_user)
 def system_settings(request):
     """System configuration settings"""
+    from .models import DeviceAuthorizationRequest
+    
     if request.method == 'POST':
         form = SystemSettingsForm(request.POST)
         if form.is_valid():
@@ -651,16 +629,144 @@ def system_settings(request):
             'debug_mode': settings.DEBUG,
             'site_name': getattr(settings, 'SITE_NAME', 'ArmGuard'),
             'max_login_attempts': getattr(settings, 'MAX_LOGIN_ATTEMPTS', 5),
-            'session_timeout': getattr(settings, 'SESSION_COOKIE_AGE', 3600) // 60,
+            'session_timeout': getattr(settings, 'SESSION_COOKIE_AGE', 3600) //60,
         }
         form = SystemSettingsForm(initial=initial_data)
+    
+    # Get pending device authorization requests count
+    pending_device_requests = DeviceAuthorizationRequest.objects.filter(
+        status='pending'
+    ).count() if request.user.is_superuser else 0
     
     context = {
         'form': form,
         'debug_mode': settings.DEBUG,
         'database_engine': settings.DATABASES['default']['ENGINE'],
+        'pending_device_requests': pending_device_requests,
     }
     return render(request, 'admin/system_settings.html', context)
+
+
+@login_required
+def request_device_authorization(request):
+    """
+    Request device authorization for current device
+    """
+    from core.middleware.device_authorization import DeviceAuthorizationMiddleware
+    from .models import DeviceAuthorizationRequest
+    
+    middleware = DeviceAuthorizationMiddleware(None)
+    device_fingerprint = middleware.get_device_fingerprint(request)
+    ip_address = middleware.get_client_ip(request)
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+    
+    # Check if request already exists
+    existing_request = DeviceAuthorizationRequest.objects.filter(
+        device_fingerprint=device_fingerprint
+    ).first()
+    
+    if existing_request:
+        if existing_request.status == 'pending':
+            messages.info(request, 'You already have a pending authorization request.')
+            return redirect('armguard_admin:dashboard')
+        elif existing_request.status == 'approved':
+            messages.success(request, 'This device is already authorized.')
+            return redirect('armguard_admin:dashboard')
+    
+    if request.method == 'POST':
+        reason = request.POST.get('reason', '')
+        device_name = request.POST.get('device_name', '')
+        
+        if not reason or not device_name:
+            messages.error(request, 'Please provide both device name and reason.')
+        else:
+            # Create authorization request
+            auth_request = DeviceAuthorizationRequest.objects.create(
+                device_fingerprint=device_fingerprint,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                hostname=device_name,
+                requested_by=request.user,
+                reason=reason,
+                device_name=device_name
+            )
+            
+            messages.success(request, 'Device authorization request submitted successfully. An administrator will review it.')
+            return redirect('armguard_admin:dashboard')
+    
+    context = {
+        'device_fingerprint': device_fingerprint[:16] + '...',
+        'ip_address': ip_address,
+        'existing_request': existing_request,
+    }
+    return render(request, 'admin/request_device_auth.html', context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+def manage_device_requests(request):
+    """
+    View and manage device authorization requests (Superuser only)
+    """
+    from .models import DeviceAuthorizationRequest
+    
+    status_filter = request.GET.get('status', 'pending')
+    
+    requests_qs = DeviceAuthorizationRequest.objects.all()
+    if status_filter and status_filter != 'all':
+        requests_qs = requests_qs.filter(status=status_filter)
+    
+    context = {
+        'device_requests': requests_qs,
+        'status_filter': status_filter,
+        'pending_count': DeviceAuthorizationRequest.objects.filter(status='pending').count(),
+    }
+    return render(request, 'admin/manage_device_requests.html', context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+def approve_device_request(request, request_id):
+    """Approve a device authorization request"""
+    from .models import DeviceAuthorizationRequest
+    
+    auth_request = get_object_or_404(DeviceAuthorizationRequest, id=request_id)
+    
+    if request.method == 'POST':
+        device_name = request.POST.get('device_name', auth_request.device_name)
+        security_level = request.POST.get('security_level', 'STANDARD')
+        notes = request.POST.get('notes', '')
+        
+        auth_request.approve(request.user, device_name, security_level, notes)
+        
+        messages.success(request, f'Device "{device_name}" has been authorized successfully.')
+        return redirect('armguard_admin:manage_device_requests')
+    
+    context = {
+        'auth_request': auth_request,
+    }
+    return render(request, 'admin/approve_device_request.html', context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+def reject_device_request(request, request_id):
+    """Reject a device authorization request"""
+    from .models import DeviceAuthorizationRequest
+    
+    auth_request = get_object_or_404(DeviceAuthorizationRequest, id=request_id)
+    
+    if request.method == 'POST':
+        notes = request.POST.get('notes', '')
+        auth_request.reject(request.user, notes)
+        
+        messages.warning(request, 'Device authorization request has been rejected.')
+        return redirect('armguard_admin:manage_device_requests')
+    
+    context = {
+        'auth_request': auth_request,
+    }
+    return render(request, 'admin/reject_device_request.html', context)
 
 
 @login_required

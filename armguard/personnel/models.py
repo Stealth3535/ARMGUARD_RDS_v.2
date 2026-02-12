@@ -57,6 +57,7 @@ See: admin/models.py (AuditLog, DeletedRecord)
 See: admin/signals.py (personnel_post_save_with_audit, delete_personnel_with_audit)
 """
 from django.db import models
+from django.db.models import Q
 from django.core.validators import RegexValidator, FileExtensionValidator, EmailValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -195,7 +196,7 @@ class Personnel(models.Model):
     serial = models.CharField(
         max_length=20, 
         unique=True,
-        help_text="Serial number (numeric only)"
+        help_text="Serial number (officers have O- prefix, enlisted are numeric only)"
     )
     group = models.CharField(max_length=10, choices=GROUP_CHOICES, default='HAS')
     
@@ -281,6 +282,33 @@ class Personnel(models.Model):
         ordering = ['surname', 'firstname']
         verbose_name = 'Personnel'
         verbose_name_plural = 'Personnel'
+        # Database-level constraints for data integrity
+        constraints = [
+            models.CheckConstraint(
+                check=Q(status__in=['Active', 'Inactive', 'Suspended', 'Archived']),
+                name='valid_personnel_status'
+            ),
+            models.CheckConstraint(
+                check=Q(classification__in=['ENLISTED PERSONNEL', 'OFFICER', 'SUPERUSER']),
+                name='valid_personnel_classification'
+            ),
+            # Ensure serial is not empty
+            models.CheckConstraint(
+                check=~Q(serial=''),
+                name='serial_not_empty'
+            ),
+            # Ensure valid email format (basic check)
+            models.CheckConstraint(
+                check=Q(email__icontains='@') | Q(email=''),
+                name='valid_email_format'
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['status', 'classification']),
+            models.Index(fields=['rank']),
+            models.Index(fields=['group']),
+            models.Index(fields=['-registration_date']),
+        ]
     
     def __str__(self):
         if self.rank:
@@ -302,7 +330,16 @@ class Personnel(models.Model):
         return self.rank in officer_ranks
     
     def get_serial_display(self):
-        """Return serial number (numeric format)"""
+        """Return serial number (O- prefix for officers only)"""
+        if self.serial:
+            # Officers: Display with O- prefix (already in DB)
+            if self.serial.startswith('O-'):
+                return self.serial
+            # Officers without O- prefix (shouldn't happen, but handle it)
+            if self.is_officer():
+                return f"O-{self.serial}"
+            # Enlisted: Display numeric only (no prefix)
+            return self.serial
         return self.serial
     
     def get_classification_from_rank(self):
@@ -322,14 +359,43 @@ class Personnel(models.Model):
         """
         Validate model fields before save.
         - Email must end with @gmail.com if provided
+        - Serial number should be numeric only
+       - Validate rank vs classification consistency
         """
         super().clean()
+        from django.core.exceptions import ValidationError
         
         # Validate email format if provided
         if self.email and not self.email.lower().endswith('@gmail.com'):
             # Auto-correct to @gmail.com (can be changed to raise error if preferred)
             local_part = self.email.split('@')[0]
             self.email = f"{local_part}@gmail.com"
+        
+        # Validate serial number format (accept with or without O- prefix)
+        if self.serial:
+            # Normalize serial - remove O- prefix temporarily for validation
+            clean_serial = self.serial.replace('O-', '')
+            
+            # Check if the numeric part is valid
+            if not clean_serial.replace('-', '').isdigit():
+                raise ValidationError({
+                    'serial': f'Serial number must be numeric only. Got: {self.serial}'
+                })
+            
+            # Store the clean numeric version for now (will be formatted in save())
+            self.serial = clean_serial
+        
+        # Validate rank vs classification consistency
+        if self.rank:
+            expected_classification = self.get_classification_from_rank()
+            if self.classification and self.classification != expected_classification and self.classification != 'SUPERUSER':
+                # This will be auto-corrected in save(), but we can warn here
+                from django.core.exceptions import ValidationError
+                # Don't raise error, just let save() auto-correct it
+                # raise ValidationError({
+                #     'classification': f"Rank '{self.rank}' should have classification '{expected_classification}', not '{self.classification}'"
+                # })
+                pass  # Let save() auto-correct
     
     def save(self, *args, **kwargs):
         """
@@ -385,17 +451,37 @@ class Personnel(models.Model):
         if is_update:
             self.version += 1
         
-        # Auto-determine classification if not set or using old values
-        if not self.classification or self.classification in ['REGULAR', 'ADMIN']:
-            if hasattr(self, 'user') and self.user and self.user.is_superuser:
-                self.classification = 'SUPERUSER'
-            else:
-                self.classification = self.get_classification_from_rank()
+        # ALWAYS auto-correct classification based on rank (data integrity fix)
+        # This ensures database consistency even if old data had wrong classification
+        if hasattr(self, 'user') and self.user and self.user.is_superuser:
+            self.classification = 'SUPERUSER'
+        elif self.rank:
+            # Auto-correct based on rank
+            expected_classification = self.get_classification_from_rank()
+            if self.classification != expected_classification:
+                # Log the correction
+                if is_update:
+                    print(f"Auto-correcting classification for {self.get_full_name()}: {self.classification} → {expected_classification}")
+                self.classification = expected_classification
+        elif not self.classification:
+            # No rank and no classification set
+            self.classification = 'ENLISTED PERSONNEL'
         
         # Auto-correct email format
         if self.email and not self.email.lower().endswith('@gmail.com'):
             local_part = self.email.split('@')[0]
             self.email = f"{local_part}@gmail.com"
+        
+        # Format serial number: Officers get O- prefix in DB, enlisted stay numeric
+        if self.serial:
+            # Remove O- prefix if present (normalize)
+            clean_serial = self.serial.replace('O-', '')
+            
+            # Add O- prefix for officers only
+            if self.is_officer():
+                self.serial = f"O-{clean_serial}"
+            else:
+                self.serial = clean_serial
         
         # Format names based on classification
         if self.is_officer():
@@ -417,7 +503,8 @@ class Personnel(models.Model):
         if not self.id:
             prefix = 'PO' if self.is_officer() else 'PE'
             date_suffix = timezone.now().strftime('%d%m%y')
-            clean_serial = self.serial.replace('O-', '') if self.is_officer() else self.serial
+            # Serial already formatted with O- for officers, clean it for ID
+            clean_serial = self.serial.replace('O-', '')
             self.id = f"{prefix}-{clean_serial}{date_suffix}"
         
         # Set QR code to ID if not set
@@ -519,6 +606,101 @@ class Personnel(models.Model):
                 }
         
         return changes
+    
+    @classmethod
+    def bulk_update_status(cls, personnel_ids, new_status, updated_by=None):
+        """
+        Batch update status for multiple personnel records.
+        More efficient than updating individually.
+        
+        Args:
+            personnel_ids: List of personnel IDs to update
+            new_status: New status ('Active', 'Inactive', 'Suspended', 'Archived')
+            updated_by: User performing the update (for audit)
+        
+        Returns:
+            Number of records updated
+        
+        Usage:
+            Personnel.bulk_update_status(['PE-123', 'PE-456'], 'Inactive', request.user)
+        """
+        from django.utils import timezone
+        from django.db import transaction
+        
+        if new_status not in dict(cls.STATUS_CHOICES):
+            raise ValueError(f"Invalid status: {new_status}")
+        
+        with transaction.atomic():
+            # Get all personnel to update
+            personnel_qs = cls.objects.filter(id__in=personnel_ids)
+            
+            # Update in bulk
+            updated_count = personnel_qs.update(
+                status=new_status,
+                status_changed_at=timezone.now(),
+                modified_by=updated_by
+            )
+            
+            # Create audit log entries
+            if updated_by:
+                from admin.models import AuditLog
+                for personnel in personnel_qs:
+                    AuditLog.objects.create(
+                        performed_by=updated_by,
+                        action='UPDATE',
+                        target_model='Personnel',
+                        target_id=personnel.id,
+                        target_name=personnel.get_full_name(),
+                        description=f'Bulk status update: {personnel.status} → {new_status}',
+                        changes={'status': {'old': personnel.status, 'new': new_status}}
+                    )
+            
+            return updated_count
+    
+    @classmethod
+    def bulk_assign_group(cls, personnel_ids, new_group, updated_by=None):
+        """
+        Batch update group assignment for multiple personnel.
+        
+        Args:
+            personnel_ids: List of personnel IDs
+            new_group: New group ('HAS', '951st', '952nd', '953rd')
+            updated_by: User performing the update
+        
+        Returns:
+            Number of records updated
+        """
+        from django.db import transaction
+        
+        with transaction.atomic():
+            updated_count = cls.objects.filter(id__in=personnel_ids).update(
+                group=new_group,
+                modified_by=updated_by
+            )
+            
+            return updated_count
+    
+    @classmethod
+    def get_statistics(cls):
+        """
+        Get comprehensive personnel statistics.
+        Returns dictionary with counts by status, classification, rank, etc.
+        
+        Usage:
+            stats = Personnel.get_statistics()
+            print(f"Active: {stats['by_status']['Active']}")
+        """
+        from django.db.models import Count
+        
+        return {
+            'total': cls.objects.count(),
+            'by_status': dict(cls.objects.values_list('status').annotate(Count('id'))),
+            'by_classification': dict(cls.objects.values_list('classification').annotate(Count('id'))),
+            'by_group': dict(cls.objects.values_list('group').annotate(Count('id'))),
+            'with_user': cls.objects.filter(user__isnull=False).count(),
+            'without_user': cls.objects.filter(user__isnull=True).count(),
+            'soft_deleted': cls.all_objects.filter(deleted_at__isnull=False).count(),
+        }
     
     @classmethod
     def create_audit_log(cls, action, personnel, performed_by, description, changes=None, ip_address=None, user_agent=None):

@@ -1,6 +1,26 @@
 {
     "devices": [
         {
+            "name": "Localhost Development",
+            "fingerprint": "444be32e095db424f8b4ae5b1e5cf8bb",
+            "ip": "127.0.0.1",
+            "hostname": "localhost",
+            "mac": "00:00:00:00:00:00",
+            "can_transact": true,
+            "active": true,
+            "created_at": "2026-02-11T14:59:00",
+            "authorized_by": "system",
+            "description": "Localhost development workstation for admin access",
+            "roles": [
+                "admin",
+                "development",
+                "superuser"
+            ],
+            "max_daily_transactions": 1000,
+            "security_level": "DEVELOPMENT",
+            "last_updated": "2026-02-11T14:59:00"
+        },
+        {
             "name": "Developer PC",
             "hostname": "DESKTOP-E3N8R9V",
             "ip": "192.168.0.82",

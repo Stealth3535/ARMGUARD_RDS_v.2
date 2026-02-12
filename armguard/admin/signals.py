@@ -9,6 +9,14 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 import os
 
+# Import cache invalidation
+try:
+    from core.cache_utils import invalidate_dashboard_cache
+except ImportError:
+    # Fallback if cache_utils not available
+    def invalidate_dashboard_cache():
+        pass
+
 
 # ============================================================================
 # Personnel Signals with Audit Logging
@@ -134,6 +142,10 @@ def personnel_post_save_with_audit(sender, instance, created, **kwargs):
                 ip_address=None,
                 user_agent=''
             )
+        
+        # Invalidate dashboard cache when personnel changes
+        invalidate_dashboard_cache()
+        
     except Exception as e:
         # Don't let audit logging failure break the save operation
         import logging
@@ -254,6 +266,9 @@ def generate_item_qr_code(sender, instance, created, **kwargs):
     if qr_obj.qr_data != instance.id:
         qr_obj.qr_data = instance.id
         qr_obj.save(update_fields=['qr_data'])
+    
+    # Invalidate dashboard cache when items change
+    invalidate_dashboard_cache()
 
 
 @receiver(pre_delete, sender='inventory.Item')

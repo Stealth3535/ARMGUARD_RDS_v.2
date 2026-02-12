@@ -519,10 +519,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Search functionality
     const searchInput = document.getElementById('user-search');
     const personnelSearch = document.getElementById('personnel-search');
+    const roleFilter = document.getElementById('role-filter');
+    const statusFilter = document.getElementById('status-filter');
     
     if (searchInput) {
         searchInput.addEventListener('input', debounce(function() {
-            filterTable('users-table', this.value);
+            applyFilters();
         }, 300));
     }
     
@@ -532,44 +534,56 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300));
     }
     
-    // Role filter
-    const roleFilter = document.getElementById('role-filter');
-    if (roleFilter) {
-        roleFilter.addEventListener('change', function() {
-            const role = this.value;
-            const rows = document.querySelectorAll('#users-table tbody tr');
+    // Combined filter function
+    function applyFilters() {
+        const role = roleFilter ? roleFilter.value : 'all';
+        const status = statusFilter ? statusFilter.value : 'all';
+        const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+        const rows = document.querySelectorAll('#users-table tbody tr');
+        
+        rows.forEach(row => {
+            let showRow = true;
             
-            rows.forEach(row => {
-                if (!role || role === 'all') {
-                    row.style.display = '';
-                } else {
-                    const roleCell = row.querySelector('.role-badge');
-                    const roleText = roleCell ? roleCell.textContent.toLowerCase() : '';
-                    row.style.display = roleText.includes(role) ? '' : 'none';
+            // Apply role filter
+            if (role && role !== 'all') {
+                const roleCell = row.querySelector('.role-badge');
+                const roleText = roleCell ? roleCell.textContent.toLowerCase() : '';
+                if (!roleText.includes(role)) {
+                    showRow = false;
                 }
-            });
-            updateCount('users-table', 'user-count');
+            }
+            
+            // Apply status filter
+            if (status && status !== 'all') {
+                const statusCell = row.querySelector('.status-badge');
+                const statusText = statusCell ? statusCell.textContent.toLowerCase() : '';
+                if (!statusText.includes(status)) {
+                    showRow = false;
+                }
+            }
+            
+            // Apply search filter
+            if (searchTerm) {
+                const text = row.textContent.toLowerCase();
+                if (!text.includes(searchTerm)) {
+                    showRow = false;
+                }
+            }
+            
+            row.style.display = showRow ? '' : 'none';
         });
+        
+        updateCount('users-table', 'user-count');
+    }
+    
+    // Role filter
+    if (roleFilter) {
+        roleFilter.addEventListener('change', applyFilters);
     }
     
     // Status filter
-    const statusFilter = document.getElementById('status-filter');
     if (statusFilter) {
-        statusFilter.addEventListener('change', function() {
-            const status = this.value;
-            const rows = document.querySelectorAll('#users-table tbody tr');
-            
-            rows.forEach(row => {
-                if (!status || status === 'all') {
-                    row.style.display = '';
-                } else {
-                    const statusCell = row.querySelector('.status-badge');
-                    const statusText = statusCell ? statusCell.textContent.toLowerCase() : '';
-                    row.style.display = statusText.includes(status) ? '' : 'none';
-                }
-            });
-            updateCount('users-table', 'user-count');
-        });
+        statusFilter.addEventListener('change', applyFilters);
     }
     
     // Quick filter chips
@@ -903,13 +917,14 @@ function showAuditHistory(element) {
                 </td>
                 <td>
                     <div class="btn-group">
-                        {% if user.is_superuser or can_edit and not user_item.is_superuser and not is_restricted_admin %}
-                        <a href="{% url 'armguard_admin:edit_user' user_item.id %}" class="btn-sm btn-edit"> Edit</a>
-                        {% endif %}
-                        {% if can_edit and user.is_superuser and user_item != user %}
-                        <a href="{% url 'armguard_admin:delete_user' user_item.id %}" class="btn-sm btn-delete" onclick="return confirm('Are you sure you want to delete this user?')"> Delete</a>
-                        {% endif %}
-                        {% if is_restricted_admin %}
+                        {% if not is_restricted_admin %}
+                            {% if user.is_superuser or can_edit and not user_item.is_superuser %}
+                            <a href="{% url 'armguard_admin:edit_user' user_item.id %}" class="btn-sm btn-edit"> Edit</a>
+                            {% endif %}
+                            {% if can_edit and user.is_superuser and user_item != user %}
+                            <a href="{% url 'armguard_admin:delete_user' user_item.id %}" class="btn-sm btn-delete" onclick="return confirm('Are you sure you want to delete this user?')"> Delete</a>
+                            {% endif %}
+                        {% else %}
                         <span class="btn-sm" style="background: #f3f4f6; color: #666;">👁️ View Only</span>
                         {% endif %}
                     </div>
@@ -1069,24 +1084,25 @@ function showAuditHistory(element) {
                     </td>
                     <td>
                         <div class="btn-group">
-                            {% if can_edit and can_edit_personnel %}
-                            <a href="{% url 'armguard_admin:edit_personnel' person.id %}" class="btn-sm btn-edit" title="Edit Personnel">✏️</a>
-                            {% endif %}
-                            {% if can_edit and request.user.is_superuser %}
-                            <a href="#" class="btn-sm btn-view" title="View Audit History" 
-                               data-created="{{ person.created_at|date:'M d, Y H:i' }}"
-                               data-created-by="{% if person.created_by %}{{ person.created_by.username }}{% else %}System{% endif %}"
-                               data-modified="{{ person.updated_at|date:'M d, Y H:i' }}"
-                               data-modified-by="{% if person.modified_by %}{{ person.modified_by.username }}{% else %}N/A{% endif %}"
-                               data-version="{{ person.version }}"
-                               data-reason="{% if person.change_reason %}{{ person.change_reason }}{% else %}N/A{% endif %}"
-                               data-created-ip="{% if person.created_ip %}{{ person.created_ip }}{% else %}N/A{% endif %}"
-                               data-status-changed="{% if person.status_changed_at %}{{ person.status_changed_at|date:'M d, Y H:i' }}{% else %}N/A{% endif %}"
-                               onclick="showAuditHistory(this); return false;">📋</a>
-                            <a href="{% url 'armguard_admin:delete_personnel' person.id %}" class="btn-sm btn-delete" title="Delete Personnel" onclick="return confirm('Are you sure you want to delete {{ person.get_full_name }}?')">🗑️</a>
-                            {% endif %}
-                            {% if is_restricted_admin %}
-                            <span class="btn-sm" style="background: #f3f4f6; color: #666;">👁️</span>
+                            {% if not is_restricted_admin %}
+                                {% if can_edit and can_edit_personnel %}
+                                <a href="{% url 'armguard_admin:edit_personnel' person.id %}" class="btn-sm btn-edit" title="Edit Personnel">✏️</a>
+                                {% endif %}
+                                {% if can_edit and request.user.is_superuser %}
+                                <a href="#" class="btn-sm btn-view" title="View Audit History" 
+                                   data-created="{{ person.created_at|date:'M d, Y H:i' }}"
+                                   data-created-by="{% if person.created_by %}{{ person.created_by.username }}{% else %}System{% endif %}"
+                                   data-modified="{{ person.updated_at|date:'M d, Y H:i' }}"
+                                   data-modified-by="{% if person.modified_by %}{{ person.modified_by.username }}{% else %}N/A{% endif %}"
+                                   data-version="{{ person.version }}"
+                                   data-reason="{% if person.change_reason %}{{ person.change_reason }}{% else %}N/A{% endif %}"
+                                   data-created-ip="{% if person.created_ip %}{{ person.created_ip }}{% else %}N/A{% endif %}"
+                                   data-status-changed="{% if person.status_changed_at %}{{ person.status_changed_at|date:'M d, Y H:i' }}{% else %}N/A{% endif %}"
+                                   onclick="showAuditHistory(this); return false;">📋</a>
+                                <a href="{% url 'armguard_admin:delete_personnel' person.id %}" class="btn-sm btn-delete" title="Delete Personnel" onclick="return confirm('Are you sure you want to delete {{ person.get_full_name }}?')">🗑️</a>
+                                {% endif %}
+                            {% else %}
+                            <span class="btn-sm" style="background: #f3f4f6; color: #666;">👁️ View Only</span>
                             {% endif %}
                         </div>
                     </td>

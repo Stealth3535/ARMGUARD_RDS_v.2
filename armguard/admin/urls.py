@@ -42,6 +42,12 @@ urlpatterns = [
     # System Settings
     path('settings/', views.system_settings, name='system_settings'),
     
+    # Device Authorization
+    path('device/request-authorization/', views.request_device_authorization, name='request_device_authorization'),
+    path('device/requests/', views.manage_device_requests, name='manage_device_requests'),
+    path('device/requests/<int:request_id>/approve/', views.approve_device_request, name='approve_device_request'),
+    path('device/requests/<int:request_id>/reject/', views.reject_device_request, name='reject_device_request'),
+    
     # Audit Logs
     path('audit-logs/', views.audit_logs, name='audit_logs'),
 ]

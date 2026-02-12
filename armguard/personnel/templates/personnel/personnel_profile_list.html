@@ -677,7 +677,7 @@ function updateCount(tableId, countId) {
 function updateStatistics() {
     const visibleRows = document.querySelectorAll('#personnel-table tbody tr:not([style*="display: none"])');
     
-    let officers = 0, enlisted = 0, active = 0;
+    let officers = 0, enlisted = 0, active = 0, superusers = 0;
     
     visibleRows.forEach(row => {
         // Skip empty state rows
@@ -685,13 +685,17 @@ function updateStatistics() {
             const rank = row.getAttribute('data-rank');
             const status = row.getAttribute('data-status');
             
-            if (rank === 'officer' || rank === 'superuser') officers++;
-            if (rank === 'enlisted') enlisted++;
+            // Count by rank type (don't count superusers as officers)
+            if (rank === 'officer') officers++;
+            else if (rank === 'enlisted') enlisted++;
+            else if (rank === 'superuser') superusers++;
+            
             if (status === 'active') active++;
         }
     });
     
-    const total = officers + enlisted;
+    // Total includes officers + enlisted + superusers
+    const total = officers + enlisted + superusers;
     
     // Update stat counters
     const officerCount = document.getElementById('officerCount');

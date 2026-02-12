@@ -1,0 +1,501 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Device Authorization Requests - ArmGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+    
+    .page-header h1 {
+        margin: 0;
+        color: #333;
+        font-size: 2rem;
+    }
+    
+    .back-link {
+        padding: 0.75rem 1.5rem;
+        background: #f3f4f6;
+        color: #333;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: all 0.3s;
+        border: 1px solid #d1d5db;
+        font-weight: 500;
+    }
+    
+    .back-link:hover {
+        background: #e5e7eb;
+        border-color: #9ca3af;
+    }
+    
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-left: 4px solid #667eea;
+        transition: transform 0.2s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card.pending { border-left-color: #f59e0b; }
+    .stat-card.approved { border-left-color: #10b981; }
+    .stat-card.rejected { border-left-color: #dc2626; }
+    
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .filter-bar {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .filter-chips {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .filter-chip {
+        padding: 0.5rem 1rem;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        color: #333;
+    }
+    
+    .filter-chip:hover {
+        background: #e5e7eb;
+    }
+    
+    .filter-chip.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    
+    .requests-table {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+    
+    .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .table-title {
+        font-weight: 600;
+        color: #333;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .count-badge {
+        display: inline-block;
+        background: #667eea;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    th {
+        background: #f8f9fa;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #333;
+        border-bottom: 2px solid #dee2e6;
+        white-space: nowrap;
+    }
+    
+    td {
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        vertical-align: top;
+    }
+    
+    tr:hover {
+        background: #f9fafb;
+    }
+    
+    tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .badge-pending {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .badge-approved {
+        background: #dcfce7;
+        color: #14532d;
+    }
+    
+    .badge-rejected {
+        background: #fee2e2;
+        color: #7f1d1d;
+    }
+    
+    .device-info {
+        font-size: 0.9rem;
+    }
+    
+    .device-fingerprint {
+        font-family: 'Courier New', monospace;
+        background: #f3f4f6;
+        padding: 0.2rem 0.5rem;
+        border-radius: 3px;
+        font-size: 0.85rem;
+        display: inline-block;
+        margin: 0.25rem 0;
+    }
+    
+    .device-user-agent {
+        color: #666;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-sm {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        border-radius: 4px;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        border: none;
+        cursor: pointer;
+        font-weight: 500;
+    }
+    
+    .btn-approve {
+        background: #10b981;
+        color: white;
+    }
+    
+    .btn-approve:hover {
+        background: #059669;
+    }
+    
+    .btn-reject {
+        background: #dc2626;
+        color: white;
+    }
+    
+    .btn-reject:hover {
+        background: #b91c1c;
+    }
+    
+    .btn-view {
+        background: #667eea;
+        color: white;
+    }
+    
+    .btn-view:hover {
+        background: #5568d3;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #666;
+    }
+    
+    .empty-state svg {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #666;
+        margin-right: 0.5rem;
+    }
+    
+    .info-row {
+        margin: 0.25rem 0;
+        font-size: 0.9rem;
+    }
+    
+    .alert {
+        padding: 1rem 1.5rem;
+        border-radius: 5px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .alert-success {
+        background: #dcfce7;
+        color: #14532d;
+        border: 1px solid #10b981;
+    }
+    
+    .alert-error {
+        background: #fee2e2;
+        color: #7f1d1d;
+        border: 1px solid #dc2626;
+    }
+    
+    .alert-info {
+        background: #e0e7ff;
+        color: #3730a3;
+        border: 1px solid #667eea;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>🔒 Device Authorization Requests</h1>
+    <a href="{% url 'armguard_admin:system_settings' %}" class="back-link">← Back to Settings</a>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Statistics -->
+<div class="stats-container">
+    <div class="stat-card pending">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-value">{{ pending_count }}</div>
+        <div class="stat-label">Pending Requests</div>
+    </div>
+    <div class="stat-card approved">
+        <div class="stat-icon">✅</div>
+        <div class="stat-value">{{ approved_count }}</div>
+        <div class="stat-label">Approved</div>
+    </div>
+    <div class="stat-card rejected">
+        <div class="stat-icon">❌</div>
+        <div class="stat-value">{{ rejected_count }}</div>
+        <div class="stat-label">Rejected</div>
+    </div>
+</div>
+
+<!-- Status Filter -->
+<div class="filter-bar">
+    <div class="filter-chips">
+        <a href="{% url 'armguard_admin:manage_device_requests' %}" class="filter-chip {% if not status_filter %}active{% endif %}">
+            🔍 All Requests
+        </a>
+        <a href="{% url 'armguard_admin:manage_device_requests' %}?status=pending" class="filter-chip {% if status_filter == 'pending' %}active{% endif %}">
+            ⏳ Pending
+        </a>
+        <a href="{% url 'armguard_admin:manage_device_requests' %}?status=approved" class="filter-chip {% if status_filter == 'approved' %}active{% endif %}">
+            ✅ Approved
+        </a>
+        <a href="{% url 'armguard_admin:manage_device_requests' %}?status=rejected" class="filter-chip {% if status_filter == 'rejected' %}active{% endif %}">
+            ❌ Rejected
+        </a>
+    </div>
+</div>
+
+<!-- Requests Table -->
+<div class="requests-table">
+    <div class="table-header">
+        <div class="table-title">
+            <span>Device Authorization Requests</span>
+            <span class="count-badge">Total: {{ requests.count }}</span>
+        </div>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Device Information</th>
+                <th>Requested By</th>
+                <th>Request Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for request in requests %}
+            <tr>
+                <td>
+                    <div class="device-info">
+                        <div><strong>🖥️ Hostname:</strong> {{ request.hostname|default:"Unknown" }}</div>
+                        <div><strong>🌐 IP Address:</strong> {{ request.ip_address }}</div>
+                        <div style="margin-top: 0.5rem;">
+                            <strong>🔑 Fingerprint:</strong><br>
+                            <code class="device-fingerprint">{{ request.device_fingerprint }}</code>
+                        </div>
+                        <div class="device-user-agent">
+                            <strong>📱 User Agent:</strong><br>
+                            {{ request.user_agent|truncatechars:80 }}
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="info-row">
+                        <span class="info-label">👤 User:</span>
+                        {{ request.requested_by.username }}
+                    </div>
+                    {% if request.requested_by.get_full_name %}
+                    <div class="info-row">
+                        <span class="info-label">📝 Name:</span>
+                        {{ request.requested_by.get_full_name }}
+                    </div>
+                    {% endif %}
+                    {% if request.requested_by.email %}
+                    <div class="info-row">
+                        <span class="info-label">📧 Email:</span>
+                        {{ request.requested_by.email }}
+                    </div>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="info-row">
+                        {{ request.created_at|date:"M d, Y" }}<br>
+                        {{ request.created_at|time:"H:i" }}
+                    </div>
+                </td>
+                <td>
+                    {% if request.status == 'pending' %}
+                    <span class="badge badge-pending">⏳ Pending</span>
+                    {% elif request.status == 'approved' %}
+                    <span class="badge badge-approved">✅ Approved</span>
+                    <div class="info-row" style="margin-top: 0.5rem;">
+                        <small>By: {{ request.approved_by.username }}</small><br>
+                        <small>{{ request.approved_at|date:"M d, Y H:i" }}</small>
+                    </div>
+                    {% elif request.status == 'rejected' %}
+                    <span class="badge badge-rejected">❌ Rejected</span>
+                    <div class="info-row" style="margin-top: 0.5rem;">
+                        <small>By: {{ request.rejected_by.username }}</small><br>
+                        <small>{{ request.rejected_at|date:"M d, Y H:i" }}</small>
+                    </div>
+                    {% if request.rejection_reason %}
+                    <div class="info-row" style="margin-top: 0.5rem;">
+                        <small><strong>Reason:</strong> {{ request.rejection_reason }}</small>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group">
+                        {% if request.status == 'pending' %}
+                        <a href="{% url 'armguard_admin:approve_device_request' request.id %}" class="btn-sm btn-approve">
+                            ✅ Approve
+                        </a>
+                        <a href="{% url 'armguard_admin:reject_device_request' request.id %}" class="btn-sm btn-reject">
+                            ❌ Reject
+                        </a>
+                        {% else %}
+                        <span class="btn-sm btn-view">👁️ View</span>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">No Requests Found</div>
+                    <div>
+                        {% if status_filter %}
+                        No {{ status_filter }} device authorization requests.
+                        {% else %}
+                        No device authorization requests yet.
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div style="margin-top: 2rem; padding: 1.5rem; background: #f9fafb; border-radius: 10px; border-left: 4px solid #667eea;">
+    <h3 style="margin: 0 0 1rem 0; color: #333;">ℹ️ About Device Authorization</h3>
+    <p style="margin: 0.5rem 0; color: #666;">
+        <strong>Device authorization</strong> adds an extra layer of security by requiring devices to be explicitly approved before accessing sensitive areas.
+    </p>
+    <ul style="margin: 0.5rem 0; padding-left: 1.5rem; color: #666;">
+        <li>Users can request device authorization when blocked</li>
+        <li>Approved devices are automatically added to the authorized devices list</li>
+        <li>Device fingerprints are based on User-Agent, IP, and browser settings</li>
+        <li>Each request shows device details to help identify legitimate devices</li>
+    </ul>
+</div>
+{% endblock %}

@@ -487,6 +487,42 @@ class UniversalForm(forms.Form):
         
         elif operation_type in ['edit_personnel', 'edit_both']:
             personnel = Personnel.objects.get(id=self.cleaned_data['edit_personnel_id'])
+            
+            # Check if we're also creating a user account for this personnel
+            # Only create user if role is armorer or admin, NOT for personnel role
+            role = self.cleaned_data.get('role', 'personnel')
+            creating_user_for_personnel = (operation_type == 'edit_personnel' and 
+                                          not personnel.user and 
+                                          role in ['armorer', 'admin'] and
+                                          self.cleaned_data.get('username') and 
+                                          self.cleaned_data.get('password'))
+            
+            # Create user account if requested and role is armorer/admin
+            if creating_user_for_personnel:
+                user = User.objects.create_user(
+                    username=self.cleaned_data['username'],
+                    first_name=self.cleaned_data.get('first_name', ''),
+                    last_name=self.cleaned_data.get('last_name', ''),
+                    email=self.cleaned_data.get('email', ''),
+                    password=self.cleaned_data['password'],
+                    is_active=self.cleaned_data.get('is_active', True)
+                )
+                
+                # Set role/group
+                role = self.cleaned_data.get('role', 'personnel')
+                if role != 'personnel':
+                    user.is_staff = True
+                    if role == 'admin':
+                        user.groups.add(Group.objects.get(name='Admin'))
+                    elif role == 'armorer':
+                        user.groups.add(Group.objects.get(name='Armorer'))
+                
+                user.save()
+                
+                # Link user to personnel
+                personnel.user = user
+            
+            # Update personnel fields
             personnel.surname = self.cleaned_data['surname']
             personnel.firstname = self.cleaned_data['firstname']
             personnel.middle_initial = self.cleaned_data.get('middle_initial', '')

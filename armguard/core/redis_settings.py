@@ -32,10 +32,10 @@ def get_redis_connection():
 try:
     REDIS_AVAILABLE = True
     get_redis_connection()
-    print("✅ Redis connection successful - WebSocket optimization enabled")
+    print("[OK] Redis connection successful - WebSocket optimization enabled")
 except ImproperlyConfigured:
     REDIS_AVAILABLE = False
-    print("⚠️  Redis connection failed - falling back to InMemory channels")
+    print("[WARNING] Redis connection failed - falling back to InMemory channels")
 
 # Django Channels configuration with Redis
 if REDIS_AVAILABLE:
@@ -99,5 +99,5 @@ else:
         }
     }
 
-print(f"🔄 Channel Backend: {'Redis' if REDIS_AVAILABLE else 'InMemory'}")
-print(f"💾 Cache Backend: {'Redis' if REDIS_AVAILABLE else 'Local Memory'}")
+print(f"[INFO] Channel Backend: {'Redis' if REDIS_AVAILABLE else 'InMemory'}")
+print(f"[INFO] Cache Backend: {'Redis' if REDIS_AVAILABLE else 'Local Memory'}")

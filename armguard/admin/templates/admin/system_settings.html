@@ -110,6 +110,25 @@
     
     {% if user.is_superuser %}
     <div class="settings-card">
+        <h2>🔐 Device Authorization</h2>
+        {% if pending_device_requests > 0 %}
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+            <strong style="color: #92400e;">⚠️ {{ pending_device_requests }} Pending Authorization Request{{ pending_device_requests|pluralize }}</strong>
+        </div>
+        {% endif %}
+        <p>Manage device authorization for sensitive operations:</p>
+        <div style="margin-top: 1rem;">
+            <a href="{% url 'armguard_admin:manage_device_requests' %}" 
+               style="display: inline-block; padding: 0.75rem 1.5rem; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                📋 Manage Device Requests
+                {% if pending_device_requests > 0 %}
+                <span style="background: #f59e0b; padding: 0.25rem 0.5rem; border-radius: 12px; margin-left: 0.5rem; font-size: 0.875rem;">{{ pending_device_requests }}</span>
+                {% endif %}
+            </a>
+        </div>
+    </div>
+    
+    <div class="settings-card">
         <h2>Superuser Options</h2>
         <p>As a superuser, you have access to:</p>
         <ul>

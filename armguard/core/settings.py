@@ -218,7 +218,7 @@ MIDDLEWARE = [
 # Disable history tracking with SQLite to prevent database locks
 if DEBUG or 'sqlite' in config('DB_ENGINE', default='django.db.backends.sqlite3'):
     MIDDLEWARE = [m for m in MIDDLEWARE if 'HistoryRequestMiddleware' not in m]
-    logger.warning("⚠️ HistoryRequestMiddleware disabled (SQLite or DEBUG mode) to prevent database locks")
+    logger.warning("[WARNING] HistoryRequestMiddleware disabled (SQLite or DEBUG mode) to prevent database locks")
 
 ROOT_URLCONF = 'core.urls'
 
@@ -321,7 +321,7 @@ ASGI_APPLICATION = 'core.asgi.application'
 # Import unified Redis configuration
 try:
     from .redis_settings import CHANNEL_LAYERS, CACHES, WEBSOCKET_SETTINGS
-    print("✅ Using unified Redis configuration for WebSockets")
+    print("[OK] Using unified Redis configuration for WebSockets")
 except ImportError:
     # Fallback configuration if unified Redis not available
     try:
@@ -344,7 +344,7 @@ except ImportError:
                 },
             },
         }
-        print("✅ Using Redis for WebSocket channel layer")
+        print("[OK] Using Redis for WebSocket channel layer")
         
     except (ImportError, redis.exceptions.ConnectionError, redis.exceptions.TimeoutError):
         # Redis not available - use improved InMemory with limits
@@ -357,7 +357,7 @@ except ImportError:
                 },
             },
         }
-        print("⚠️ Redis not available - using InMemory channel layer with limits")
+        print("[WARNING] Redis not available - using InMemory channel layer with limits")
         print("   For better WebSocket performance, install Redis: pip install redis")
         print("   Or run the unified Redis manager: deployment/unified-redis-manager.sh")
 
