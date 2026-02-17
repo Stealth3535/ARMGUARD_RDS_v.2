@@ -8,7 +8,7 @@
 # Usage: sudo bash ubuntu-deploy.sh [--quick] [--production]
 ################################################################################
 
-set -e
+set -Ee
 
 # Colors
 RED='\033[0;31m'
@@ -88,10 +88,10 @@ print_ubuntu_banner() {
     clear
     echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${CYAN}║                                                                ║${NC}"
-    echo -e "${CYAN}║   ${GREEN} ArmGuard Ubuntu Server Deployment ${CYAN}           ║${NC}"
+    echo -e "${CYAN}║   ${GREEN} ArmGuard Ubuntu Server Deployment ${CYAN}                        ║${NC}"
     echo -e "${CYAN}║                                                                ║${NC}"
-    echo -e "${CYAN}║  ${YELLOW}Optimized specifically for Ubuntu servers${CYAN}     ║${NC}"
-    echo -e "${CYAN}║  ${YELLOW}Automatic platform detection and optimization${CYAN} ║${NC}"
+    echo -e "${CYAN}║  ${YELLOW}Optimized specifically for Ubuntu servers${CYAN}                   ║${NC}"
+    echo -e "${CYAN}║  ${YELLOW}Automatic platform detection and optimization${CYAN}               ║${NC}"
     echo -e "${CYAN}║                                                                ║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
@@ -174,9 +174,12 @@ detect_platform() {
         fi
     fi
     
-    # Check if virtual machine
+    # Check if virtual machine (do not fail on physical hosts)
     if command -v systemd-detect-virt &>/dev/null; then
-        VIRT=$(systemd-detect-virt)
+        VIRT=$(systemd-detect-virt 2>/dev/null || echo "none")
+        if [ -z "$VIRT" ]; then
+            VIRT="none"
+        fi
         if [ "$VIRT" != "none" ]; then
             PLATFORM_TYPE="$PLATFORM_TYPE (Virtual: $VIRT)"
         fi
