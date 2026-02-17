@@ -8,6 +8,7 @@ from django.dispatch import receiver
 from django.contrib.auth.models import User
 from django.utils import timezone
 import os
+import logging
 
 # Import cache invalidation
 try:
@@ -246,26 +247,60 @@ def delete_personnel_with_audit(sender, instance, **kwargs):
 
 @receiver(post_save, sender='inventory.Item')
 def generate_item_qr_code(sender, instance, created, **kwargs):
-    """Generate QR code for item after save"""
+    """Generate QR code for item after save (skip for factory QR codes like M4)"""
     # Skip if this is a recursive call
     if getattr(instance, '_skip_post_save', False):
         return
         
     from qr_manager.models import QRCodeImage
+    import logging
+    logger = logging.getLogger(__name__)
     
-    # Create/update QRCodeImage for this item
-    # Use all_objects to check for inactive QR codes too
-    qr_obj, created_qr = QRCodeImage.all_objects.get_or_create(
+    # Check if this is a factory QR code (M4 Carbine with existing QR)
+    # Factory QR codes don't follow the standard "IR-..." or "IP-..." pattern
+    is_factory_qr = not (instance.id.startswith('IR-') or instance.id.startswith('IP-'))
+    
+    # For factory QR codes (like M4 Carbine), do NOT create QRCodeImage records
+    # The physical weapon has the QR code already - no digital image needed
+    if is_factory_qr:
+        logger.info(f"Item {instance.id} uses factory QR code - skipping QRCodeImage creation")
+        invalidate_dashboard_cache()
+        return
+    
+    if created:
+        # For new items, check if there's an old QR record with this ID and delete it
+        old_qr_codes = QRCodeImage.all_objects.filter(
+            qr_type=QRCodeImage.TYPE_ITEM,
+            reference_id=instance.id
+        )
+        if old_qr_codes.exists():
+            logger.info(f"Found {old_qr_codes.count()} old QR code(s) for {instance.id}, deleting...")
+            for old_qr in old_qr_codes:
+                # Delete image file if exists
+                if old_qr.qr_image:
+                    try:
+                        if os.path.isfile(old_qr.qr_image.path):
+                            os.remove(old_qr.qr_image.path)
+                    except Exception as e:
+                        logger.warning(f"Could not delete old QR image: {e}")
+                old_qr.delete()
+    
+    # Create/update QRCodeImage for system-generated items (IR-xxx, IP-xxx)
+    qr_obj, created_qr = QRCodeImage.objects.get_or_create(
         qr_type=QRCodeImage.TYPE_ITEM,
         reference_id=instance.id,
         defaults={
             'qr_data': instance.id,
+            'is_active': True,
         }
     )
-    # Update qr_data if needed
-    if qr_obj.qr_data != instance.id:
+    
+    # Update qr_data and ensure active if needed
+    if qr_obj.qr_data != instance.id or not qr_obj.is_active:
         qr_obj.qr_data = instance.id
-        qr_obj.save(update_fields=['qr_data'])
+        qr_obj.is_active = True
+        qr_obj.save(update_fields=['qr_data', 'is_active'])
+        logger.info(f"Updated QR code record for {instance.id}")
     
     # Invalidate dashboard cache when items change
     invalidate_dashboard_cache()
@@ -273,21 +308,34 @@ def generate_item_qr_code(sender, instance, created, **kwargs):
 
 @receiver(pre_delete, sender='inventory.Item')
 def delete_item_qr_codes(sender, instance, **kwargs):
-    """Delete QR codes before item deletion"""
+    """Delete QR codes before item deletion - includes inactive codes"""
     from qr_manager.models import QRCodeImage
     
-    # Delete all QR codes associated with this item
-    qr_codes = QRCodeImage.objects.filter(
+    # Delete all QR codes associated with this item (including inactive ones)
+    # Use all_objects to catch both active and inactive QR codes
+    qr_codes = QRCodeImage.all_objects.filter(
         qr_type=QRCodeImage.TYPE_ITEM,
         reference_id=instance.id
     )
+    
+    deleted_count = 0
     for qr_code in qr_codes:
         # Delete QR image file if it exists
         if qr_code.qr_image:
-            if os.path.isfile(qr_code.qr_image.path):
-                os.remove(qr_code.qr_image.path)
-        # Delete QR code record
+            try:
+                if os.path.isfile(qr_code.qr_image.path):
+                    os.remove(qr_code.qr_image.path)
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Could not delete QR image file: {e}")
+        
+        # Delete QR code record from database
         qr_code.delete()
+        deleted_count += 1
+    
+    if deleted_count > 0:
+        logger = logging.getLogger(__name__)
+        logger.info(f"Deleted {deleted_count} QR code(s) for item {instance.id}")
 
 
 @receiver(pre_delete, sender='users.UserProfile')

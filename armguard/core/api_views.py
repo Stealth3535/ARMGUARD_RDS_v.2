@@ -211,13 +211,13 @@ def create_transaction(request):
                 success_msg = f'✓ Transaction #{transaction_obj.id} completed: {item.item_type} {item.serial} {action_text} by {personnel.get_full_name()}'
                 messages.success(request, success_msg)
                 
-                # Comprehensive response data
+                # Comprehensive response data with validated transaction_id
                 response_data = {
                     'success': True,
-                    'transaction_id': transaction_obj.id,
+                    'transaction_id': int(transaction_obj.id),  # Ensure it's an integer
                     'message': 'Transaction completed successfully',
                     'transaction': {
-                        'id': transaction_obj.id,
+                        'id': int(transaction_obj.id),  # Ensure it's an integer
                         'personnel': {
                             'id': personnel.id,
                             'name': personnel.get_full_name(),
@@ -237,8 +237,13 @@ def create_transaction(request):
                     'action': action
                 }
                 
-                if pdf_url:
+                # Add PDF URL for Take transactions (ensure transaction_id is valid)
+                if pdf_url and transaction_obj.id:
                     response_data['pdf_url'] = pdf_url
+                    logger.info(f"Response includes PDF URL: {pdf_url} for transaction {transaction_obj.id}")
+                
+                # Log response for debugging
+                logger.info(f"Transaction response data: transaction_id={response_data['transaction_id']}, action={action}")
                 
                 return JsonResponse(response_data)
         

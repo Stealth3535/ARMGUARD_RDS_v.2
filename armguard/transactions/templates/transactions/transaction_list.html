@@ -120,6 +120,12 @@
         border: 1px solid #c3e6cb;
     }
     
+    .info-text.warning {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
     .info-text.error {
         background: #f8d7da;
         color: #721c24;
@@ -454,10 +460,16 @@ function openQrScanner(targetInputId) {
         { facingMode: "environment" },
         { fps: 10, qrbox: 250 },
         qrCodeMessage => {
+            console.log('QR Code scanned:', qrCodeMessage); // Debug log
             const input = document.getElementById(currentQrTarget);
             input.value = qrCodeMessage;
+            console.log('Set value for input:', currentQrTarget, 'to:', qrCodeMessage); // Debug log
             closeQrScanner();
-            setTimeout(() => input.dispatchEvent(new Event('blur')), 100);
+            // Trigger validation after a brief delay to ensure UI is updated
+            setTimeout(() => {
+                console.log('Triggering blur event for:', currentQrTarget); // Debug log
+                input.dispatchEvent(new Event('blur'));
+            }, 100);
         },
         errorMessage => {}
     ).catch(err => {
@@ -531,6 +543,7 @@ const actionSelect = document.getElementById('actionSelect');
 
 itemInput.addEventListener('blur', async function() {
     const itemId = this.value.trim();
+    console.log('Item validation triggered for:', itemId); // Debug log
     if (!itemId) {
         itemInfo.style.display = 'none';
         return;
@@ -541,30 +554,45 @@ itemInput.addEventListener('blur', async function() {
         const dutyType = document.getElementById('dutyType').value;
         const url = `/api/items/${itemId}/${dutyType ? '?duty_type=' + encodeURIComponent(dutyType) : ''}`;
         const response = await fetch(url);
+        console.log('API Response status:', response.status, 'for URL:', url); // Debug log
         if (response.ok) {
             const data = await response.json();
+            console.log('API Response data:', data); // Debug log
             const action = actionSelect.value;
             
+            // Always show item info first
+            itemInfo.className = 'info-text success';
+            itemInfo.textContent = `✓ ${data.item_type} - Serial: ${data.serial} - Status: ${data.status}`;
+            
+            // Check action compatibility and suggest if needed
+            let actionWarning = '';
             if (action === 'withdraw' && data.status !== 'Available') {
-                itemInfo.className = 'info-text error';
-                itemInfo.textContent = `✗ Item not available (Status: ${data.status})`;
+                actionWarning = ` ⚠ Item not available for withdrawal`;
             } else if (action === 'return' && data.status !== 'Issued') {
-                itemInfo.className = 'info-text error';
-                itemInfo.textContent = `✗ Item not issued (Status: ${data.status})`;
-            } else {
-                itemInfo.className = 'info-text success';
-                itemInfo.textContent = `✓ ${data.item_type} - Serial: ${data.serial} - Status: ${data.status}`;
-                
-                // Auto-fill using data from utils.py
-                if (data.autofill) {
-                    if (data.autofill.mags > 0) {
-                        document.getElementById('mags').value = data.autofill.mags;
-                    }
-                    if (data.autofill.rounds > 0) {
-                        document.getElementById('rounds').value = data.autofill.rounds;
-                    }
+                actionWarning = ` ⚠ Item not issued - should withdraw instead`;
+                // Auto-suggest correct action
+                actionSelect.value = 'withdraw';
+            } else if (action === 'withdraw' && data.status === 'Issued') {
+                actionWarning = ` ⚠ Item already issued - should return instead`;
+                // Auto-suggest correct action  
+                actionSelect.value = 'return';
+            }
+            
+            if (actionWarning) {
+                itemInfo.textContent += actionWarning;
+                itemInfo.className = 'info-text warning';
+            }
+            
+            // Auto-fill mags and rounds regardless of action compatibility
+            if (data.autofill) {
+                if (data.autofill.mags > 0) {
+                    document.getElementById('mags').value = data.autofill.mags;
+                }
+                if (data.autofill.rounds > 0) {
+                    document.getElementById('rounds').value = data.autofill.rounds;
                 }
             }
+            
             itemInfo.style.display = 'block';
         } else {
             itemInfo.className = 'info-text error';
@@ -669,43 +697,104 @@ async function submitTransaction() {
         
         if (response.ok) {
             const data = await response.json();
-            showNotification('Transaction successful!', 'success');
+            console.log('Transaction response:', data); // Debug log
+            showNotification('✓ Transaction #' + data.transaction_id + ' completed successfully!', 'success');
             
-            // Auto-print PDF only for withdrawals (Take)
+            // Auto-print PDF for withdrawals (Take) 
             if (data.action === 'Take' && data.transaction_id) {
-                console.log('Auto-print triggered for transaction', data.transaction_id);
+                console.log('🖨️ Auto-print triggered for transaction', data.transaction_id);
                 
-                // Open PDF directly - browser will use built-in PDF viewer
-                const pdfUrl = `/print/transaction/${data.transaction_id}/pdf/`;
-                const printWindow = window.open(pdfUrl, 'PrintWindow', 'width=900,height=700');
-                
-                if (!printWindow) {
-                    console.error('Print window blocked! Please allow pop-ups for this site.');
-                    showNotification('Print blocked! Please allow pop-ups for: ' + window.location.host, 'error');
-                } else {
-                    // Give Edge PDF viewer 3 seconds to fully render, then trigger print
-                    setTimeout(function() {
-                        try {
-                            if (!printWindow.closed) {
-                                console.log('Triggering print dialog...');
-                                printWindow.focus();  // Ensure window has focus
-                                printWindow.print();
-                                console.log('Print command sent successfully');
-                            } else {
-                                console.warn('Print window was closed before print could trigger');
-                            }
-                        } catch (e) {
-                            console.error('Print trigger failed:', e);
-                            showNotification('Unable to auto-print. Press Ctrl+P in the PDF window to print manually.', 'error');
-                        }
-                    }, 3000);  // Increased to 3 seconds for reliable PDF rendering
+                // Validate transaction ID before proceeding
+                if (!data.transaction_id || data.transaction_id === 'undefined' || data.transaction_id === 'null') {
+                    console.error('❌ Invalid transaction_id:', data.transaction_id);
+                    showNotification('⚠️ Print failed: Invalid transaction ID', 'error');
+                    return;
                 }
                 
-                // Reload page after 6 seconds to allow time for printing
-                setTimeout(() => location.reload(), 6000);
+                // Show printing notification
+                showNotification('📄 Opening print dialog for transaction receipt...', 'info');
+                
+                // Construct and validate PDF URL
+                const pdfUrl = `/print/transaction/${data.transaction_id}/pdf/`;
+                console.log('🔍 PDF URL for print:', pdfUrl);
+                console.log('🔍 Transaction data:', JSON.stringify(data, null, 2));
+                
+                // Open PDF directly in a new window and print only after navigation completes
+                let printWindow;
+                try {
+                    printWindow = window.open(pdfUrl, 'PrintWindow', 'width=900,height=800,scrollbars=yes,resizable=yes');
+                    console.log('🔍 Print window opened:', printWindow ? 'SUCCESS' : 'FAILED (pop-up blocked)');
+                } catch (openError) {
+                    console.error('❌ Failed to open print window:', openError);
+                    showNotification('❌ Failed to open print window: ' + openError.message, 'error');
+                    return;
+                }
+                
+                if (!printWindow) {
+                    console.error('❌ Print window blocked by pop-up blocker!');
+                    showNotification('⚠️ Pop-up blocked! Please allow pop-ups to auto-print receipts.', 'error');
+                    
+                    // Enhanced fallback with URL validation
+                    const fallbackMsg = document.createElement('div');
+                    fallbackMsg.style.cssText = 'background: #fff3cd; color: #856404; padding: 15px; margin: 10px 0; border: 1px solid #ffeaa7; border-radius: 8px; text-align: center;';
+                    fallbackMsg.innerHTML = `
+                        <strong>⚠️ Please allow pop-ups for auto-print</strong><br>
+                        <p>Transaction ID: ${data.transaction_id}</p>
+                        <p>PDF URL: ${pdfUrl}</p>
+                        <a href="${pdfUrl}" target="_blank" style="color: #004085; text-decoration: underline; font-weight: bold;">
+                            Click here to open and print the receipt manually
+                        </a>
+                    `;
+                    document.getElementById('transactionForm').insertBefore(fallbackMsg, document.getElementById('transactionForm').firstChild);
+                } else {
+                    let printSent = false;
+                    let attempts = 0;
+                    const maxAttempts = 20; // 10 seconds total
+
+                    const triggerPrint = (label) => {
+                        if (printSent) return;
+                        try {
+                            if (printWindow && !printWindow.closed) {
+                                console.log(`🖨️ Triggering print (${label})...`);
+                                printWindow.focus();
+                                printWindow.print();
+                                printSent = true;
+                            }
+                        } catch (e) {
+                            console.warn(`Print attempt failed (${label}):`, e);
+                        }
+                    };
+
+                    // Wait until popup leaves about:blank before printing.
+                    const waitForPdf = setInterval(() => {
+                        attempts += 1;
+                        try {
+                            const currentUrl = printWindow.location.href || '';
+                            if (currentUrl && !currentUrl.includes('about:blank')) {
+                                clearInterval(waitForPdf);
+                                setTimeout(() => triggerPrint('pdf_ready'), 1200);
+                                return;
+                            }
+                        } catch (e) {
+                            // Ignore transient access errors while browser is navigating.
+                        }
+
+                        if (attempts >= maxAttempts) {
+                            clearInterval(waitForPdf);
+                            showNotification('⚠️ Auto-print delayed. Use Ctrl+P in the opened PDF window.', 'warning');
+                        }
+                    }, 500);
+                }
+                
+                // Reload transaction list after printing
+                setTimeout(() => {
+                    console.log('↻ Reloading transaction list...');
+                    location.reload();
+                }, 12000);
             } else {
-                // For Return transactions, reload immediately
-                setTimeout(() => location.reload(), 800);
+                // For Return transactions, reload after short delay
+                console.log('Return transaction completed, reloading...');
+                setTimeout(() => location.reload(), 1200);
             }
         } else {
             const error = await response.json();
@@ -777,8 +866,14 @@ itemTypeFilter.addEventListener('change', filterTransactions);
 
 // Notification system
 function showNotification(message, type = 'info') {
+    // Keep one info toast at a time to avoid stacked/staggering notifications.
+    if (type === 'info') {
+        document.querySelectorAll('.js-toast-info').forEach(el => el.remove());
+    }
+
     // Create notification element
     const notification = document.createElement('div');
+    notification.classList.add(`js-toast-${type}`);
     notification.style.cssText = `
         position: fixed;
         top: 20px;
@@ -799,8 +894,10 @@ function showNotification(message, type = 'info') {
         notification.style.background = '#28a745';
     } else if (type === 'error') {
         notification.style.background = '#dc3545';
+    } else if (type === 'info') {
+        notification.style.background = '#17a2b8';  // Teal/cyan for info
     } else {
-        notification.style.background = '#007bff';
+        notification.style.background = '#007bff';  // Default blue
     }
     
     notification.textContent = message;

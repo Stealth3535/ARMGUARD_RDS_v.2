@@ -15,7 +15,7 @@ class TransactionCreateForm(forms.Form):
     item_id = forms.CharField(
         max_length=50, 
         required=True,
-        help_text="Item ID (e.g., IP-123456 or QR reference)"
+        help_text="Item ID (e.g., IP-123456, IR-123456, or factory QR)"
     )
     action = forms.ChoiceField(
         choices=[('Take', 'Take'), ('Return', 'Return')],
@@ -53,8 +53,9 @@ class TransactionCreateForm(forms.Form):
     
     def clean_item_id(self):
         item_id = self.cleaned_data['item_id']
-        # Validate format (IP-XXXXXX or QR reference)
-        if not re.match(r'^(IP-\d{6}|[A-Za-z0-9\-_]{3,50})$', item_id):
+        # Validate format (IP-XXXXXX, IR-XXXXXX, or factory QR reference)
+        # Allow spaces in serial numbers (e.g., "afp 759458")
+        if not re.match(r'^(I[PR]-[\w\s\-.]{1,50}|[A-Za-z0-9\-_.\s]{3,50})$', item_id):
             raise ValidationError('Invalid item ID format')
         return item_id
     
@@ -90,6 +91,7 @@ class ItemLookupForm(forms.Form):
     
     def clean_item_id(self):
         item_id = self.cleaned_data['item_id']
-        if not re.match(r'^(IP-\d{6}|[A-Za-z0-9\-_]{3,50})$', item_id):
+        # Allow standard IDs (IP-/IR-), factory QR codes (with periods), and spaces in serial numbers  
+        if not re.match(r'^(I[PR]-[\w\s\-.]{1,50}|[A-Za-z0-9\-_.\s]{3,50})$', item_id):
             raise ValidationError('Invalid item ID format')
         return item_id

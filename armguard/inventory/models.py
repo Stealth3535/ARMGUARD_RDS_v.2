@@ -99,10 +99,16 @@ class Item(models.Model):
         if errors:
             raise ValueError(f"Item validation failed: {errors}")
         if not self.id:
-            # Generate ID: I + R/P + serial + DDMMYY
-            category = self.get_item_category()
-            date_suffix = timezone.now().strftime('%d%m%y')
-            self.id = f"I{category}-{self.serial}{date_suffix}"
+            # Check if using existing QR code (passed via _existing_qr attribute)
+            if hasattr(self, '_existing_qr') and self._existing_qr:
+                # Use existing QR code as primary key
+                self.id = self._existing_qr
+                self.qr_code = self._existing_qr
+            else:
+                # Generate ID: I + R/P + serial + DDMMYY
+                category = self.get_item_category()
+                date_suffix = timezone.now().strftime('%d%m%y')
+                self.id = f"I{category}-{self.serial}{date_suffix}"
         # Set QR code to ID if not set
         if not self.qr_code:
             self.qr_code = self.id

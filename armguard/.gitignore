@@ -33,7 +33,6 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 /staticfiles/
-/media/
 /logs/
 
 # Environment variables
@@ -58,9 +57,13 @@ htmlcov/
 # Project specific
 test_qr.png
 *.pyc
+core/media/
 core/media/temp/
-core/media/qr_codes/*
+core/media/transaction_forms/
+core/media/qr_codes/
+core/media/images/
 !core/media/qr_codes/.gitkeep
+!print_handler/templates/pdf_forms/*.pdf
 
 # Backup files
 *.bak

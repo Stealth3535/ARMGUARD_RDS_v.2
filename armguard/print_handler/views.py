@@ -160,36 +160,56 @@ def print_transactions(request):
 @login_required
 @user_passes_test(is_admin_or_armorer)
 def download_transaction_pdf(request, transaction_id):
-    """Download filled PDF form for a transaction with print preview"""
+    """Serve the filled PDF form for a transaction (create if doesn't exist)"""
     import os
     from django.conf import settings
+    from django.http import FileResponse
     
     transaction = get_object_or_404(Transaction, id=transaction_id)
     
+    # Check if filled PDF already exists (from auto-generation during transaction)
+    filename = f"Transaction_{transaction.id}_{transaction.date_time.strftime('%Y%m%d_%H%M%S')}.pdf"
+    output_dir = os.path.join(settings.MEDIA_ROOT, 'transaction_forms')
+    output_path = os.path.join(output_dir, filename)
+    
+    # If PDF exists and is valid, serve it directly (faster, avoids regeneration)
+    if os.path.exists(output_path) and os.path.getsize(output_path) > 1024:  # File exists and > 1KB
+        try:
+            # Use FileResponse for better performance and reliability
+            response = FileResponse(
+                open(output_path, 'rb'),
+                content_type='application/pdf',
+                filename=filename
+            )
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            response['X-Print-Page-Size'] = 'legal'
+            response['Cache-Control'] = 'no-cache, must-revalidate'
+            return response
+        except Exception as e:
+            # If reading existing PDF fails, continue to regeneration
+            print(f"Error serving existing PDF: {e}")
+    
+    # Generate PDF if it doesn't exist or is corrupted
     try:
-        # Fill the PDF form
         form_filler = TransactionFormFiller()
         filled_pdf = form_filler.fill_transaction_form(transaction)
         
-        # Save to media folder for review
-        filename = f"Transaction_{transaction.id}_{transaction.date_time.strftime('%Y%m%d_%H%M%S')}.pdf"
-        output_dir = os.path.join(settings.MEDIA_ROOT, 'transaction_forms')
+        # Ensure directory exists
         os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, filename)
         
-        # Write PDF to file
+        # Get PDF bytes properly
+        filled_pdf.seek(0)  # Reset pointer to beginning
+        pdf_bytes = filled_pdf.read()
+        
+        # Write PDF to file for future use
         with open(output_path, 'wb') as f:
-            f.write(filled_pdf.read())
+            f.write(pdf_bytes)
         
-        # Read back for display
-        with open(output_path, 'rb') as f:
-            pdf_content = f.read()
-            response = HttpResponse(pdf_content, content_type='application/pdf')
-            # Use inline to display in browser instead of download
-            response['Content-Disposition'] = f'inline; filename="{filename}"'
-            # Add header to suggest legal paper size
-            response['X-Print-Page-Size'] = 'legal'
-            
+        # Serve the PDF directly from memory (more reliable)
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        response['X-Print-Page-Size'] = 'legal'
+        response['Cache-Control'] = 'no-cache, must-revalidate'
         return response
         
     except Exception as e:

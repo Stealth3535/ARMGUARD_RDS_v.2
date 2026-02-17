@@ -566,6 +566,19 @@ class UniversalForm(forms.Form):
 
 class ItemRegistrationForm(forms.ModelForm):
     """Form for registering inventory items"""
+    
+    # Add field for existing QR codes (REQUIRED for M4 Carbine)
+    existing_qr = forms.CharField(
+        max_length=255,
+        required=False,  # Validated conditionally in clean()
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Scan factory-engraved QR code on the weapon',
+            'id': 'existingQrInput'
+        }),
+        help_text='REQUIRED for M4 Carbine. Scan the factory QR code - it will be used as the item ID.'
+    )
+    
     class Meta:
         model = Item
         fields = ['item_type', 'serial', 'description', 'condition', 'status']
@@ -582,6 +595,27 @@ class ItemRegistrationForm(forms.ModelForm):
         if Item.objects.filter(serial=serial).exists():
             raise ValidationError('This serial number already exists.')
         return serial
+    
+    def clean(self):
+        """Validate form - existing_qr is REQUIRED for M4 Carbine"""
+        cleaned_data = super().clean()
+        item_type = cleaned_data.get('item_type')
+        existing_qr = cleaned_data.get('existing_qr', '').strip()
+        
+        # M4 Carbine MUST have existing QR code
+        if item_type == 'M4' and not existing_qr:
+            raise ValidationError({
+                'existing_qr': 'Factory QR code is REQUIRED for M4 Carbine. Please scan the QR code on the weapon.'
+            })
+        
+        # If QR code provided, ensure it's not already used
+        if existing_qr:
+            if Item.objects.filter(id=existing_qr).exists():
+                raise ValidationError({
+                    'existing_qr': 'This QR code is already registered to another item.'
+                })
+        
+        return cleaned_data
 
 
 class ItemEditForm(forms.ModelForm):

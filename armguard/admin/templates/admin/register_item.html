@@ -89,12 +89,83 @@
         color: #dc2626;
         font-size: 0.875rem;
     }
+    
+    .qr-scanner-section {
+        background: #fff3cd;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        border: 3px solid #ffc107;
+        display: none; /* Hidden by default, shown only for M4 */
+    }
+    
+    .qr-scanner-section.required {
+        background: #fff3cd;
+        border-color: #ffc107;
+    }
+    
+    .qr-scanner-section h3 {
+        margin-top: 0;
+        color: #856404;
+        font-size: 1.1rem;
+    }
+    
+    .qr-scanner-section h3 .required-badge {
+        background: #dc3545;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        margin-left: 8px;
+    }
+    
+    .qr-hint {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
+    
+    .btn-scan {
+        background: #10b981;
+        color: white;
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 0.5rem;
+    }
+    
+    .btn-scan:hover {
+        background: #059669;
+    }
+    
+    #qr-reader {
+        display: none;
+        margin-top: 1rem;
+        border-radius: 8px;
+        overflow: hidden;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="form-container">
     <h1>Register Inventory Item</h1>
+    
+    {% if used_existing_qr %}
+    <div class="alert alert-success" style="background: #d4edda; border: 1px solid #c3e6cb; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+        <strong>✓ Item Registered Successfully!</strong><br>
+        <p style="margin: 0.5rem 0 0 0;">
+            This M4 Carbine uses its factory-engraved QR code. <strong>No printed QR label needed.</strong><br>
+            The existing QR code on the weapon (<code>{{ item.id }}</code>) is now registered in the system.
+        </p>
+    </div>
+    {% elif success and qr_code %}
+    <div class="alert alert-success" style="background: #d4edda; border: 1px solid #c3e6cb; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+        <strong>✓ Item Registered Successfully!</strong><br>
+        <p style="margin: 0.5rem 0;">Print the QR code below and attach it to the item.</p>
+    </div>
+    {% endif %}
     
     <form method="post">
         {% csrf_token %}
@@ -103,6 +174,19 @@
             {{ form.item_type.errors }}
             <label for="{{ form.item_type.id_for_label }}">{{ form.item_type.label }}</label>
             {{ form.item_type }}
+        </div>
+        
+        <!-- Factory QR Code Scanner Section (Shows for M4 Carbine ONLY) -->
+        <div class="qr-scanner-section" id="qrScannerSection" style="display: none;">
+            <h3>📷 Factory QR Code <span class="required-badge">REQUIRED</span></h3>
+            <p class="qr-hint">
+                <strong>M4 Carbine has factory-engraved QR codes.</strong> Scan the QR code on the weapon.
+                The scanned code will be used as the item's primary ID.
+            </p>
+            {{ form.existing_qr.errors }}
+            {{ form.existing_qr }}
+            <button type="button" class="btn-scan" onclick="startQRScanner()">📷 Scan Factory QR Code</button>
+            <div id="qr-reader"></div>
         </div>
         
         <div class="form-group">
@@ -135,4 +219,214 @@
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+let html5QrCode = null;
+
+function startQRScanner() {
+    const readerDiv = document.getElementById('qr-reader');
+    readerDiv.style.display = 'block';
+    
+    html5QrCode = new Html5Qrcode("qr-reader");
+    html5QrCode.start(
+        { facingMode: "environment" },
+        {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
+        },
+        onScanSuccess,
+        onScanError
+    ).catch(err => {
+        console.error('Error starting scanner:', err);
+        alert('Could not start camera. Please check permissions or enter QR code manually.');
+        readerDiv.style.display = 'none';
+    });
+}
+
+function stopQRScanner() {
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            document.getElementById('qr-reader').style.display = 'none';
+            html5QrCode = null;
+        }).catch(err => {
+            console.error('Error stopping scanner:', err);
+        });
+    }
+}
+
+function onScanSuccess(decodedText) {
+    // Example scanned: "DASANPAF202447592024.10.02P5137"
+    console.log('QR Scanned:', decodedText);
+    
+    const input = document.getElementById('existingQrInput');
+    input.value = decodedText;
+    
+    // Highlight the input to show it was scanned
+    input.style.background = '#d4edda';
+    input.style.borderColor = '#28a745';
+    
+    // Stop scanner after successful scan
+    stopQRScanner();
+    
+    // Always parse for M4 (since scanner only shows for M4)
+    parseM4QRCode(decodedText);
+    
+    // Show success message
+    alert('✓ QR Code scanned successfully!\n\nScanned: ' + decodedText);
+}
+
+function parseM4QRCode(qrCode) {
+    // Example: "DASANPAF202447592024.10.02P5137"
+    // Extract: Serial = "PAF20244759", Description = "DASAN2024.10.02P5137"
+    
+    console.log('Parsing M4 QR Code:', qrCode);
+    
+    const pafIndex = qrCode.indexOf('PAF');
+    if (pafIndex !== -1) {
+        // Extract year (4 characters after PAF)
+        const year = qrCode.substring(pafIndex + 3, pafIndex + 7);
+        console.log('Found PAF at index:', pafIndex, 'Year:', year);
+        
+        if (year && year.length === 4) {
+            // Find next occurrence of year (starts searching after "PAF" + year)
+            const searchStart = pafIndex + 3 + 4; // After "PAFyyyy"
+            const nextYearIndex = qrCode.indexOf(year, searchStart);
+            console.log('Next year occurrence at:', nextYearIndex);
+            
+            // Extract serial (from PAF to next year occurrence)
+            let serial = '';
+            if (nextYearIndex !== -1) {
+                serial = qrCode.substring(pafIndex, nextYearIndex);
+            } else {
+                serial = qrCode.substring(pafIndex);
+            }
+            
+            // Extract description (everything before PAF + everything after serial)
+            let description = qrCode.substring(0, pafIndex) + qrCode.substring(pafIndex + serial.length);
+            
+            console.log('Extracted Serial:', serial);
+            console.log('Extracted Description:', description);
+            
+            // Auto-fill serial and description
+            const serialInput = document.getElementById('{{ form.serial.id_for_label }}');
+            const descInput = document.getElementById('{{ form.description.id_for_label }}');
+            
+            if (serialInput) {
+                serialInput.value = serial;
+                serialInput.style.background = '#d4edda';
+                serialInput.style.borderColor = '#28a745';
+                console.log('Serial field updated');
+            } else {
+                console.error('Serial input not found');
+            }
+            
+            if (descInput) {
+                descInput.value = description;
+                descInput.style.background = '#d4edda';
+                descInput.style.borderColor = '#28a745';
+                console.log('Description field updated');
+            } else {
+                console.error('Description input not found');
+            }
+        } else {
+            console.error('Invalid year extracted');
+        }
+    } else {
+        console.error('PAF not found in QR code');
+    }
+}
+
+function onScanError(error) {
+    // Ignore scan errors (happens when no QR in frame)
+}
+
+// Show/hide QR scanner based on item type selection
+document.addEventListener('DOMContentLoaded', function() {
+    const itemTypeSelect = document.getElementById('{{ form.item_type.id_for_label }}');
+    const qrSection = document.getElementById('qrScannerSection');
+    const qrInput = document.getElementById('existingQrInput');
+    
+    console.log('Page loaded. Item type select:', itemTypeSelect);
+    console.log('QR Section:', qrSection);
+    
+    // Function to toggle QR section visibility
+    function toggleQRSection() {
+        const selectedType = itemTypeSelect ? itemTypeSelect.value : '';
+        console.log('Item type changed to:', selectedType);
+        
+        if (selectedType === 'M4') {
+            // Show QR section for M4 and make it required
+            console.log('Showing QR section for M4');
+            qrSection.style.display = 'block';
+            qrInput.required = true;
+            qrInput.setAttribute('required', 'required');
+        } else {
+            // Hide QR section for other items
+            console.log('Hiding QR section');
+            qrSection.style.display = 'none';
+            qrInput.required = false;
+            qrInput.removeAttribute('required');
+            qrInput.value = ''; // Clear any entered value
+            
+            // Clear serial and description styling
+            const serialInput = document.getElementById('{{ form.serial.id_for_label }}');
+            const descInput = document.getElementById('{{ form.description.id_for_label }}');
+            if (serialInput) {
+                serialInput.style.background = '';
+                serialInput.style.borderColor = '';
+            }
+            if (descInput) {
+                descInput.style.background = '';
+                descInput.style.borderColor = '';
+            }
+        }
+    }
+    
+    // Check on page load
+    if (itemTypeSelect && qrSection) {
+        toggleQRSection();
+        
+        // Listen for changes
+        itemTypeSelect.addEventListener('change', function() {
+            console.log('Item type dropdown changed');
+            toggleQRSection();
+        });
+    } else {
+        console.error('Missing elements:', {itemTypeSelect, qrSection});
+    }
+    
+    // Visual feedback for QR input and auto-parse
+    if (qrInput) {
+        qrInput.addEventListener('input', function() {
+            if (this.value) {
+                this.style.background = '#d4edda';
+                this.style.borderColor = '#28a745';
+            } else {
+                this.style.background = '';
+                this.style.borderColor = '';
+            }
+        });
+        
+        // Auto-parse when QR code is manually entered or pasted
+        qrInput.addEventListener('blur', function() {
+            if (this.value && itemTypeSelect.value === 'M4') {
+                console.log('QR input blur - parsing...');
+                parseM4QRCode(this.value);
+            }
+        });
+        
+        // Also parse on Enter key
+        qrInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && this.value && itemTypeSelect.value === 'M4') {
+                e.preventDefault();
+                console.log('QR input enter - parsing...');
+                parseM4QRCode(this.value);
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

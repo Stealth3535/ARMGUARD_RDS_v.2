@@ -585,22 +585,42 @@ def register_item(request):
         form = ItemRegistrationForm(request.POST)
         if form.is_valid():
             try:
-                item = form.save()
+                # Check if using existing QR code
+                existing_qr = form.cleaned_data.get('existing_qr', '').strip()
                 
-                # Generate QR code using standard generator for consistent gray-on-black styling
-                from utils.qr_generator import generate_qr_code_to_buffer
-                item_data = f"ITEM:{item.id}:{item.item_type}:{item.serial}"
+                # Save item (don't commit yet to set existing QR)
+                item = form.save(commit=False)
                 
-                buffer = generate_qr_code_to_buffer(item_data, size=600)
-                qr_code = base64.b64encode(buffer.getvalue()).decode()
-                
-                messages.success(request, f'Item "{item}" registered successfully with QR code!')
-                return render(request, 'admin/register_item.html', {
-                    'form': ItemRegistrationForm(),
-                    'qr_code': qr_code,
-                    'item': item,
-                    'success': True
-                })
+                if existing_qr:
+                    # Use existing QR code as primary key
+                    item._existing_qr = existing_qr
+                    item.save()
+                    
+                    messages.success(request, f'Item "{item}" registered successfully using existing QR code!')
+                    return render(request, 'admin/register_item.html', {
+                        'form': ItemRegistrationForm(),
+                        'item': item,
+                        'success': True,
+                        'used_existing_qr': True
+                    })
+                else:
+                    # Generate new ID and QR code
+                    item.save()
+                    
+                    # Generate QR code using standard generator for consistent gray-on-black styling
+                    from utils.qr_generator import generate_qr_code_to_buffer
+                    item_data = f"ITEM:{item.id}:{item.item_type}:{item.serial}"
+                    
+                    buffer = generate_qr_code_to_buffer(item_data, size=600)
+                    qr_code = base64.b64encode(buffer.getvalue()).decode()
+                    
+                    messages.success(request, f'Item "{item}" registered successfully with QR code!')
+                    return render(request, 'admin/register_item.html', {
+                        'form': ItemRegistrationForm(),
+                        'qr_code': qr_code,
+                        'item': item,
+                        'success': True
+                    })
                 
             except Exception as e:
                 messages.error(request, f'Error registering item: {str(e)}')
