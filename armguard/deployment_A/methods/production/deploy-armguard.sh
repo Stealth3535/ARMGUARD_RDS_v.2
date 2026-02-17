@@ -641,8 +641,8 @@ EOF
             ;;
     esac
     
-    echo -e "${YELLOW}Collecting static files...${NC}"
-    .venv/bin/python manage.py collectstatic --noinput --settings=core.settings_production
+    echo -e "${YELLOW}Collecting static files (clearing stale files first)...${NC}"
+    .venv/bin/python manage.py collectstatic --clear --noinput --settings=core.settings_production
     
     echo -e "${GREEN}✓ Database ready${NC}"
 }
