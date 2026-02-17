@@ -258,10 +258,7 @@ DATABASES = {
         'OPTIONS': {
             'connect_timeout': 20,
             'sslmode': config('DB_SSL_MODE', default='prefer'),  # SSL connection security
-            # Performance Optimizations
-            'MAX_CONNS': config('DB_MAX_CONNS', default=100, cast=int),  # Connection pooling
-            'cursor_factory': 'psycopg2.extras.RealDictCursor',  # Faster query results
-            'isolation_level': 'psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED',
+            # Keep only valid Django/driver connection options
         },
         'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=600, cast=int),  # Extended connection pooling
         'CONN_HEALTH_CHECKS': True,  # Connection health checks
@@ -655,7 +652,6 @@ if not DEBUG:
     if 'postgresql' in DATABASES['default']['ENGINE']:
         DATABASES['default']['CONN_MAX_AGE'] = 600  # 10 minutes
         DATABASES['default']['OPTIONS'].update({
-            'MAX_CONNS': 20,
             'connect_timeout': 10,
         })
 
@@ -824,7 +820,7 @@ if IS_RASPBERRY_PI:
         if 'postgresql' in DATABASES['default']['ENGINE']:
             if 'OPTIONS' not in DATABASES['default']:
                 DATABASES['default']['OPTIONS'] = {}
-            DATABASES['default']['OPTIONS']['MAX_CONNS'] = 5  # Fewer connections
+            DATABASES['default']['OPTIONS']['connect_timeout'] = 10
         
         # Use simple cache backend
         CACHES['default']['BACKEND'] = 'django.core.cache.backends.dummy.DummyCache'
