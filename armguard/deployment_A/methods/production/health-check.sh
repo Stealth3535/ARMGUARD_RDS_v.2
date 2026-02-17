@@ -250,15 +250,24 @@ echo -e "${BLUE}Logs & Recent Errors${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
 echo ""
 
+# Determine service runtime window to avoid stale historical noise
+SERVICE_SINCE="1 hour ago"
+if command -v systemctl &> /dev/null; then
+    SERVICE_STARTED_AT=$(systemctl show -p ActiveEnterTimestamp --value "$SERVICE_NAME" 2>/dev/null || true)
+    if [ -n "$SERVICE_STARTED_AT" ] && [ "$SERVICE_STARTED_AT" != "n/a" ]; then
+        SERVICE_SINCE="$SERVICE_STARTED_AT"
+    fi
+fi
+
 # Check for recent errors in Gunicorn logs
 if [ -f "/var/log/armguard/error.log" ]; then
-    ERROR_COUNT=$(grep -i "error" /var/log/armguard/error.log | tail -100 | wc -l)
+    ERROR_COUNT=$(tail -200 /var/log/armguard/error.log 2>/dev/null | grep -i "error" | wc -l)
     if [ "$ERROR_COUNT" -eq 0 ]; then
-        check_pass "No recent errors in Gunicorn logs"
+        check_pass "No errors in recent Gunicorn log lines"
     elif [ "$ERROR_COUNT" -lt 10 ]; then
-        check_warn "Found $ERROR_COUNT recent errors in Gunicorn logs"
+        check_warn "Found $ERROR_COUNT errors in recent Gunicorn log lines"
     else
-        check_fail "Found $ERROR_COUNT recent errors in Gunicorn logs"
+        check_fail "Found $ERROR_COUNT errors in recent Gunicorn log lines"
     fi
 else
     check_warn "Gunicorn error log not found"
@@ -266,11 +275,11 @@ fi
 
 # Check systemd journal for service errors
 if command -v journalctl &> /dev/null; then
-    JOURNAL_ERRORS=$(journalctl -u $SERVICE_NAME --since "1 hour ago" -p err --no-pager -q | wc -l)
+    JOURNAL_ERRORS=$(journalctl -u "$SERVICE_NAME" --since "$SERVICE_SINCE" -p err --no-pager -q | wc -l)
     if [ "$JOURNAL_ERRORS" -eq 0 ]; then
-        check_pass "No service errors in last hour"
+        check_pass "No service errors since current service start"
     else
-        check_warn "Found $JOURNAL_ERRORS service errors in last hour"
+        check_warn "Found $JOURNAL_ERRORS service errors since current service start"
     fi
 fi
 
