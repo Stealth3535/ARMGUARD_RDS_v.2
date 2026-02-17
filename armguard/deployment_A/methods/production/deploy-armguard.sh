@@ -910,8 +910,13 @@ EOF
     ln -sf /etc/nginx/sites-available/armguard /etc/nginx/sites-enabled/
     rm -f /etc/nginx/sites-enabled/default
     
-    # Test configuration
-    nginx -t
+    # Test configuration only when SSL is not enabled yet.
+    # For SSL-enabled flows, certificate directives are injected in setup_ssl().
+    if [[ "$USE_SSL" =~ ^[Yy] ]]; then
+        echo -e "${CYAN}ℹ Nginx syntax check deferred until SSL certificates are configured${NC}"
+    else
+        nginx -t
+    fi
     
     echo -e "${GREEN}✓ Nginx configured for ${NETWORK_TYPE} deployment${NC}"
 }
@@ -920,6 +925,7 @@ EOF
 setup_ssl() {
     if [[ ! "$USE_SSL" =~ ^[Yy] ]]; then
         echo -e "${YELLOW}Skipping SSL setup${NC}"
+        nginx -t
         systemctl reload nginx
         return
     fi
@@ -1029,6 +1035,8 @@ setup_ssl() {
         echo -e "${YELLOW}Install this on client devices to trust the certificate${NC}"
     fi
     
+    echo -e "${YELLOW}Validating Nginx configuration with SSL certificates...${NC}"
+    nginx -t
     systemctl reload nginx
 }
 
