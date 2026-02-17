@@ -440,6 +440,12 @@ setup_python_environment() {
         .venv/bin/pip install -r requirements.txt --progress-bar on
         echo -e "${YELLOW}📝 Note: psutil not installed - some monitoring features will use fallbacks${NC}"
     fi
+
+    # Safety check: ensure whitenoise is installed for production middleware
+    if ! .venv/bin/python -c "import whitenoise" >/dev/null 2>&1; then
+        echo -e "${YELLOW}Installing missing runtime dependency: whitenoise...${NC}"
+        .venv/bin/pip install whitenoise==6.8.2 --progress-bar on
+    fi
     
     echo -e "${GREEN}✓ Python environment ready${NC}"
 }
