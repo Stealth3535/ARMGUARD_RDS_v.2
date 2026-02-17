@@ -18,6 +18,16 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# Better error visibility (prevents silent exits)
+on_error() {
+    local exit_code=$?
+    local line_no=${BASH_LINENO[0]}
+    echo -e "${RED}❌ Deployment wrapper failed at line ${line_no} (exit: ${exit_code})${NC}"
+    echo -e "${YELLOW}Tip: Re-run with debug: sudo bash -x ubuntu-deploy.sh --production${NC}"
+    exit ${exit_code}
+}
+trap on_error ERR
+
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -78,10 +88,10 @@ print_ubuntu_banner() {
     clear
     echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${CYAN}║                                                                ║${NC}"
-    echo -e "${CYAN}║           ${GREEN}🐧 ArmGuard Ubuntu Server Deployment 🐧${CYAN}           ║${NC}"
+    echo -e "${CYAN}║   ${GREEN} ArmGuard Ubuntu Server Deployment ${CYAN}           ║${NC}"
     echo -e "${CYAN}║                                                                ║${NC}"
-    echo -e "${CYAN}║  ${YELLOW}Optimized specifically for Ubuntu servers${CYAN}                 ║${NC}"
-    echo -e "${CYAN}║  ${YELLOW}Automatic platform detection and optimization${CYAN}            ║${NC}"
+    echo -e "${CYAN}║  ${YELLOW}Optimized specifically for Ubuntu servers${CYAN}     ║${NC}"
+    echo -e "${CYAN}║  ${YELLOW}Automatic platform detection and optimization${CYAN} ║${NC}"
     echo -e "${CYAN}║                                                                ║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
@@ -118,7 +128,7 @@ detect_platform() {
             PLATFORM_TYPE="Ubuntu x86_64 Server"
             ARCH_TYPE="amd64"
             # Check for HP ProDesk mini computers
-            if dmidecode -s system-product-name 2>/dev/null | grep -qi "prodesk\|elitedesk\|hp.*mini"; then
+            if command -v dmidecode >/dev/null 2>&1 && dmidecode -s system-product-name 2>/dev/null | grep -qi "prodesk\|elitedesk\|hp.*mini"; then
                 PLATFORM_TYPE="HP ProDesk Mini Computer"
                 HARDWARE_TYPE="hp_prodesk"
                 echo -e "${CYAN}🖥️ HP ProDesk/EliteDesk mini computer detected${NC}"
@@ -181,7 +191,7 @@ apply_ubuntu_optimizations() {
     echo -e "${BLUE}⚡ Applying Ubuntu-specific optimizations...${NC}"
     
     # CPU-based worker optimization
-    CPU_CORES=$(nproc)
+    CPU_CORES=$(nproc 2>/dev/null || echo 2)
     
     # Platform-specific optimization
     case "$HARDWARE_TYPE" in
@@ -220,7 +230,10 @@ apply_ubuntu_optimizations() {
     esac
     
     # Memory-based database optimization
-    TOTAL_MEM_MB=$(free -m | awk 'NR==2 {print $2}')
+    TOTAL_MEM_MB=$(free -m 2>/dev/null | awk 'NR==2 {print $2}')
+    if [ -z "$TOTAL_MEM_MB" ]; then
+        TOTAL_MEM_MB=2048
+    fi
     
     # Platform-specific memory optimization
     case "$HARDWARE_TYPE" in
@@ -393,6 +406,9 @@ main() {
         exit 1
     fi
     
+    # Ensure script relative paths are stable
+    cd "$SCRIPT_DIR"
+
     # Show detected project location
     if [ -n "$DETECTED_PROJECT_DIR" ]; then
         echo -e "${CYAN}📦 Project auto-detected at: ${GREEN}$DETECTED_PROJECT_DIR${NC}"
@@ -408,14 +424,16 @@ main() {
     # Show configuration
     show_deployment_summary
     
-    # Confirm deployment (unless quick mode)
-    if [ "$QUICK_MODE" != "yes" ]; then
+    # Confirm deployment (unless quick mode or explicit production mode)
+    if [ "$QUICK_MODE" != "yes" ] && [ "$PRODUCTION_MODE" != "yes" ]; then
         echo -e "${YELLOW}❓ Proceed with Ubuntu deployment? [y/N]:${NC}"
         read -r CONFIRM
         if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
             echo -e "${YELLOW}⏹️ Deployment cancelled${NC}"
             exit 0
         fi
+    elif [ "$PRODUCTION_MODE" = "yes" ]; then
+        echo -e "${GREEN}✅ Production flag detected, proceeding automatically...${NC}"
     fi
     
     # Run deployment
