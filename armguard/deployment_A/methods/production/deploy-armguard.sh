@@ -658,13 +658,10 @@ WorkingDirectory=${PROJECT_DIR}
 Environment="PATH=${PROJECT_DIR}/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Environment="DJANGO_SETTINGS_MODULE=core.settings_production"
 EnvironmentFile=-${PROJECT_DIR}/.env
-    RuntimeDirectory=gunicorn-armguard
-    RuntimeDirectoryMode=0755
 
 ExecStart=${PROJECT_DIR}/.venv/bin/gunicorn \\
           --workers ${WORKERS} \\
-              --bind unix:/run/gunicorn-armguard/gunicorn.sock \
-              --umask 007 \
+              --bind 127.0.0.1:8000 \
           --timeout 60 \\
           --access-logfile /var/log/armguard/access.log \\
           --error-logfile /var/log/armguard/error.log \\
@@ -757,7 +754,7 @@ EOF
     }
     
     location / {
-        proxy_pass http://unix:/run/gunicorn-armguard/gunicorn.sock;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -813,7 +810,7 @@ EOF
     }
     
     location / {
-        proxy_pass http://unix:/run/gunicorn-armguard/gunicorn.sock;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -888,7 +885,7 @@ EOF
     
     # Proxy to Gunicorn
     location / {
-        proxy_pass http://unix:/run/gunicorn-armguard/gunicorn.sock;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;

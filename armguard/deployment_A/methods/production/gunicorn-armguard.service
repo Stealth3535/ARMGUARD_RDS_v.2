@@ -18,15 +18,12 @@ Environment="DJANGO_SETTINGS_MODULE=core.settings_production"
 
 # Load environment variables from .env file (optional with -)
 EnvironmentFile=-/home/rds/ARMGUARD_RDS_v.2/armguard/.env
-RuntimeDirectory=gunicorn-armguard
-RuntimeDirectoryMode=0755
 
 # Gunicorn execution command
 # Adjust paths and worker count based on your server
 ExecStart=/home/rds/ARMGUARD_RDS_v.2/armguard/.venv/bin/gunicorn \
           --workers 3 \
-          --bind unix:/run/gunicorn-armguard/gunicorn.sock \
-          --umask 007 \
+          --bind 127.0.0.1:8000 \
           --timeout 60 \
           --max-requests 1000 \
           --max-requests-jitter 50 \

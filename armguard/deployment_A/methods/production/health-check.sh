@@ -150,11 +150,11 @@ else
     check_warn "Port 443 (HTTPS) is NOT listening (SSL may not be configured)"
 fi
 
-# Check Gunicorn socket
-if [ -S "/run/gunicorn-armguard/gunicorn.sock" ] || [ -S "/run/gunicorn-armguard.sock" ]; then
-    check_pass "Gunicorn socket exists"
+# Check Gunicorn backend (socket or localhost TCP)
+if [ -S "/run/gunicorn-armguard/gunicorn.sock" ] || [ -S "/run/gunicorn-armguard.sock" ] || netstat -tuln | grep -q "127.0.0.1:8000"; then
+    check_pass "Gunicorn backend is available"
 else
-    check_fail "Gunicorn socket NOT found"
+    check_fail "Gunicorn backend NOT found"
 fi
 
 # HTTP connectivity test
