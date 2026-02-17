@@ -67,18 +67,25 @@ print_banner() {
     echo ""
 }
 
-    After=network.target postgresql.service redis-server.service
+# Check if running as root
 check_root() {
     if [ "$EUID" -ne 0 ]; then 
         echo -e "${RED}ERROR: This script must be run as root (use sudo)${NC}"
         exit 1
-    Group=${RUN_GROUP}
+    fi
 }
 
 # Prompt for configuration
 get_configuration() {
     echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
-    ExecStart=${PROJECT_DIR}/.venv/bin/gunicorn --workers ${WORKERS} --bind ${GUNICORN_BIND_HOST}:${GUNICORN_BIND_PORT} --timeout 60 --access-logfile /var/log/armguard/access.log --error-logfile /var/log/armguard/error.log --log-level info core.wsgi:application
+    echo -e "${BLUE}Configuration Setup${NC}"
+    echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
+    echo ""
+    echo "Press ENTER to accept defaults shown in [brackets]"
+    echo ""
+
+    # Auto-detect project directory from git repository
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     DETECTED_PROJECT_DIR=""
     SEARCH_DIR="$SCRIPT_DIR"
     
@@ -653,25 +660,18 @@ install_gunicorn_service() {
 [Unit]
 Description=Gunicorn daemon for ArmGuard
 Documentation=https://github.com/Stealth3535/armguard
-After=network.target
+    After=network.target postgresql.service redis-server.service
 
 [Service]
 Type=exec
 User=${RUN_USER}
-    Group=www-data
+    Group=${RUN_GROUP}
 WorkingDirectory=${PROJECT_DIR}
 Environment="PATH=${PROJECT_DIR}/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Environment="DJANGO_SETTINGS_MODULE=core.settings_production"
 EnvironmentFile=-${PROJECT_DIR}/.env
 
-ExecStart=${PROJECT_DIR}/.venv/bin/gunicorn \\
-          --workers ${WORKERS} \\
-              --bind 127.0.0.1:8000 \
-          --timeout 60 \\
-          --access-logfile /var/log/armguard/access.log \\
-          --error-logfile /var/log/armguard/error.log \\
-          --log-level info \\
-          core.wsgi:application
+    ExecStart=${PROJECT_DIR}/.venv/bin/gunicorn --workers ${WORKERS} --bind ${GUNICORN_BIND_HOST}:${GUNICORN_BIND_PORT} --timeout 60 --access-logfile /var/log/armguard/access.log --error-logfile /var/log/armguard/error.log --log-level info core.wsgi:application
 
 Restart=always
 RestartSec=3
