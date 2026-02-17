@@ -4,6 +4,7 @@ python-decouple==3.8
 
 # WSGI HTTP server for production
 gunicorn==21.2.0
+whitenoise==6.8.2
 
 # Enhanced Database Support (ARM64 Compatible)
 psycopg2-binary==2.9.10      # PostgreSQL adapter (ARM64 ready)
