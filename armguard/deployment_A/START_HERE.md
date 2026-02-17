@@ -4,26 +4,10 @@
 
 ```bash
 cd ~/ARMGUARD_RDS_v.2/armguard/deployment_A
-sudo bash deploy.sh
+sudo bash ubuntu-deploy.sh --production
 ```
 
-**That's it!** The interactive menu will guide you through:
-
-### Option 1: Fresh Deployment
-Choose your deployment method:
-- **Production** - Full production setup (Nginx, Gunicorn, SSL, Redis)
-- **Basic Setup** - Manual VM/server configuration
-- **Docker Testing** - Containerized environment
-- **VMware Setup** - VMware-specific configuration
-
-### Option 2: Cleanup & Re-deploy
-Fix failed deployments and start fresh
-
-### Option 3: Quick Fix
-Update existing deployment with latest code
-
-### Option 4: Development Mode
-Run Django dev server (no nginx/systemd)
+**That's it!** This is the canonical production path.
 
 ---
 
@@ -34,6 +18,8 @@ Run Django dev server (no nginx/systemd)
 cd ~/ARMGUARD_RDS_v.2/armguard/deployment_A/methods/production
 sudo bash deploy-armguard.sh
 ```
+
+Use this only for advanced troubleshooting when the wrapper path cannot be used.
 
 ### 🐳 Docker (Direct)
 ```bash
@@ -135,7 +121,7 @@ sudo bash deployment_A/methods/production/deploy-armguard.sh
 ## 🎯 The One Command You Need
 
 ```bash
-cd ~/ARMGUARD_RDS_v.2/armguard && git pull origin main && sudo bash deployment_A/methods/production/deploy-armguard.sh
+cd ~/ARMGUARD_RDS_v.2/armguard/deployment_A && git pull origin main && sudo bash ubuntu-deploy.sh --production
 ```
 
 This will:
@@ -170,12 +156,13 @@ sudo -u postgres psql armguard_db
 ## 🚫 What NOT to Use
 
 ❌ `01_setup.sh` - Old modular approach  
+❌ `deploy.sh` - Legacy multi-menu path  
 ❌ `deploy-master.sh` - Deprecated  
 ❌ `systematized-deploy.sh` - Old version  
 ❌ Scripts in `legacy_archive/` - Archived  
 ❌ Multiple validator scripts - Built into deploy-armguard.sh  
 
-**Use ONLY:** `methods/production/deploy-armguard.sh`
+**Use ONLY:** `ubuntu-deploy.sh --production`
 
 ---
 

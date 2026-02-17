@@ -143,9 +143,13 @@ Basic validation of deployment synchronization fixes
     $allResults += Test-RedisSettings
     
     # Calculate totals
-    $totalPassed = ($allResults | Measure-Object -Property Passed -Sum).Sum
-    $totalTests = ($allResults | Measure-Object -Property Total -Sum).Sum
-    $successRate = [math]::Round(($totalPassed / $totalTests) * 100, 1)
+    $totalPassed = ($allResults | ForEach-Object { [int]$_['Passed'] } | Measure-Object -Sum).Sum
+    $totalTests = ($allResults | ForEach-Object { [int]$_['Total'] } | Measure-Object -Sum).Sum
+    if ($totalTests -gt 0) {
+        $successRate = [math]::Round(($totalPassed / $totalTests) * 100, 1)
+    } else {
+        $successRate = 0
+    }
     
     # Summary
     Write-Host @"

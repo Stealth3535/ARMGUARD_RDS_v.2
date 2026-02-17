@@ -1,5 +1,5 @@
 # 📋 ARMGUARD DEPLOYMENT MIGRATION GUIDE
-**Complete Migration from Legacy Scripts to Modular System**
+**Complete Migration from Legacy Scripts to One Authoritative Deployment Path**
 
 ---
 
@@ -7,7 +7,7 @@
 
 **Migration Date**: February 9, 2026  
 **Status**: All legacy scripts deprecated and archived  
-**New System**: 4-script modular deployment with enhanced capabilities
+**New System**: `ubuntu-deploy.sh --production` canonical production deployment
 
 ### ✅ **Why Migrate?**
 - **Better reliability**: Enhanced error handling and recovery
@@ -19,25 +19,25 @@
 
 ---
 
-## 🔄 **LEGACY TO MODULAR SCRIPT MAPPING**
+## 🔄 **LEGACY TO CANONICAL PATH MAPPING**
 
 ### 📊 **Direct Replacements**
 | **Legacy Script** | **Lines** | **Modular Replacement** | **Improvement** |
 |-------------------|-----------|-------------------------|----------------|
-| `deploy-master.sh` | 526 | `01-04 sequence` | Better UX, error handling |
-| `master-config.sh` | 778 | `02_config.sh` | Interactive, SSL options |
-| `systematized-deploy.sh` | 470 | `01-04 sequence` | Enhanced validation |
-| `systematized-config.sh` | 283 | `02_config.sh` | Unified configuration |
+| `deploy-master.sh` | 526 | `ubuntu-deploy.sh --production` | Better UX, error handling |
+| `master-config.sh` | 778 | `ubuntu-deploy.sh --production` | Unified configuration flow |
+| `systematized-deploy.sh` | 470 | `ubuntu-deploy.sh --production` | Enhanced validation |
+| `systematized-config.sh` | 283 | `ubuntu-deploy.sh --production` | Unified configuration |
 | `fix-all-production-issues.sh` | 333 | Built into all scripts | Proactive fixes |
-| `pre-deployment-check.sh` | 157 | `01_setup.sh` (automatic) | Integrated checks |
+| `pre-deployment-check.sh` | 157 | `ubuntu-deploy.sh --production` (automatic) | Integrated checks |
 
 ### 🏭 **Enterprise Method Equivalents**
 | **Legacy Approach** | **New Approach** | **When to Use** |
 |-------------------|------------------|----------------|
-| `deploy-master.sh production` | `methods/production/master-deploy.sh` | Complex enterprise needs |
+| `deploy-master.sh production` | `ubuntu-deploy.sh --production` | Standard production |
 | `deploy-master.sh vm-test` | `methods/vmware-setup/vm-deploy.sh` | VMware deployments |
 | `deploy-master.sh docker-test` | `methods/docker-testing/` | Testing environments |
-| `deploy-master.sh basic-setup` | `01-04 modular sequence` | Standard deployments |
+| `deploy-master.sh basic-setup` | `ubuntu-deploy.sh --production` | Standard deployments |
 
 ---
 
@@ -51,7 +51,7 @@
 
 **✅ New Way:**
 ```bash
-./01_setup.sh && ./02_config.sh && ./03_services.sh && ./04_monitoring.sh
+./ubuntu-deploy.sh --production
 ```
 
 **🎉 Benefits:**
@@ -70,11 +70,7 @@ source master-config.sh
 
 **✅ New Way:**
 ```bash
-# For standard production
-./01_setup.sh && ./02_config.sh && ./03_services.sh && ./04_monitoring.sh
-
-# For complex enterprise production  
-./methods/production/master-deploy.sh && ./04_monitoring.sh
+./ubuntu-deploy.sh --production
 ```
 
 **🎉 Benefits:**
@@ -112,11 +108,7 @@ docker-compose up
 
 **✅ New Way (Automated Device Authorization v2.0):**
 ```bash
-# Modular deployment with integrated device authorization
-./01_setup.sh && ./02_config.sh && ./03_services.sh && ./04_monitoring.sh
-
-# OR Enterprise production with device authorization
-./methods/production/master-deploy.sh  # Includes device_auth_integration.sh
+./ubuntu-deploy.sh --production
 ```
 
 **🎉 Benefits:**
@@ -138,11 +130,8 @@ docker-compose up
 ✅ Network Awareness: LAN/WAN/Hybrid network support
 ✅ Compliance Ready: Military security standards built-in
 ```
-- Performance testing (Locust load tests)
-- Security scanning (OWASP ZAP)
-- Automated test execution
 
-### 🌐 **Scenario 4: Network Isolation (LAN/WAN)**
+### 🌐 **Scenario 5: Network Isolation (LAN/WAN)**
 **Old Way:**
 ```bash
 # Manual network configuration
@@ -152,12 +141,11 @@ docker-compose up
 
 **✅ New Way (Integrated):**
 ```bash
-./02_config.sh  # Select network type during configuration:
-                # - Option 1: LAN-only (192.168.10.x subnet)
-                # - Option 2: Hybrid (LAN + WAN isolation) 
-                # - Option 3: WAN-only (public access)
-# Then continue with:
-./03_services.sh && ./04_monitoring.sh
+./ubuntu-deploy.sh --production
+# Select network type during prompts:
+# - LAN-only (192.168.10.x subnet)
+# - Hybrid (LAN + WAN isolation)
+# - WAN-only (public access)
 ```
 
 **🎉 Benefits:**
@@ -182,7 +170,7 @@ source master-config.sh          # 778 lines, complex
 ### ✅ **New Unified Configuration**
 ```bash
 # New interactive approach
-./02_config.sh
+./ubuntu-deploy.sh --production
 ```
 
 **🎯 Interactive Configuration Features:**
@@ -207,11 +195,9 @@ source master-config.sh          # 778 lines, complex
 
 ### ✅ **New 3-Tier Monitoring System**
 ```bash
-./04_monitoring.sh
-# Choose from:
-# 1. Minimal - Basic health checks
-# 2. Operational - System metrics + health
-# 3. Full - Prometheus + Grafana stack
+./ubuntu-deploy.sh --production
+# Monitoring setup is integrated in the canonical deployment flow.
+# For post-deploy checks, run: ./methods/production/health-check.sh
 ```
 
 **🚀 Enhanced Monitoring Features:**
@@ -227,7 +213,7 @@ source master-config.sh          # 778 lines, complex
 
 ### 🛡️ **Enhanced Security Features**
 
-| **Security Aspect** | **Legacy System** | **New Modular System** |
+| **Security Aspect** | **Legacy System** | **New Canonical Flow** |
 |-------------------|------------------|----------------------|
 | **SSL Management** | Manual, error-prone | Automated with 4 certificate options |
 | **Firewall Config** | Basic rules | Intelligent port management |
@@ -248,7 +234,7 @@ source master-config.sh          # 778 lines, complex
 
 ### ✅ **During Migration**
 - [ ] **Archive old scripts** (automatically moved to `legacy_archive/`)
-- [ ] **Run modular deployment** (`01-04 sequence`)
+- [ ] **Run canonical deployment** (`ubuntu-deploy.sh --production`)
 - [ ] **Verify SSL certificates** (check certificate renewal)
 - [ ] **Test all services** (use health check tools)
 - [ ] **Configure monitoring** (select appropriate monitoring level)
@@ -276,19 +262,19 @@ source master-config.sh          # 778 lines, complex
 #### **Problem**: "Configuration not matching old system"
 **✅ Solution**: Use interactive configuration
 ```bash
-./02_config.sh  # Guides through all configuration options
+./ubuntu-deploy.sh --production  # Guides through all configuration options
 ```
 
 #### **Problem**: "Monitoring not as comprehensive as expected"
 **✅ Solution**: Choose full monitoring stack
 ```bash
-./04_monitoring.sh  # Select option 3 for Prometheus + Grafana
+./ubuntu-deploy.sh --production  # Choose full monitoring options during prompts
 ```
 
 #### **Problem**: "Need enterprise production features"  
-**✅ Solution**: Use production methods + modular monitoring
+**✅ Solution**: Use canonical production deployment
 ```bash
-./methods/production/master-deploy.sh && ./04_monitoring.sh
+./ubuntu-deploy.sh --production
 ```
 
 ---
@@ -299,7 +285,7 @@ source master-config.sh          # 778 lines, complex
 | **Week** | **Phase** | **Activities** | **Deliverables** |
 |----------|-----------|---------------|----------------|
 | **Week 1** | **Planning** | Backup, documentation, staging setup | Migration plan |
-| **Week 2** | **Staging Test** | Deploy modular system in test environment | Validated config |
+| **Week 2** | **Staging Test** | Deploy canonical path in test environment | Validated config |
 | **Week 3** | **Production Migration** | Execute production migration | Live system |
 | **Week 4** | **Validation** | Monitor, optimize, document | Final validation |
 

@@ -1,0 +1,19 @@
+[Unit]
+Description=ArmGuard production (Gunicorn)
+After=network.target postgresql.service redis.service
+Requires=redis.service
+
+[Service]
+Type=simple
+User=rds
+Group=rds
+WorkingDirectory=/opt/armguard
+EnvironmentFile=/opt/armguard/.env.production
+Environment=DJANGO_SETTINGS_MODULE=core.settings_production
+Environment=PATH=/opt/armguard/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/opt/armguard/.venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 core.wsgi:application
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

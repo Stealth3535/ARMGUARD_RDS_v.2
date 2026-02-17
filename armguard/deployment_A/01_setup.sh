@@ -19,11 +19,6 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly LOG_DIR="/var/log/armguard-deploy"
 readonly LOG_FILE="$LOG_DIR/01-setup-$(date +%Y%m%d-%H%M%S).log"
 
-# Load configuration if available
-if [ -f "$SCRIPT_DIR/master-config.sh" ]; then
-    source "$SCRIPT_DIR/master-config.sh"
-fi
-
 # Colors for output (unified from both systems)
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'

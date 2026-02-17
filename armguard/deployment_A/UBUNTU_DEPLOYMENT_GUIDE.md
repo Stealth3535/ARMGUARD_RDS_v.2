@@ -11,19 +11,13 @@ Your ArmGuard system is **fully optimized** for Ubuntu server deployment with au
 # Clone or transfer your ArmGuard project to Ubuntu server
 cd /path/to/armguard/deployment_A
 
-# Run comprehensive environment detection
-sudo bash methods/production/detect-environment.sh
-
-# Run pre-deployment validation
-sudo bash methods/production/pre-check.sh
-
-# Deploy with master script (recommended)
-sudo bash methods/production/master-deploy.sh --network-type lan
+# Canonical production deployment path
+sudo bash ubuntu-deploy.sh --production
 ```
 
 ### **Option 2: Complete Production Deployment**
 ```bash
-# For full production deployment with all security features
+# Fallback only (advanced troubleshooting)
 sudo bash methods/production/deploy-armguard.sh
 ```
 
@@ -117,7 +111,7 @@ The deployment scripts automatically detect and optimize for:
 
 ### **Profile 1: Ubuntu LAN Server**
 ```bash
-sudo bash methods/production/master-deploy.sh --network-type lan
+sudo bash ubuntu-deploy.sh --quick
 ```
 - **Use Case:** Internal company network, home lab
 - **Database:** SQLite (lightweight)
@@ -127,7 +121,7 @@ sudo bash methods/production/master-deploy.sh --network-type lan
 
 ### **Profile 2: Ubuntu WAN Server (Internet-Facing)**
 ```bash
-sudo bash methods/production/master-deploy.sh --network-type wan
+sudo bash ubuntu-deploy.sh --production --wan
 ```
 - **Use Case:** Public internet deployment
 - **Database:** PostgreSQL (production-ready)
@@ -137,7 +131,7 @@ sudo bash methods/production/master-deploy.sh --network-type wan
 
 ### **Profile 3: Ubuntu Hybrid Server**
 ```bash
-sudo bash methods/production/master-deploy.sh --network-type hybrid
+sudo bash ubuntu-deploy.sh --production --hybrid
 ```
 - **Use Case:** Mixed internal/external access
 - **Database:** PostgreSQL with connection pooling
@@ -319,4 +313,4 @@ Your ArmGuard system provides **complete Ubuntu server deployment automation** w
 - ✅ **Performance optimization** based on hardware
 - ✅ **Complete monitoring and logging**
 
-**Deploy on Ubuntu now:** `sudo bash methods/production/master-deploy.sh`
+**Deploy on Ubuntu now:** `sudo bash ubuntu-deploy.sh --production`

@@ -20,11 +20,6 @@ readonly LOG_DIR="/var/log/armguard-deploy"
 readonly LOG_FILE="$LOG_DIR/03-services-$(date +%Y%m%d-%H%M%S).log"
 readonly ARMGUARD_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Load configuration
-if [ -f "$SCRIPT_DIR/master-config.sh" ]; then
-    source "$SCRIPT_DIR/master-config.sh"
-fi
-
 if [ -f "$SCRIPT_DIR/.db_config" ]; then
     source "$SCRIPT_DIR/.db_config"
 fi
@@ -71,7 +66,7 @@ log_success() {
 setup_python_environment() {
     log_info "Setting up Python virtual environment..."
     
-    local venv_path="$ARMGUARD_ROOT/venv"
+    local venv_path="$ARMGUARD_ROOT/.venv"
     
     # Create virtual environment if it doesn't exist
     if [ ! -d "$venv_path" ]; then
@@ -119,7 +114,7 @@ setup_django_application() {
     cd "$ARMGUARD_ROOT"
     
     # Activate virtual environment
-    source "venv/bin/activate"
+    source ".venv/bin/activate"
     
     # Set Django settings
     export DJANGO_SETTINGS_MODULE=core.settings_production
@@ -167,8 +162,8 @@ setup_django_application() {
 create_gunicorn_service() {
     log_info "Creating Gunicorn systemd service..."
     
-    local service_file="/etc/systemd/system/armguard-gunicorn.service"
-    local venv_path="$ARMGUARD_ROOT/venv"
+    local service_file="/etc/systemd/system/gunicorn-armguard.service"
+    local venv_path="$ARMGUARD_ROOT/.venv"
     
     # Create Gunicorn service file
     sudo tee "$service_file" > /dev/null << EOF
@@ -215,7 +210,7 @@ EOF
     
     # Set proper permissions
     sudo systemctl daemon-reload
-    sudo systemctl enable armguard-gunicorn.service
+    sudo systemctl enable gunicorn-armguard.service
     
     log_success "Gunicorn service created and enabled"
 }
@@ -228,7 +223,7 @@ create_daphne_service() {
     log_info "Creating Daphne WebSocket service..."
     
     local service_file="/etc/systemd/system/armguard-daphne.service"
-    local venv_path="$ARMGUARD_ROOT/venv"
+    local venv_path="$ARMGUARD_ROOT/.venv"
     
     # Create Daphne service file (resolves WebSocket blocking issues)
     sudo tee "$service_file" > /dev/null << EOF
@@ -283,7 +278,7 @@ setup_log_rotation() {
     notifempty
     create 644 www-data www-data
     postrotate
-        /bin/systemctl reload armguard-gunicorn armguard-daphne || true
+        /bin/systemctl reload gunicorn-armguard armguard-daphne || true
     endscript
 }
 
@@ -369,12 +364,12 @@ start_services() {
     log_info "Starting ArmGuard services..."
     
     # Start Gunicorn service
-    sudo systemctl start armguard-gunicorn.service
-    if systemctl is-active --quiet armguard-gunicorn.service; then
+    sudo systemctl start gunicorn-armguard.service
+    if systemctl is-active --quiet gunicorn-armguard.service; then
         log_success "Gunicorn service started"
     else
         log_error "Failed to start Gunicorn service"
-        sudo journalctl -u armguard-gunicorn.service --no-pager -l
+        sudo journalctl -u gunicorn-armguard.service --no-pager -l
         return 1
     fi
     
@@ -441,7 +436,7 @@ validate_deployment() {
     # Test database connection
     log_info "Testing database connection..."
     cd "$ARMGUARD_ROOT"
-    source "venv/bin/activate"
+    source ".venv/bin/activate"
     if python manage.py check --database default --settings=core.settings_production >/dev/null 2>&1; then
         log_success "Database connection working"
     else
@@ -452,7 +447,7 @@ validate_deployment() {
     # Service status summary
     echo ""
     log_info "Service status summary:"
-    local services=("armguard-gunicorn" "armguard-daphne" "nginx" "postgresql" "redis-server")
+    local services=("gunicorn-armguard" "armguard-daphne" "nginx" "postgresql" "redis-server")
     for service in "${services[@]}"; do
         if systemctl is-active --quiet "$service" 2>/dev/null || 
            systemctl is-active --quiet "${service%%-server}" 2>/dev/null; then
@@ -544,7 +539,7 @@ main() {
         echo -e "${YELLOW}║                   ${WHITE}SERVICE DEPLOYMENT - WARNINGS DETECTED${YELLOW}                   ║${NC}"
         echo -e "${YELLOW}║                                                                               ║${NC}"
         echo -e "${YELLOW}║  Some validation checks failed. Please review the logs:                      ║${NC}"
-        echo -e "${YELLOW}║  • Service logs: sudo journalctl -u armguard-gunicorn                        ║${NC}"
+        echo -e "${YELLOW}║  • Service logs: sudo journalctl -u gunicorn-armguard                        ║${NC}"
         echo -e "${YELLOW}║  • WebSocket logs: sudo journalctl -u armguard-daphne                        ║${NC}"
         echo -e "${YELLOW}║  • Deployment logs: $LOG_FILE    ║${NC}"
         echo -e "${YELLOW}║                                                                               ║${NC}"

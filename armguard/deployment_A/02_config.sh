@@ -20,11 +20,6 @@ readonly LOG_DIR="/var/log/armguard-deploy"
 readonly LOG_FILE="$LOG_DIR/02-config-$(date +%Y%m%d-%H%M%S).log"
 readonly ARMGUARD_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Load master configuration
-if [ -f "$SCRIPT_DIR/master-config.sh" ]; then
-    source "$SCRIPT_DIR/master-config.sh"
-fi
-
 # Colors for output
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
@@ -37,6 +32,7 @@ readonly NC='\033[0m'
 
 # Configuration defaults (can be overridden)
 PROJECT_NAME="${PROJECT_NAME:-armguard}"
+PROJECT_DIR="${PROJECT_DIR:-$ARMGUARD_ROOT}"
 DEFAULT_DOMAIN="${DEFAULT_DOMAIN:-armguard.local}"
 SERVER_LAN_IP="${SERVER_LAN_IP:-192.168.1.100}"
 NETWORK_TYPE="${NETWORK_TYPE:-lan}"
@@ -931,12 +927,12 @@ server {
     
     # Static files
     location /static/ {
-        alias /var/www/armguard/static/;
+        alias ${PROJECT_DIR}/staticfiles/;
         expires 30d;
     }
     
     location /media/ {
-        alias /var/www/armguard/media/;
+        alias ${PROJECT_DIR}/media/;
         expires 30d;
     }
     
@@ -1026,13 +1022,13 @@ server {
     
     # Static files
     location /static/ {
-        alias /var/www/armguard/static/;
+        alias ${PROJECT_DIR}/staticfiles/;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
     
     location /media/ {
-        alias /var/www/armguard/media/;
+        alias ${PROJECT_DIR}/media/;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
@@ -1133,12 +1129,12 @@ server {
     
     # Static files
     location /static/ {
-        alias /var/www/armguard/static/;
+        alias ${PROJECT_DIR}/staticfiles/;
         expires 30d;
     }
     
     location /media/ {
-        alias /var/www/armguard/media/;
+        alias ${PROJECT_DIR}/media/;
         expires 30d;
     }
     

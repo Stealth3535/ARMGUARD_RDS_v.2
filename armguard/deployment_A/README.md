@@ -32,11 +32,8 @@ cd armguard\deployment_A
 # Navigate to deployment directory
 cd armguard/deployment_A
 
-# Run interactive deployment helper
-./deployment-helper.sh
-
-# OR run step-by-step
-./01_setup.sh && ./02_config.sh && ./03_services.sh && ./04_monitoring.sh
+# Run the authoritative production deployment path
+sudo bash ubuntu-deploy.sh --production
 ```
 
 ### 🔍 Validate Your System
@@ -50,37 +47,16 @@ cd armguard/deployment_A
 
 ---
 
-## 🎯 **DEPLOYMENT PATH DECISION TREE** 🚨
+## 🎯 **AUTHORITATIVE DEPLOYMENT PATH** 
 
-**✅ START HERE** - Choose your deployment approach:
+**✅ Use a single production entrypoint:**
 
-```
-🎯 WHAT DO YOU WANT TO DEPLOY?
-│
-├─ 🚀 "I want to deploy ArmGuard quickly and efficiently"
-│   └─ ✅ USE: Modular System (01-04 scripts) ← RECOMMENDED FOR 95% OF USERS
-│       └─ Command: ./01_setup.sh && ./02_config.sh && ./03_services.sh && ./04_monitoring.sh
-│
-├─ 🏭 "I need enterprise production with advanced features"  
-│   └─ ✅ USE: Production Methods + Modular Monitoring
-│       └─ Command: ./methods/production/master-deploy.sh + ./04_monitoring.sh
-│
-├─ 🧪 "I need comprehensive testing environment"
-│   └─ ✅ USE: Docker Testing Stack
-│       └─ Command: cd methods/docker-testing && docker-compose up
-│
-├─ 🌐 "I need advanced network isolation (LAN/WAN separation)"
-│   └─ ✅ USE: Integrated Network Configuration (in Modular System)
-│       └─ Command: ./02_config.sh (select hybrid/LAN/WAN during setup)
-│
-└─ 💻 "I'm running on VMware VM"
-    └─ ✅ USE: VMware Setup + Modular System
-        └─ Command: ./methods/vmware-setup/vm-deploy.sh
+```bash
+cd armguard/deployment_A
+sudo bash ubuntu-deploy.sh --production
 ```
 
-## 🎯 **PRIMARY RECOMMENDATION: MODULAR SYSTEM** 
-
-**✅ 95% of users should use the modular system** - it handles:
+This path handles:
 - Development deployments ✅
 - Small-scale production ✅  
 - Standard enterprise deployments ✅
@@ -88,22 +64,26 @@ cd armguard/deployment_A
 - Monitoring (3 levels) ✅
 - Cross-platform compatibility ✅
 
-### 🎯 System Architecture (Cross-Platform)
-```
-Windows PowerShell          Linux Bash
-───────────────────         ──────────────────
-01_setup.ps1        OR      01_setup.sh     → Environment & Prerequisites  
-     ↓                           ↓
-02_config.ps1       OR      02_config.sh    → Unified .env Configuration
-     ↓                           ↓  
-03_services.ps1     OR      03_services.sh  → Service Deployment & Startup
-     ↓                           ↓
-04_monitoring.ps1   OR      04_monitoring.sh → Health Checks & Monitoring
+### 🔁 CI/CD Automation Package
 
-PLUS: deployment-helper.ps1/.sh → Interactive deployment assistant
-      unified-env-generator.ps1  → Environment configuration generator
-      sync-validator.ps1         → Comprehensive validation system
-```
+![Deployment A CI/CD](https://github.com/Stealth3535/ARMGUARD_RDS_v.2/actions/workflows/deployment-a-cicd.yml/badge.svg)
+
+[View workflow runs](https://github.com/Stealth3535/ARMGUARD_RDS_v.2/actions/workflows/deployment-a-cicd.yml)
+
+Production/staging pipeline assets are now available at:
+
+- `deployment_A/methods/production/ci/`
+- `.github/workflows/deployment-a-cicd.yml`
+
+Use this package for automated build/validate/deploy with rollback support over SSH.
+
+#### ⚡ CI/CD Quick Start
+
+1. Configure GitHub Environments: `staging` and `production`.
+2. Enable required reviewers for `production` in Environment protection rules.
+3. Add required repository/environment secrets listed in `deployment_A/methods/production/ci/README.md`.
+4. On target server, copy env templates, set real values, and run: `chmod +x deployment_A/methods/production/ci/*.sh`.
+5. Trigger workflow dispatch with `target=staging`; after success and approval gate, run `target=production`.
 
 ### 🔧 **New Unified Configuration System**
 Instead of hardcoded settings files, the system now uses environment variables:
@@ -188,13 +168,13 @@ Layer 6: Comprehensive Audit Logging
 **If you're upgrading from older ArmGuard deployments:**
 
 ### 🔄 **Legacy Script Migration**
-| **Old Script (DEPRECATED)** | **New Modular Equivalent** | **Status** |
+| **Old Script (DEPRECATED)** | **Canonical Replacement** | **Status** |
 |------------------------------|---------------------------|------------|
-| `deploy-master.sh` | `01-04 modular sequence` | ❌ **DEPRECATED** - Use wrapper |
-| `master-config.sh` | `02_config.sh` | ❌ **DEPRECATED** - Use wrapper |
-| `systematized-deploy.sh` | `01-04 modular sequence` | ❌ **DEPRECATED** - Use wrapper |
-| `quick-rpi-setup.sh` | `01-04 modular + RPi detection` | ❌ **DEPRECATED** - Auto-detected |
-| `fix-all-production-issues.sh` | Built into all modular scripts | ❌ **DEPRECATED** - Integrated |
+| `deploy-master.sh` | `ubuntu-deploy.sh --production` | ❌ **DEPRECATED** - Use canonical path |
+| `master-config.sh` | `ubuntu-deploy.sh --production` | ❌ **DEPRECATED** - Use canonical path |
+| `systematized-deploy.sh` | `ubuntu-deploy.sh --production` | ❌ **DEPRECATED** - Use canonical path |
+| `quick-rpi-setup.sh` | `ubuntu-deploy.sh --production` | ❌ **DEPRECATED** - Auto-detected |
+| `fix-all-production-issues.sh` | `ubuntu-deploy.sh --production` | ❌ **DEPRECATED** - Integrated |
 
 ### 📁 **Legacy Archive Location**
 - **Deprecated scripts moved to**: `./legacy_archive/`
@@ -219,36 +199,17 @@ Layer 6: Comprehensive Audit Logging
 ### 🎬 One-Line Deployment
 ```bash
 cd /path/to/armguard/deployment_A
-chmod +x *.sh && ./01_setup.sh && ./02_config.sh && ./03_services.sh && ./04_monitoring.sh
+sudo bash ubuntu-deploy.sh --production
 ```
 
-### 📋 Step-by-Step Deployment
+### 📋 Canonical Deployment Flow
 
-#### Step 1: Environment Setup
 ```bash
 cd /path/to/armguard/deployment_A
-chmod +x 01_setup.sh
-./01_setup.sh
+sudo bash ubuntu-deploy.sh --production
 ```
-**What it does**: Installs system packages, sets up PostgreSQL, Redis, Nginx, creates log structure
 
-#### Step 2: Configuration
-```bash
-./02_config.sh
-```  
-**What it does**: Interactive SSL setup, Django configuration, database setup, security hardening
-
-#### Step 3: Services
-```bash
-./03_services.sh
-```
-**What it does**: Creates systemd services, starts Gunicorn+Daphne, validates deployment
-
-#### Step 4: Monitoring
-```bash
-./04_monitoring.sh  
-```
-**What it does**: Health checks, log monitoring, optional Prometheus/Grafana stack
+**What it does**: Detects platform/hardware, configures SSL/database/network, deploys services, and validates health.
 
 ---
 
@@ -455,11 +416,11 @@ CERT_PATH=/etc/nginx/ssl/
 **Solution**:
 ```bash
 # Check service logs
-journalctl -u armguard-gunicorn -f
+journalctl -u gunicorn-armguard -f
 journalctl -u armguard-daphne -f
 
 # Restart services
-sudo systemctl restart armguard-gunicorn armguard-daphne
+sudo systemctl restart gunicorn-armguard armguard-daphne
 sudo systemctl reload nginx
 
 # Validate configuration
@@ -475,7 +436,7 @@ sudo systemctl reload nginx
 ```bash
 # Regenerate certificates
 cd /path/to/deployment_A
-./02_config.sh
+sudo bash ubuntu-deploy.sh --production
 
 # Choose appropriate SSL option:
 # - letsencrypt (production)
@@ -501,8 +462,7 @@ sudo systemctl restart postgresql
 
 # Rerun database setup
 cd /path/to/deployment_A
-./01_setup.sh  # Reconfigure database
-./02_config.sh # Update connection settings
+sudo bash ubuntu-deploy.sh --production
 ```
 
 #### ❌ Issue: Port Conflicts
@@ -521,7 +481,7 @@ sudo fuser -k 80/tcp
 sudo fuser -k 443/tcp
 
 # Reconfigure with different ports
-./02_config.sh  # Choose different ports
+sudo bash ubuntu-deploy.sh --production  # choose different ports when prompted
 ```
 
 #### ❌ Issue: WebSocket Connection Failures

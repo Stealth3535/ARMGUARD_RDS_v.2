@@ -45,7 +45,7 @@ Use existing location? [Y/n]:
 
 ---
 
-## 📋 Deployment Methods
+## 📋 Deployment Method
 
 ### **Method 1: Ubuntu-Optimized Deployment (RECOMMENDED)**
 
@@ -67,7 +67,7 @@ sudo bash ubuntu-deploy.sh --quick
 
 ---
 
-### **Method 2: Direct Production Deployment**
+### **Fallback Only: Direct Production Deployment**
 
 ```bash
 cd ~/ARMGUARD_RDS_v.2/armguard/deployment_A/methods/production
@@ -81,21 +81,9 @@ sudo bash deploy-armguard.sh
 
 ---
 
-### **Method 3: Modular Step-by-Step**
+### **Deprecated Path: Modular Step-by-Step**
 
-```bash
-cd ~/ARMGUARD_RDS_v.2/armguard/deployment_A
-
-sudo bash 01_setup.sh      # Install dependencies
-sudo bash 02_config.sh     # Configure SSL & Django
-sudo bash 03_services.sh   # Setup services
-sudo bash 04_monitoring.sh # Enable monitoring
-```
-
-**Features:**
-- ✅ Run individual steps
-- ✅ Resume from any point
-- ✅ Better error recovery
+Do not use for new production deployments. Use `ubuntu-deploy.sh --production`.
 
 ---
 

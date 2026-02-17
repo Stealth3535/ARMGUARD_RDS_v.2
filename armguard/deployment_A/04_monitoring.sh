@@ -20,11 +20,6 @@ readonly LOG_DIR="/var/log/armguard-deploy"
 readonly LOG_FILE="$LOG_DIR/04-monitoring-$(date +%Y%m%d-%H%M%S).log"
 readonly ARMGUARD_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Load configuration
-if [ -f "$SCRIPT_DIR/master-config.sh" ]; then
-    source "$SCRIPT_DIR/master-config.sh"
-fi
-
 # Colors for output
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
@@ -181,7 +176,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 health_status=0
 
 # Check core services
-check_service "armguard-gunicorn" || health_status=1
+check_service "gunicorn-armguard" || health_status=1
 check_service "armguard-daphne" || health_status=1
 check_service "nginx" || health_status=1
 check_service "postgresql" || health_status=1
@@ -329,7 +324,7 @@ EOF
     notifempty
     create 644 www-data www-data
     postrotate
-        systemctl reload armguard-gunicorn armguard-daphne 2>/dev/null || true
+        systemctl reload gunicorn-armguard armguard-daphne 2>/dev/null || true
     endscript
 }
 EOF

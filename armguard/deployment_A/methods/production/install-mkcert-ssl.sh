@@ -17,6 +17,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 APP_NAME="armguard"
+APP_DIR="${PROJECT_DIR:-/var/www/armguard}"
 DOMAIN_NAME="${1:-armguard.local}"
 SERVER_IP=$(hostname -I | awk '{print $1}')
 CERT_DIR="/etc/ssl/armguard"
@@ -147,14 +148,14 @@ server {
     
     # Static files
     location /static/ {
-        alias /var/www/armguard/staticfiles/;
+        alias APP_DIR_PLACEHOLDER/staticfiles/;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
     
     # Media files
     location /media/ {
-        alias /var/www/armguard/core/media/;
+        alias APP_DIR_PLACEHOLDER/media/;
         expires 7d;
         add_header Cache-Control "public";
     }
@@ -192,6 +193,7 @@ NGINX_SSL_CONFIG
 # Replace placeholders
 sed -i "s/DOMAIN_NAME_PLACEHOLDER/${DOMAIN_NAME}/g" "/etc/nginx/sites-available/${APP_NAME}"
 sed -i "s/SERVER_IP_PLACEHOLDER/${SERVER_IP}/g" "/etc/nginx/sites-available/${APP_NAME}"
+sed -i "s|APP_DIR_PLACEHOLDER|${APP_DIR}|g" "/etc/nginx/sites-available/${APP_NAME}"
 
 echo -e "${GREEN}✓ Nginx HTTPS configuration created${NC}"
 

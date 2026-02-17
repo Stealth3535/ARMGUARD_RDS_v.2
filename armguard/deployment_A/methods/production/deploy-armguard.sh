@@ -25,6 +25,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Default configuration
@@ -37,6 +38,8 @@ DEFAULT_USE_SSL="yes"
 DEFAULT_SSL_TYPE="mkcert"  # or "letsencrypt"
 DEFAULT_USE_POSTGRESQL="no"
 DEFAULT_CONFIGURE_FIREWALL="yes"
+REDIS_TUNE_MODE="${REDIS_TUNE_MODE:-idempotent}"
+CREATE_SUPERUSER="${CREATE_SUPERUSER:-prompt}"
 
 # Print banner
 print_banner() {
@@ -316,9 +319,9 @@ install_system_packages() {
     # Configure Redis for WebSocket performance
     if [ -f /etc/redis/redis.conf ]; then
         cp /etc/redis/redis.conf /etc/redis/redis.conf.backup.$(date +%Y%m%d_%H%M%S)
-        
-        # Apply WebSocket optimizations
-        cat >> /etc/redis/redis.conf << 'EOF'
+
+        if [ "$REDIS_TUNE_MODE" = "append" ] || ! grep -q "# ArmGuard WebSocket Optimizations" /etc/redis/redis.conf; then
+            cat >> /etc/redis/redis.conf << 'EOF'
 
 # ArmGuard WebSocket Optimizations
 maxmemory 256mb
@@ -327,7 +330,11 @@ timeout 300
 tcp-keepalive 300
 notify-keyspace-events Ex
 EOF
-        
+            echo -e "${GREEN}✓ Redis optimization block applied${NC}"
+        else
+            echo -e "${CYAN}ℹ Redis optimization block already present; skipping append${NC}"
+        fi
+
         systemctl restart redis-server
         echo -e "${GREEN}✓ Redis configured for WebSocket performance${NC}"
     fi
@@ -599,9 +606,28 @@ EOF
     echo -e "${YELLOW}Running migrations...${NC}"
     .venv/bin/python manage.py migrate --settings=core.settings_production
     
-    echo -e "${YELLOW}Creating superuser...${NC}"
-    echo "Create a superuser account for admin access:"
-    .venv/bin/python manage.py createsuperuser --settings=core.settings_production
+    case "${CREATE_SUPERUSER}" in
+        never|skip|no)
+            echo -e "${CYAN}Skipping superuser creation (CREATE_SUPERUSER=${CREATE_SUPERUSER})${NC}"
+            ;;
+        auto)
+            if [ -n "${DJANGO_SUPERUSER_USERNAME:-}" ] && [ -n "${DJANGO_SUPERUSER_EMAIL:-}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD:-}" ]; then
+                echo -e "${YELLOW}Creating superuser non-interactively...${NC}"
+                .venv/bin/python manage.py createsuperuser --noinput --settings=core.settings_production || true
+            else
+                echo -e "${YELLOW}CREATE_SUPERUSER=auto requested but DJANGO_SUPERUSER_* env vars are incomplete; skipping${NC}"
+            fi
+            ;;
+        prompt|yes|*)
+            echo -e "${YELLOW}Create a superuser now? [y/N]${NC}"
+            read -r CREATE_SUPERUSER_CONFIRM
+            if [[ "$CREATE_SUPERUSER_CONFIRM" =~ ^[Yy]$ ]]; then
+                .venv/bin/python manage.py createsuperuser --settings=core.settings_production
+            else
+                echo -e "${CYAN}Superuser creation skipped by user${NC}"
+            fi
+            ;;
+    esac
     
     echo -e "${YELLOW}Collecting static files...${NC}"
     .venv/bin/python manage.py collectstatic --noinput --settings=core.settings_production

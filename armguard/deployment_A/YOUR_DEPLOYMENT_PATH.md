@@ -99,24 +99,20 @@ sudo systemctl restart nginx
 
 ---
 
-## 🛠️ Alternative: Manual Step-by-Step
+## 🛠️ Alternative (Fallback Only)
 
-If you prefer more control, use the modular approach:
+If you need manual troubleshooting only, use direct production script fallback:
+
+```bash
+cd ~/ARMGUARD_RDS_v.2/armguard/deployment_A/methods/production
+sudo bash deploy-armguard.sh
+```
+
+For normal deployments, always use:
 
 ```bash
 cd ~/ARMGUARD_RDS_v.2/armguard/deployment_A
-
-# Phase 1: Setup (install packages, create venv)
-sudo bash 01_setup.sh
-
-# Phase 2: Configuration (generate .env, SSL setup)
-sudo bash 02_config.sh
-
-# Phase 3: Services (deploy and start services)
-sudo bash 03_services.sh
-
-# Phase 4: Monitoring (optional - health checks)
-sudo bash 04_monitoring.sh
+sudo bash ubuntu-deploy.sh --production
 ```
 
 ---
@@ -128,7 +124,7 @@ After deployment completes:
 ### **1. Check Services**
 ```bash
 sudo systemctl status gunicorn-armguard
-sudo systemctl status daphne-armguard
+sudo systemctl status armguard-daphne
 sudo systemctl status nginx
 sudo systemctl status postgresql
 sudo systemctl status redis-server
