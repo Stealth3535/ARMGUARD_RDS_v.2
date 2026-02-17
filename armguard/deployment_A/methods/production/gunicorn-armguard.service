@@ -7,7 +7,7 @@ After=network.target
 Type=exec
 # The specific user and group that should run Gunicorn
 User=rds
-Group=www-data
+Group=rds
 
 # Working directory where your Django project is located
 WorkingDirectory=/home/rds/ARMGUARD_RDS_v.2/armguard
@@ -23,7 +23,7 @@ EnvironmentFile=-/home/rds/ARMGUARD_RDS_v.2/armguard/.env
 # Adjust paths and worker count based on your server
 ExecStart=/home/rds/ARMGUARD_RDS_v.2/armguard/.venv/bin/gunicorn \
           --workers 3 \
-          --bind 127.0.0.1:8000 \
+          --bind 127.0.0.1:18000 \
           --timeout 60 \
           --max-requests 1000 \
           --max-requests-jitter 50 \

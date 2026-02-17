@@ -40,6 +40,8 @@ DEFAULT_USE_POSTGRESQL="no"
 DEFAULT_CONFIGURE_FIREWALL="yes"
 REDIS_TUNE_MODE="${REDIS_TUNE_MODE:-idempotent}"
 CREATE_SUPERUSER="${CREATE_SUPERUSER:-prompt}"
+GUNICORN_BIND_HOST="${GUNICORN_BIND_HOST:-127.0.0.1}"
+GUNICORN_BIND_PORT="${GUNICORN_BIND_PORT:-18000}"
 
 # Print banner
 print_banner() {
@@ -65,25 +67,18 @@ print_banner() {
     echo ""
 }
 
-# Check if running as root
+    After=network.target postgresql.service redis-server.service
 check_root() {
     if [ "$EUID" -ne 0 ]; then 
         echo -e "${RED}ERROR: This script must be run as root (use sudo)${NC}"
         exit 1
-    fi
+    Group=${RUN_GROUP}
 }
 
 # Prompt for configuration
 get_configuration() {
     echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
-    echo -e "${BLUE}Configuration Setup${NC}"
-    echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
-    echo ""
-    echo "Press ENTER to accept defaults shown in [brackets]"
-    echo ""
-    
-    # Auto-detect project directory from git repository
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    ExecStart=${PROJECT_DIR}/.venv/bin/gunicorn --workers ${WORKERS} --bind ${GUNICORN_BIND_HOST}:${GUNICORN_BIND_PORT} --timeout 60 --access-logfile /var/log/armguard/access.log --error-logfile /var/log/armguard/error.log --log-level info core.wsgi:application
     DETECTED_PROJECT_DIR=""
     SEARCH_DIR="$SCRIPT_DIR"
     
@@ -185,6 +180,11 @@ get_configuration() {
                     echo -e "${RED}Error: Domain name required for WAN deployment${NC}"
                     continue
                 fi
+                if [[ "$WAN_DOMAIN" =~ \.local$ ]]; then
+                    echo -e "${RED}Error: .local domains are not valid for Let's Encrypt (WAN mode).${NC}"
+                    echo -e "${YELLOW}Use a real public domain or choose LAN-only mode.${NC}"
+                    continue
+                fi
                 DOMAIN="$WAN_DOMAIN"
                 read -p "Email for Let's Encrypt [admin@${DOMAIN}]: " LETSENCRYPT_EMAIL
                 LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-admin@${DOMAIN}}
@@ -206,6 +206,11 @@ get_configuration() {
                 read -p "Enter your public domain name: " WAN_DOMAIN
                 if [ -z "$WAN_DOMAIN" ]; then
                     echo -e "${RED}Error: Domain name required for WAN access${NC}"
+                    continue
+                fi
+                if [[ "$WAN_DOMAIN" =~ \.local$ ]]; then
+                    echo -e "${RED}Error: .local domains are not valid for Let's Encrypt (Hybrid WAN side).${NC}"
+                    echo -e "${YELLOW}Use a real public domain or choose LAN-only mode.${NC}"
                     continue
                 fi
                 WAN_DOMAIN_NAME="$WAN_DOMAIN"
@@ -693,7 +698,9 @@ EOF
         echo -e "${GREEN}✓ Gunicorn service running${NC}"
     else
         echo -e "${RED}✗ Gunicorn service failed to start${NC}"
-        journalctl -u gunicorn-armguard -n 20
+        systemctl status gunicorn-armguard --no-pager -l || true
+        journalctl -u gunicorn-armguard -n 120 --no-pager -l || true
+        tail -n 120 /var/log/armguard/error.log 2>/dev/null || true
         exit 1
     fi
 }
@@ -754,7 +761,7 @@ EOF
     }
     
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://${GUNICORN_BIND_HOST}:${GUNICORN_BIND_PORT};
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -810,7 +817,7 @@ EOF
     }
     
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://${GUNICORN_BIND_HOST}:${GUNICORN_BIND_PORT};
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -885,7 +892,7 @@ EOF
     
     # Proxy to Gunicorn
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://${GUNICORN_BIND_HOST}:${GUNICORN_BIND_PORT};
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;

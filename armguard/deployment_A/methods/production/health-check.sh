@@ -25,6 +25,8 @@ fi
 PROJECT_DIR="${PROJECT_DIR:-/var/www/armguard}"
 SERVICE_NAME="${SERVICE_NAME:-gunicorn-armguard}"
 NGINX_SERVICE="nginx"
+GUNICORN_BIND_HOST="${GUNICORN_BIND_HOST:-127.0.0.1}"
+GUNICORN_BIND_PORT="${GUNICORN_BIND_PORT:-18000}"
 DOMAIN="${1:-${DEFAULT_DOMAIN:-localhost}}"
 CHECKS_PASSED=0
 CHECKS_FAILED=0
@@ -151,7 +153,7 @@ else
 fi
 
 # Check Gunicorn backend (socket or localhost TCP)
-if [ -S "/run/gunicorn-armguard/gunicorn.sock" ] || [ -S "/run/gunicorn-armguard.sock" ] || netstat -tuln | grep -q "127.0.0.1:8000"; then
+if [ -S "/run/gunicorn-armguard/gunicorn.sock" ] || [ -S "/run/gunicorn-armguard.sock" ] || netstat -tuln | grep -q "${GUNICORN_BIND_HOST}:${GUNICORN_BIND_PORT}" || netstat -tuln | grep -q "127.0.0.1:8000"; then
     check_pass "Gunicorn backend is available"
 else
     check_fail "Gunicorn backend NOT found"
