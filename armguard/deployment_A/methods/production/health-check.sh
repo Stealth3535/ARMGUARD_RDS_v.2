@@ -151,7 +151,7 @@ else
 fi
 
 # Check Gunicorn socket
-if [ -S "/run/gunicorn-armguard.sock" ]; then
+if [ -S "/run/gunicorn-armguard/gunicorn.sock" ] || [ -S "/run/gunicorn-armguard.sock" ]; then
     check_pass "Gunicorn socket exists"
 else
     check_fail "Gunicorn socket NOT found"

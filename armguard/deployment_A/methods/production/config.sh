@@ -14,7 +14,7 @@ export VENV_DIR="${PROJECT_DIR}/.venv"
 
 # Service Configuration
 export SERVICE_NAME="gunicorn-armguard"
-export SOCKET_PATH="${ARMGUARD_SOCKET_PATH:-/run/gunicorn-armguard.sock}"
+export SOCKET_PATH="${ARMGUARD_SOCKET_PATH:-/run/gunicorn-armguard/gunicorn.sock}"
 export RUN_USER="${ARMGUARD_RUN_USER:-rds}"
 export RUN_GROUP="${ARMGUARD_RUN_GROUP:-rds}"
 
