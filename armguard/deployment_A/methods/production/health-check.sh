@@ -28,6 +28,11 @@ NGINX_SERVICE="nginx"
 GUNICORN_BIND_HOST="${GUNICORN_BIND_HOST:-127.0.0.1}"
 GUNICORN_BIND_PORT="${GUNICORN_BIND_PORT:-18000}"
 DOMAIN="${1:-${DEFAULT_DOMAIN:-localhost}}"
+SERVER_IP="$(hostname -I | awk '{print $1}')"
+CONNECTIVITY_HOST="${DOMAIN}"
+if [ "$#" -eq 0 ] && [[ "$DOMAIN" =~ \.local$ ]]; then
+    CONNECTIVITY_HOST="${SERVER_IP:-127.0.0.1}"
+fi
 CHECKS_PASSED=0
 CHECKS_FAILED=0
 CHECKS_WARNED=0
@@ -160,24 +165,26 @@ else
 fi
 
 # HTTP connectivity test
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://$DOMAIN 2>/dev/null || echo "000")
+HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "http://${CONNECTIVITY_HOST}" 2>/dev/null || true)
+HTTP_STATUS=${HTTP_STATUS:-000}
 if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "302" ]; then
-    check_pass "HTTP endpoint responding (status: $HTTP_STATUS)"
+    check_pass "HTTP endpoint responding via ${CONNECTIVITY_HOST} (status: $HTTP_STATUS)"
 elif [ "$HTTP_STATUS" = "000" ]; then
-    check_fail "HTTP endpoint not reachable"
+    check_fail "HTTP endpoint not reachable via ${CONNECTIVITY_HOST}"
 else
-    check_warn "HTTP endpoint responding with status: $HTTP_STATUS"
+    check_warn "HTTP endpoint via ${CONNECTIVITY_HOST} responding with status: $HTTP_STATUS"
 fi
 
 # HTTPS connectivity test (if configured)
 if netstat -tuln | grep -q ":443 "; then
-    HTTPS_STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" https://$DOMAIN 2>/dev/null || echo "000")
+    HTTPS_STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "https://${CONNECTIVITY_HOST}" 2>/dev/null || true)
+    HTTPS_STATUS=${HTTPS_STATUS:-000}
     if [ "$HTTPS_STATUS" = "200" ] || [ "$HTTPS_STATUS" = "302" ]; then
-        check_pass "HTTPS endpoint responding (status: $HTTPS_STATUS)"
+        check_pass "HTTPS endpoint responding via ${CONNECTIVITY_HOST} (status: $HTTPS_STATUS)"
     elif [ "$HTTPS_STATUS" = "000" ]; then
-        check_fail "HTTPS endpoint not reachable"
+        check_fail "HTTPS endpoint not reachable via ${CONNECTIVITY_HOST}"
     else
-        check_warn "HTTPS endpoint responding with status: $HTTPS_STATUS"
+        check_warn "HTTPS endpoint via ${CONNECTIVITY_HOST} responding with status: $HTTPS_STATUS"
     fi
 fi
 
