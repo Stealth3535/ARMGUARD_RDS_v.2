@@ -687,6 +687,8 @@ def request_device_authorization(request):
     if request.method == 'POST' and not request.user.is_authenticated:
         return redirect(f"/login/?next=/admin/device/request-authorization/")
 
+    stale_approved_request = None
+
     # Check if request already exists
     try:
         existing_request = DeviceAuthorizationRequest.objects.filter(
@@ -716,15 +718,28 @@ def request_device_authorization(request):
             if request.user.is_authenticated:
                 return redirect('armguard_admin:dashboard')
         elif existing_request.status == 'approved':
-            if existing_request.issued_certificate_pem and not existing_request.issued_certificate_downloaded_at:
-                messages.success(request, 'This device is approved. Download your client certificate to complete enrollment.')
-                if not request.user.is_authenticated:
-                    return redirect('/login/?next=/admin/device/request-authorization/')
+            is_currently_authorized = middleware.is_device_authorized(
+                device_fingerprint,
+                ip_address,
+                request.path,
+                getattr(request, 'user', None),
+                required_security='HIGH_SECURITY',
+            )
+
+            if is_currently_authorized:
+                if existing_request.issued_certificate_pem and not existing_request.issued_certificate_downloaded_at:
+                    messages.success(request, 'This device is approved. Download your client certificate to complete enrollment.')
+                    if not request.user.is_authenticated:
+                        return redirect('/login/?next=/admin/device/request-authorization/')
+                else:
+                    messages.success(request, 'This device is already authorized.')
+                    if request.user.is_authenticated:
+                        return redirect('armguard_admin:dashboard')
+                    return redirect('/login/?next=/admin/')
             else:
-                messages.success(request, 'This device is already authorized.')
-                if request.user.is_authenticated:
-                    return redirect('armguard_admin:dashboard')
-                return redirect('/login/?next=/admin/')
+                stale_approved_request = existing_request
+                existing_request = None
+                messages.warning(request, 'Previous approval is no longer active. Please submit a new authorization request.')
     
     if request.method == 'POST':
         reason = request.POST.get('reason', '')
@@ -737,17 +752,35 @@ def request_device_authorization(request):
             messages.error(request, 'CSR must be a valid PEM block starting with BEGIN CERTIFICATE REQUEST.')
         else:
             try:
-                # Create authorization request
-                DeviceAuthorizationRequest.objects.create(
-                    device_fingerprint=device_fingerprint,
-                    ip_address=ip_address,
-                    user_agent=user_agent,
-                    hostname=device_name,
-                    requested_by=request.user,
-                    reason=reason,
-                    device_name=device_name,
-                    csr_pem=csr_pem,
-                )
+                if stale_approved_request:
+                    stale_approved_request.status = 'pending'
+                    stale_approved_request.reviewed_by = None
+                    stale_approved_request.reviewed_at = None
+                    stale_approved_request.review_notes = ''
+                    stale_approved_request.requested_by = request.user
+                    stale_approved_request.reason = reason
+                    stale_approved_request.device_name = device_name
+                    stale_approved_request.hostname = device_name
+                    stale_approved_request.ip_address = ip_address
+                    stale_approved_request.user_agent = user_agent
+                    stale_approved_request.csr_pem = csr_pem
+                    stale_approved_request.issued_certificate_pem = ''
+                    stale_approved_request.issued_certificate_serial = ''
+                    stale_approved_request.issued_certificate_issued_at = None
+                    stale_approved_request.issued_certificate_downloaded_at = None
+                    stale_approved_request.save()
+                else:
+                    # Create authorization request
+                    DeviceAuthorizationRequest.objects.create(
+                        device_fingerprint=device_fingerprint,
+                        ip_address=ip_address,
+                        user_agent=user_agent,
+                        hostname=device_name,
+                        requested_by=request.user,
+                        reason=reason,
+                        device_name=device_name,
+                        csr_pem=csr_pem,
+                    )
             except DatabaseError:
                 logger.exception("Database error while creating device authorization request")
                 messages.error(
