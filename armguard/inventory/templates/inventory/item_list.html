@@ -180,6 +180,27 @@
     .stat-change.negative {
         color: #dc2626;
     }
+
+    .stat-breakdown {
+        margin-top: 0.5rem;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.2rem 0.75rem;
+        font-size: 0.78rem;
+        color: #4b5563;
+    }
+
+    .stat-breakdown-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.35rem;
+    }
+
+    .stat-breakdown-line strong {
+        color: #111827;
+        font-weight: 700;
+    }
     
     /* Search and Filter Bar */
     .filter-bar {
@@ -536,6 +557,7 @@
                         <i class="fas fa-arrow-up"></i>
                         Ready for deployment
                     </div>
+                    <div class="stat-breakdown" id="availableTypeBreakdown"></div>
                 </div>
                 <div class="stat-icon">
                     <i class="fas fa-check-circle"></i>
@@ -552,6 +574,7 @@
                         <i class="fas fa-user-check"></i>
                         In field operations
                     </div>
+                    <div class="stat-breakdown" id="issuedTypeBreakdown"></div>
                 </div>
                 <div class="stat-icon">
                     <i class="fas fa-hand-paper"></i>
@@ -568,6 +591,7 @@
                         <i class="fas fa-exclamation-triangle"></i>
                         Requires attention
                     </div>
+                    <div class="stat-breakdown" id="maintenanceTypeBreakdown"></div>
                 </div>
                 <div class="stat-icon">
                     <i class="fas fa-tools"></i>
@@ -584,6 +608,7 @@
                         <i class="fas fa-database"></i>
                         Complete arsenal
                     </div>
+                    <div class="stat-breakdown" id="totalTypeBreakdown"></div>
                 </div>
                 <div class="stat-icon">
                     <i class="fas fa-chart-bar"></i>
@@ -602,29 +627,6 @@
                        placeholder="🔍 Search by type, serial number, or description..." 
                        value="">
             </div>
-            <select id="type-filter" class="filter-select">
-                <option value="all">All Types</option>
-                <option value="M14">M14 Rifle</option>
-                <option value="M16">M16 Rifle</option>
-                <option value="M4">M4 Carbine</option>
-                <option value="GLOCK">Glock Pistol</option>
-                <option value="45">.45 Pistol</option>
-            </select>
-            <select id="status-filter" class="filter-select">
-                <option value="all">All Status</option>
-                <option value="Available">Available</option>
-                <option value="Issued">Issued</option>
-                <option value="Maintenance">Maintenance</option>
-                <option value="Retired">Retired</option>
-            </select>
-            <select id="condition-filter" class="filter-select">
-                <option value="all">All Conditions</option>
-                <option value="Good">Good</option>
-                <option value="Fair">Fair</option>
-                <option value="Poor">Poor</option>
-                <option value="Damaged">Damaged</option>
-            </select>
-            <button type="button" id="clear-filters" class="btn-secondary">Clear Filters</button>
         </div>
         
         <!-- Quick Filters -->
@@ -775,24 +777,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Search functionality
     const searchInput = document.getElementById('item-search');
-    const typeFilter = document.getElementById('type-filter');
-    const statusFilter = document.getElementById('status-filter');
-    const conditionFilter = document.getElementById('condition-filter');
     const filterChips = document.querySelectorAll('.filter-chip');
+    const activeFilters = {
+        type: 'all',
+        status: 'all',
+        condition: 'all'
+    };
 
-    function syncPillsFromSelects() {
+    function syncPillsFromActiveFilters() {
         filterChips.forEach(chip => {
             chip.classList.remove('active');
             const group = chip.dataset.group;
             const value = chip.dataset.value;
 
-            if (group === 'type' && typeFilter && typeFilter.value === value) {
-                chip.classList.add('active');
-            }
-            if (group === 'status' && statusFilter && statusFilter.value === value) {
-                chip.classList.add('active');
-            }
-            if (group === 'condition' && conditionFilter && conditionFilter.value === value) {
+            if (group && activeFilters[group] === value) {
                 chip.classList.add('active');
             }
         });
@@ -801,9 +799,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyAllFilters() {
         const rows = document.querySelectorAll('#inventory-table tbody tr');
         const searchTerm = (searchInput?.value || '').toLowerCase().trim();
-        const selectedType = typeFilter?.value || 'all';
-        const selectedStatus = statusFilter?.value || 'all';
-        const selectedCondition = conditionFilter?.value || 'all';
+        const selectedType = activeFilters.type;
+        const selectedStatus = activeFilters.status;
+        const selectedCondition = activeFilters.condition;
 
         rows.forEach(row => {
             const itemType = row.getAttribute('data-type');
@@ -835,68 +833,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300));
     }
 
-    // Type filter
-    if (typeFilter) {
-        typeFilter.addEventListener('change', function() {
-            syncPillsFromSelects();
-            applyAllFilters();
-        });
-    }
-
-    // Status filter
-    if (statusFilter) {
-        statusFilter.addEventListener('change', function() {
-            syncPillsFromSelects();
-            applyAllFilters();
-        });
-    }
-
-    // Condition filter
-    if (conditionFilter) {
-        conditionFilter.addEventListener('change', function() {
-            syncPillsFromSelects();
-            applyAllFilters();
-        });
-    }
-    
-    // Clear filters
-    const clearButton = document.getElementById('clear-filters');
-    if (clearButton) {
-        clearButton.addEventListener('click', function() {
-            if (searchInput) searchInput.value = '';
-            if (typeFilter) typeFilter.value = 'all';
-            if (statusFilter) statusFilter.value = 'all';
-            if (conditionFilter) conditionFilter.value = 'all';
-
-            syncPillsFromSelects();
-
-            applyAllFilters();
-        });
-    }
-
     // Quick filter chips
     filterChips.forEach(chip => {
         chip.addEventListener('click', function() {
             const group = this.dataset.group;
             const value = this.dataset.value;
 
-            if (group === 'type' && typeFilter) {
-                typeFilter.value = value;
-            }
-            if (group === 'status' && statusFilter) {
-                statusFilter.value = value;
-            }
-            if (group === 'condition' && conditionFilter) {
-                conditionFilter.value = value;
+            if (group && value) {
+                activeFilters[group] = value;
             }
 
-            syncPillsFromSelects();
+            syncPillsFromActiveFilters();
             applyAllFilters();
         });
     });
     
     // Initial statistics update
-    syncPillsFromSelects();
+    syncPillsFromActiveFilters();
     applyAllFilters();
 });
 
@@ -922,20 +875,41 @@ function updateCount(tableId, countId) {
 
 // Update statistics with animated counters
 function updateStatistics() {
-    const visibleRows = document.querySelectorAll('#inventory-table tbody tr:not([style*="display: none"])');
+    const allDataRows = document.querySelectorAll('#inventory-table tbody tr[data-status]');
+    const typeOrder = ['M14', 'M16', 'M4', 'GLOCK', '45'];
+    const typeLabels = {
+        M14: 'M14',
+        M16: 'M16',
+        M4: 'M4',
+        GLOCK: 'Glock',
+        45: '.45'
+    };
+    const createTypeCountObject = () => ({ M14: 0, M16: 0, M4: 0, GLOCK: 0, 45: 0 });
     
     let available = 0, issued = 0, maintenance = 0, retired = 0;
+    const countsByStatusType = {
+        Available: createTypeCountObject(),
+        Issued: createTypeCountObject(),
+        Maintenance: createTypeCountObject(),
+        Total: createTypeCountObject()
+    };
     
-    visibleRows.forEach(row => {
-        // Skip empty state row
-        if (row.getAttribute('data-status')) {
-            const status = row.getAttribute('data-status');
-            switch(status) {
-                case 'Available': available++; break;
-                case 'Issued': issued++; break;
-                case 'Maintenance': maintenance++; break;
-                case 'Retired': retired++; break;
+    allDataRows.forEach(row => {
+        const status = row.getAttribute('data-status');
+        const type = row.getAttribute('data-type');
+
+        if (typeOrder.includes(type)) {
+            if (countsByStatusType[status]) {
+                countsByStatusType[status][type] += 1;
             }
+            countsByStatusType.Total[type] += 1;
+        }
+
+        switch(status) {
+            case 'Available': available++; break;
+            case 'Issued': issued++; break;
+            case 'Maintenance': maintenance++; break;
+            case 'Retired': retired++; break;
         }
     });
     
@@ -946,6 +920,20 @@ function updateStatistics() {
     animateCounter('issuedCount', issued);
     animateCounter('maintenanceCount', maintenance);
     animateCounter('totalCount', total);
+
+    renderTypeBreakdown('availableTypeBreakdown', countsByStatusType.Available, typeOrder, typeLabels);
+    renderTypeBreakdown('issuedTypeBreakdown', countsByStatusType.Issued, typeOrder, typeLabels);
+    renderTypeBreakdown('maintenanceTypeBreakdown', countsByStatusType.Maintenance, typeOrder, typeLabels);
+    renderTypeBreakdown('totalTypeBreakdown', countsByStatusType.Total, typeOrder, typeLabels);
+}
+
+function renderTypeBreakdown(elementId, counts, typeOrder, typeLabels) {
+    const container = document.getElementById(elementId);
+    if (!container) return;
+
+    container.innerHTML = typeOrder
+        .map(type => `<div class="stat-breakdown-line"><span>${typeLabels[type]}:</span><strong>${counts[type] || 0}</strong></div>`)
+        .join('');
 }
 
 // Smooth counter animation
