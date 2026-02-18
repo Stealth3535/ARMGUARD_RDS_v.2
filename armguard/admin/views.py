@@ -718,10 +718,13 @@ def request_device_authorization(request):
         elif existing_request.status == 'approved':
             if existing_request.issued_certificate_pem and not existing_request.issued_certificate_downloaded_at:
                 messages.success(request, 'This device is approved. Download your client certificate to complete enrollment.')
+                if not request.user.is_authenticated:
+                    return redirect('/login/?next=/admin/device/request-authorization/')
             else:
                 messages.success(request, 'This device is already authorized.')
                 if request.user.is_authenticated:
                     return redirect('armguard_admin:dashboard')
+                return redirect('/login/?next=/admin/')
     
     if request.method == 'POST':
         reason = request.POST.get('reason', '')
