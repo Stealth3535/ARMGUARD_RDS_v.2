@@ -453,27 +453,27 @@
                 <td>
                     <div class="btn-group">
                         <a href="{% url 'armguard_admin:view_device_request' request.id %}" class="btn-sm btn-view">
-                            👁️ View
+                            View
                         </a>
                         {% if request.status == 'pending' %}
                         <a href="{% url 'armguard_admin:approve_device_request' request.id %}" class="btn-sm btn-approve">
-                            ✅ Approve
+                            Approve
                         </a>
                         <a href="{% url 'armguard_admin:reject_device_request' request.id %}" class="btn-sm btn-reject">
-                            ❌ Reject
+                            Reject
                         </a>
                         {% elif request.status == 'approved' %}
                         <a href="{% url 'armguard_admin:edit_device_request' request.id %}" class="btn-sm btn-approve">
-                            ✏️ Edit
+                            Edit
                         </a>
                         <form method="post" action="{% url 'armguard_admin:delete_device_request' request.id %}" style="display:inline;" onsubmit="return confirm('Delete this approved device request? This will also revoke its device authorization.');">
                             {% csrf_token %}
-                            <button type="submit" class="btn-sm btn-reject" style="border:none; cursor:pointer;">🗑️ Delete</button>
+                            <button type="submit" class="btn-sm btn-reject" style="border:none; cursor:pointer;">Delete</button>
                         </form>
                         {% else %}
                         <form method="post" action="{% url 'armguard_admin:delete_device_request' request.id %}" style="display:inline;" onsubmit="return confirm('Delete this device request?');">
                             {% csrf_token %}
-                            <button type="submit" class="btn-sm btn-reject" style="border:none; cursor:pointer;">🗑️ Delete</button>
+                            <button type="submit" class="btn-sm btn-reject" style="border:none; cursor:pointer;">Delete</button>
                         </form>
                         {% endif %}
                     </div>
