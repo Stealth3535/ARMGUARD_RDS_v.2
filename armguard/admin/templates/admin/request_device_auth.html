@@ -205,7 +205,9 @@
                     <span class="device-info-value">{{ existing_request.device_name }}</span>
                 </div>
             </div>
+            {% if is_authenticated %}
             <a href="{% url 'armguard_admin:dashboard' %}" class="btn-submit" style="text-decoration: none; text-align: center; display: block;">Return to Dashboard</a>
+            {% endif %}
             
             {% elif existing_request.status == 'rejected' %}
             <div class="alert alert-warning">
@@ -231,11 +233,11 @@
                 No certificate was issued with this request.
                 {% endif %}
             </div>
-            {% if existing_request.issued_certificate_pem and not existing_request.issued_certificate_downloaded_at %}
+            {% if is_authenticated and existing_request.issued_certificate_pem and not existing_request.issued_certificate_downloaded_at %}
             <a href="{% url 'armguard_admin:download_device_certificate' existing_request.id %}" class="btn-submit" style="text-decoration: none; text-align: center; display: block;">
                 ⬇️ Download Client Certificate Bundle
             </a>
-            {% else %}
+            {% elif is_authenticated %}
             <a href="{% url 'armguard_admin:dashboard' %}" class="btn-submit" style="text-decoration: none; text-align: center; display: block;">Return to Dashboard</a>
             {% endif %}
             {% endif %}

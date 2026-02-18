@@ -672,7 +672,6 @@ def system_settings(request):
     return render(request, 'admin/system_settings.html', context)
 
 
-@login_required
 def request_device_authorization(request):
     """
     Request device authorization for current device
@@ -701,13 +700,15 @@ def request_device_authorization(request):
     if existing_request:
         if existing_request.status == 'pending':
             messages.info(request, 'You already have a pending authorization request.')
-            return redirect('armguard_admin:dashboard')
+            if request.user.is_authenticated:
+                return redirect('armguard_admin:dashboard')
         elif existing_request.status == 'approved':
             if existing_request.issued_certificate_pem and not existing_request.issued_certificate_downloaded_at:
                 messages.success(request, 'This device is approved. Download your client certificate to complete enrollment.')
             else:
                 messages.success(request, 'This device is already authorized.')
-                return redirect('armguard_admin:dashboard')
+                if request.user.is_authenticated:
+                    return redirect('armguard_admin:dashboard')
     
     if request.method == 'POST':
         reason = request.POST.get('reason', '')
@@ -720,13 +721,29 @@ def request_device_authorization(request):
             messages.error(request, 'CSR must be a valid PEM block starting with BEGIN CERTIFICATE REQUEST.')
         else:
             try:
+                requester_user = request.user
+                if not requester_user.is_authenticated:
+                    fallback_username = getattr(settings, 'DEVICE_REQUEST_FALLBACK_USER', 'device_request_guest')
+                    requester_user, created = User.objects.get_or_create(
+                        username=fallback_username,
+                        defaults={
+                            'first_name': 'Device',
+                            'last_name': 'Request',
+                            'email': 'device-request@local',
+                            'is_active': False,
+                        }
+                    )
+                    if created:
+                        requester_user.set_unusable_password()
+                        requester_user.save(update_fields=['password'])
+
                 # Create authorization request
                 DeviceAuthorizationRequest.objects.create(
                     device_fingerprint=device_fingerprint,
                     ip_address=ip_address,
                     user_agent=user_agent,
                     hostname=device_name,
-                    requested_by=request.user,
+                    requested_by=requester_user,
                     reason=reason,
                     device_name=device_name,
                     csr_pem=csr_pem,
@@ -743,12 +760,15 @@ def request_device_authorization(request):
                 messages.success(request, 'Device authorization request with CSR submitted successfully. Certificate will be issued automatically upon approval.')
             else:
                 messages.success(request, 'Device authorization request submitted successfully. You can upload CSR for automated certificate issuance.')
-            return redirect('armguard_admin:dashboard')
+            if request.user.is_authenticated:
+                return redirect('armguard_admin:dashboard')
+            return redirect('armguard_admin:request_device_authorization')
     
     context = {
         'device_fingerprint': device_fingerprint[:16] + '...',
         'ip_address': ip_address,
         'existing_request': existing_request,
+        'is_authenticated': request.user.is_authenticated,
     }
     return render(request, 'admin/request_device_auth.html', context)
 
