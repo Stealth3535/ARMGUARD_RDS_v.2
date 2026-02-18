@@ -413,7 +413,6 @@
             <span class="filter-chip" data-filter="officers">👨‍✈️ Officers</span>
             <span class="filter-chip" data-filter="enlisted">🎖️ Enlisted</span>
             <span class="filter-chip" data-filter="active">✅ Active</span>
-            <span class="filter-chip" data-filter="superuser">🔐 Superuser</span>
         </div>
     </div>
 
@@ -604,8 +603,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     applyQuickFilter('data-rank', ['enlisted']);
                 } else if (filterValue === 'active') {
                     applyQuickFilter('data-status', ['active']);
-                } else if (filterValue === 'superuser') {
-                    applyQuickFilter('data-rank', ['superuser']);
                 }
             } else {
                 const rows = document.querySelectorAll('#personnel-table tbody tr');
