@@ -78,19 +78,27 @@ ensure_shared_group() {
 ensure_nginx_static_access() {
     local static_dir="${PROJECT_DIR}/staticfiles"
     local media_dir="${PROJECT_DIR}/media"
-    local parent_dir
-    parent_dir="$(dirname "$PROJECT_DIR")"
+    local current_path="${PROJECT_DIR}"
 
     if ! id www-data >/dev/null 2>&1; then
         return
     fi
 
     if command -v setfacl >/dev/null 2>&1; then
-        setfacl -m u:www-data:x "$parent_dir" "$PROJECT_DIR" 2>/dev/null || true
+        while [ "$current_path" != "/" ] && [ -n "$current_path" ]; do
+            setfacl -m u:www-data:x "$current_path" 2>/dev/null || true
+            current_path="$(dirname "$current_path")"
+        done
+        setfacl -m u:www-data:x "/" 2>/dev/null || true
         setfacl -R -m u:www-data:rX "$static_dir" "$media_dir" 2>/dev/null || true
         setfacl -dR -m u:www-data:rX "$static_dir" "$media_dir" 2>/dev/null || true
     else
-        chmod o+x "$parent_dir" "$PROJECT_DIR" 2>/dev/null || true
+        current_path="${PROJECT_DIR}"
+        while [ "$current_path" != "/" ] && [ -n "$current_path" ]; do
+            chmod o+x "$current_path" 2>/dev/null || true
+            current_path="$(dirname "$current_path")"
+        done
+        chmod o+x "/" 2>/dev/null || true
         chmod -R o+rX "$static_dir" "$media_dir" 2>/dev/null || true
     fi
 }
