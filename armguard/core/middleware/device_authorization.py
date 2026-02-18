@@ -177,9 +177,27 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
     
     def is_restricted_path(self, path):
         """Check if path requires device authorization"""
+        normalized_path = path or '/'
+
+        mandatory_exempt_paths = [
+            '/static/',
+            '/media/',
+            '/favicon.ico',
+            '/robots.txt',
+            '/login/',
+            '/accounts/login/',
+            '/logout/',
+            '/admin/device/request-authorization/',
+            '/admin/device/request-authorization',
+        ]
+
+        for exempt_path in mandatory_exempt_paths:
+            if normalized_path.startswith(exempt_path):
+                return False
+
         exempt_paths = self.authorized_devices.get('exempt_paths', [])
         for exempt_path in exempt_paths:
-            if path.startswith(exempt_path):
+            if normalized_path.startswith(exempt_path):
                 return False
 
         if self.authorized_devices.get('protect_root_path', not settings.DEBUG):
