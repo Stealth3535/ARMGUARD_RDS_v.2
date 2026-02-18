@@ -794,6 +794,11 @@ EOF
     
     # mkcert SSL certificates (will be added by SSL setup)
     # ssl_certificate_lan will be configured
+
+    # mTLS rollout (optional until certificate enrollment is complete)
+    ssl_client_certificate /etc/ssl/certs/ca-certificates.crt;
+    ssl_verify_client optional;
+    ssl_verify_depth 2;
     
     # Security headers
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
@@ -847,6 +852,11 @@ EOF
     
     # Let's Encrypt SSL certificates (will be added by certbot)
     # ssl_certificate_wan will be configured
+
+    # mTLS rollout (optional until certificate enrollment is complete)
+    ssl_client_certificate /etc/ssl/certs/ca-certificates.crt;
+    ssl_verify_client optional;
+    ssl_verify_depth 2;
     
     # Enhanced security for public access
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
@@ -919,6 +929,11 @@ server {
     
     # SSL certificates (will be configured in next step)
     # ssl_certificate will be added by SSL setup
+
+    # mTLS rollout (optional until certificate enrollment is complete)
+    ssl_client_certificate /etc/ssl/certs/ca-certificates.crt;
+    ssl_verify_client optional;
+    ssl_verify_depth 2;
     
     # Security headers
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;

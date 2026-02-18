@@ -123,6 +123,11 @@ server {
     # SSL Configuration
     ssl_certificate /etc/ssl/armguard/armguard-cert.pem;
     ssl_certificate_key /etc/ssl/armguard/armguard-key.pem;
+
+    # mTLS rollout (optional until certificate enrollment is complete)
+    ssl_client_certificate /etc/ssl/certs/ca-certificates.crt;
+    ssl_verify_client optional;
+    ssl_verify_depth 2;
     
     # SSL Security Settings
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -167,6 +172,10 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-SSL-Client-Verify $ssl_client_verify;
+        proxy_set_header X-SSL-Client-DN $ssl_client_s_dn;
+        proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
+        proxy_set_header X-SSL-Client-Fingerprint $ssl_client_fingerprint;
         proxy_redirect off;
         
         # Timeouts

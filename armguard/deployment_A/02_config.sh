@@ -906,6 +906,11 @@ server {
     # LAN SSL configuration (mkcert certificates)
     ssl_certificate ${ssl_dir}/cert.pem;
     ssl_certificate_key ${ssl_dir}/key.pem;
+
+    # mTLS rollout (optional until certificate enrollment is complete)
+    ssl_client_certificate /etc/ssl/certs/ca-certificates.crt;
+    ssl_verify_client optional;
+    ssl_verify_depth 2;
     
     # SSL security settings
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -943,6 +948,10 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-SSL-Client-Verify \$ssl_client_verify;
+        proxy_set_header X-SSL-Client-DN \$ssl_client_s_dn;
+        proxy_set_header X-SSL-Client-Serial \$ssl_client_serial;
+        proxy_set_header X-SSL-Client-Fingerprint \$ssl_client_fingerprint;
         proxy_connect_timeout 30s;
         proxy_send_timeout 30s;  
         proxy_read_timeout 30s;
@@ -958,6 +967,10 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-SSL-Client-Verify \$ssl_client_verify;
+        proxy_set_header X-SSL-Client-DN \$ssl_client_s_dn;
+        proxy_set_header X-SSL-Client-Serial \$ssl_client_serial;
+        proxy_set_header X-SSL-Client-Fingerprint \$ssl_client_fingerprint;
         proxy_connect_timeout 7d;
         proxy_send_timeout 7d;
         proxy_read_timeout 7d;
@@ -998,6 +1011,11 @@ server {
     # WAN SSL configuration (ACME certificates)
     ssl_certificate ${ssl_dir}/cert.pem;
     ssl_certificate_key ${ssl_dir}/key.pem;
+
+    # mTLS rollout (optional until certificate enrollment is complete)
+    ssl_client_certificate /etc/ssl/certs/ca-certificates.crt;
+    ssl_verify_client optional;
+    ssl_verify_depth 2;
     
     # Enhanced SSL security for public access
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -1040,6 +1058,10 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-SSL-Client-Verify \$ssl_client_verify;
+        proxy_set_header X-SSL-Client-DN \$ssl_client_s_dn;
+        proxy_set_header X-SSL-Client-Serial \$ssl_client_serial;
+        proxy_set_header X-SSL-Client-Fingerprint \$ssl_client_fingerprint;
         proxy_connect_timeout 30s;
         proxy_send_timeout 30s;
         proxy_read_timeout 30s;
@@ -1055,6 +1077,10 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-SSL-Client-Verify \$ssl_client_verify;
+        proxy_set_header X-SSL-Client-DN \$ssl_client_s_dn;
+        proxy_set_header X-SSL-Client-Serial \$ssl_client_serial;
+        proxy_set_header X-SSL-Client-Fingerprint \$ssl_client_fingerprint;
         proxy_connect_timeout 7d;
         proxy_send_timeout 7d;
         proxy_read_timeout 7d;
@@ -1113,6 +1139,11 @@ server {
     # SSL configuration
     ssl_certificate ${ssl_dir}/cert.pem;
     ssl_certificate_key ${ssl_dir}/key.pem;
+
+    # mTLS rollout (optional until certificate enrollment is complete)
+    ssl_client_certificate /etc/ssl/certs/ca-certificates.crt;
+    ssl_verify_client optional;
+    ssl_verify_depth 2;
     
     # SSL security settings
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -1145,6 +1176,10 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-SSL-Client-Verify \$ssl_client_verify;
+        proxy_set_header X-SSL-Client-DN \$ssl_client_s_dn;
+        proxy_set_header X-SSL-Client-Serial \$ssl_client_serial;
+        proxy_set_header X-SSL-Client-Fingerprint \$ssl_client_fingerprint;
         proxy_connect_timeout 30s;
         proxy_send_timeout 30s;  
         proxy_read_timeout 30s;
@@ -1160,6 +1195,10 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-SSL-Client-Verify \$ssl_client_verify;
+        proxy_set_header X-SSL-Client-DN \$ssl_client_s_dn;
+        proxy_set_header X-SSL-Client-Serial \$ssl_client_serial;
+        proxy_set_header X-SSL-Client-Fingerprint \$ssl_client_fingerprint;
         proxy_connect_timeout 7d;
         proxy_send_timeout 7d;
         proxy_read_timeout 7d;
