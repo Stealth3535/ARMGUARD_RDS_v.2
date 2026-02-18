@@ -394,22 +394,14 @@
                        placeholder="🔍 Search by name, rank, serial, or group..." 
                        value="{{ request.GET.search_query|default:'' }}">
             </div>
-            <select name="status" id="status-filter" class="filter-select">
-                <option value="">All Status</option>
-                <option value="Active" {% if request.GET.status == 'Active' %}selected{% endif %}>Active</option>
-                <option value="Inactive" {% if request.GET.status == 'Inactive' %}selected{% endif %}>Inactive</option>
-            </select>
-            <select name="rank_type" id="rank-filter" class="filter-select">
-                <option value="">All Ranks</option>
-                <option value="officer" {% if request.GET.rank_type == 'officer' %}selected{% endif %}>Officers</option>
-                <option value="enlisted" {% if request.GET.rank_type == 'enlisted' %}selected{% endif %}>Enlisted</option>
-            </select>
             <button type="submit" class="btn-primary">Search</button>
             <a href="{% url 'personnel:personnel_profile_list' %}" class="btn-secondary">Clear</a>
         </form>
         
         <!-- Quick Filters -->
         <div class="quick-filters">
+            <span class="filter-chip" data-filter="all-status">All Status</span>
+            <span class="filter-chip" data-filter="all-ranks">All Ranks</span>
             <span class="filter-chip" data-filter="officers">👨‍✈️ Officers</span>
             <span class="filter-chip" data-filter="enlisted">🎖️ Enlisted</span>
             <span class="filter-chip" data-filter="active">✅ Active</span>
@@ -545,46 +537,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300));
     }
     
-    // Status filter
-    const statusFilter = document.getElementById('status-filter');
-    if (statusFilter) {
-        statusFilter.addEventListener('change', function() {
-            const status = this.value.toLowerCase();
-            const rows = document.querySelectorAll('#personnel-table tbody tr');
-            
-            rows.forEach(row => {
-                if (!status) {
-                    row.style.display = '';
-                } else {
-                    const statusData = row.getAttribute('data-status');
-                    row.style.display = statusData === status ? '' : 'none';
-                }
-            });
-            updateCount('personnel-table', 'personnel-count');
-            updateStatistics();
-        });
-    }
-    
-    // Rank filter
-    const rankFilter = document.getElementById('rank-filter');
-    if (rankFilter) {
-        rankFilter.addEventListener('change', function() {
-            const rank = this.value;
-            const rows = document.querySelectorAll('#personnel-table tbody tr');
-            
-            rows.forEach(row => {
-                if (!rank) {
-                    row.style.display = '';
-                } else {
-                    const rankData = row.getAttribute('data-rank');
-                    row.style.display = rankData === rank ? '' : 'none';
-                }
-            });
-            updateCount('personnel-table', 'personnel-count');
-            updateStatistics();
-        });
-    }
-    
     // Quick filter chips
     const filterChips = document.querySelectorAll('.filter-chip');
     filterChips.forEach(chip => {
@@ -603,6 +555,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     applyQuickFilter('data-rank', ['enlisted']);
                 } else if (filterValue === 'active') {
                     applyQuickFilter('data-status', ['active']);
+                } else if (filterValue === 'all-status' || filterValue === 'all-ranks') {
+                    const rows = document.querySelectorAll('#personnel-table tbody tr');
+                    rows.forEach(row => row.style.display = '');
                 }
             } else {
                 const rows = document.querySelectorAll('#personnel-table tbody tr');
