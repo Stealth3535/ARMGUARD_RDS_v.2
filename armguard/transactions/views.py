@@ -312,8 +312,8 @@ def create_qr_transaction(request):
             # Transaction validation errors (e.g., item already issued)
             logger.warning("Transaction validation failed: %s", str(e))
             messages.error(request, str(e))
-        except Exception as e:
-            logger.error("Unexpected error creating transaction: %s", str(e), exc_info=True)
+        except DatabaseError:
+            logger.exception("Database error creating transaction by %s", request.user.username)
             messages.error(request, 'An error occurred while creating the transaction')
         
         return redirect('transactions:qr_scanner')
@@ -390,8 +390,9 @@ def lookup_transactions(request):
                         
                 except Personnel.DoesNotExist:
                     messages.error(request, 'Personnel not found')
-                except Exception as e:
-                    messages.error(request, f'Error looking up personnel: {str(e)}')
+                except DatabaseError:
+                    logger.exception("Database error looking up personnel transactions for %s", personnel_id)
+                    messages.error(request, 'Error looking up personnel transactions. Please try again.')
                     
             elif item_id:
                 qr_code = QRCodeImage.objects.get(qr_type='item', reference_id=item_id)
@@ -426,8 +427,9 @@ def lookup_transactions(request):
                         
                 except Item.DoesNotExist:
                     messages.error(request, 'Item not found')
-                except Exception as e:
-                    messages.error(request, f'Error looking up item: {str(e)}')
+                except DatabaseError:
+                    logger.exception("Database error looking up item transactions for %s", item_id)
+                    messages.error(request, 'Error looking up item transactions. Please try again.')
             
         except QRCodeImage.DoesNotExist:
             messages.error(request, 'QR code not found in system')

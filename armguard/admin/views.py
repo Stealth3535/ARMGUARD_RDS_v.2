@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User, Group
 from django.db.models import Q, Count
 from django.conf import settings
-from django.db import transaction
+from django.db import transaction, DatabaseError
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
@@ -20,6 +20,7 @@ from core.network_decorators import lan_required, read_only_on_wan
 import qrcode
 from io import BytesIO
 import base64
+import logging
 
 from .forms import (
     UniversalForm, ItemRegistrationForm, SystemSettingsForm
@@ -27,6 +28,8 @@ from .forms import (
 from .permissions import unrestricted_admin_required, check_restricted_admin
 from core.cache_utils import DashboardCache, invalidate_dashboard_cache
 from core.decorators import handle_database_errors, safe_database_operation, with_audit_context
+
+logger = logging.getLogger(__name__)
 
 def is_admin_user(user):
     """Check if user is admin or superuser - only they can register users"""
@@ -141,9 +144,8 @@ def personnel_registration_success(request, pk):
         qr_code_obj = QRCodeImage.objects.get(qr_type=QRCodeImage.TYPE_PERSONNEL, reference_id=personnel.id)
     except QRCodeImage.DoesNotExist:
         qr_code_obj = None
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error("Error fetching QR code for personnel %s: %s", pk, str(e))
+    except DatabaseError:
+        logger.exception("Database error fetching QR code for personnel %s", pk)
         qr_code_obj = None
     
     context = {
@@ -159,9 +161,6 @@ def personnel_registration_success(request, pk):
 @lan_required
 def universal_registration(request):
     """Universal registration view - The centralized registration system (LAN only)"""
-    import logging
-    logger = logging.getLogger(__name__)
-    
     if request.method == 'POST':
         # Security: Log form submission without sensitive data
         logger.debug("Registration form submitted by user: %s", request.user.username)
@@ -201,8 +200,9 @@ def universal_registration(request):
                     
                     return redirect('armguard_admin:registration_success')
                     
-            except Exception as e:
-                messages.error(request, f'Error during registration: {str(e)}')
+            except (DatabaseError, ValueError):
+                logger.exception("Registration failed for user %s", request.user.username)
+                messages.error(request, 'Error during registration. Please try again.')
     else:
         form = UniversalForm()
     
@@ -398,8 +398,9 @@ def edit_user(request, user_id):
                     messages.success(request, f'User \"{user.username}\" updated successfully!')
                     return redirect('armguard_admin:user_management')
                     
-            except Exception as e:
-                messages.error(request, f'Error updating user: {str(e)}')
+            except DatabaseError:
+                logger.exception("Database error updating user %s by %s", edit_user_obj.id, request.user.username)
+                messages.error(request, 'Error updating user. Please try again.')
         else:
             # Form has validation errors - errors will display inline in template
             messages.error(request, 'Please correct the errors below.')
@@ -465,8 +466,9 @@ def edit_personnel(request, personnel_id):
                     messages.success(request, f'Personnel record for "{personnel.get_full_name()}" updated successfully!')
                     return redirect('armguard_admin:user_management')
                     
-            except Exception as e:
-                messages.error(request, f'Error updating personnel: {str(e)}')
+            except DatabaseError:
+                logger.exception("Database error updating personnel %s by %s", edit_personnel_obj.id, request.user.username)
+                messages.error(request, 'Error updating personnel. Please try again.')
         else:
             # Form has validation errors - errors will display inline in template
             messages.error(request, 'Please correct the errors below.')
@@ -622,8 +624,9 @@ def register_item(request):
                         'success': True
                     })
                 
-            except Exception as e:
-                messages.error(request, f'Error registering item: {str(e)}')
+            except (DatabaseError, ValueError):
+                logger.exception("Item registration failed for user %s", request.user.username)
+                messages.error(request, 'Error registering item. Please try again.')
     else:
         form = ItemRegistrationForm()
     
@@ -882,8 +885,9 @@ def delete_user(request, user_id):
             
             return redirect('armguard_admin:user_management')
             
-        except Exception as e:
-            messages.error(request, f'Error deleting user: {str(e)}')
+        except DatabaseError:
+            logger.exception("Database error deleting user %s by %s", user_obj.id, request.user.username)
+            messages.error(request, 'Error deleting user. Please try again.')
             return redirect('armguard_admin:user_management')
     
     # GET request - show confirmation page
@@ -921,8 +925,9 @@ def toggle_user_status(request, user_id):
             'is_active': user_obj.is_active
         })
         
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': f'Error updating user status: {str(e)}'})
+    except DatabaseError:
+        logger.exception("Database error toggling status for user %s", user_id)
+        return JsonResponse({'success': False, 'message': 'Error updating user status. Please try again.'})
 
 
 @login_required
@@ -947,8 +952,9 @@ def link_user_personnel(request):
                         personnel.save()
                         messages.success(request, f'User "{user.username}" linked to personnel "{personnel.rank} {personnel.surname}" successfully.')
                         
-            except Exception as e:
-                messages.error(request, f'Error linking user and personnel: {str(e)}')
+            except DatabaseError:
+                logger.exception("Database error linking user %s to personnel %s", user_id, personnel_id)
+                messages.error(request, 'Error linking user and personnel. Please try again.')
         else:
             messages.error(request, 'Please select both user and personnel to link.')
         
@@ -1023,8 +1029,9 @@ def registration(request):
                     
                     return redirect('armguard_admin:registration_success')
                     
-            except Exception as e:
-                messages.error(request, f'Error during registration: {str(e)}')
+            except (DatabaseError, ValueError):
+                logger.exception("Registration failed for user %s", request.user.username)
+                messages.error(request, 'Error during registration. Please try again.')
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
@@ -1131,8 +1138,9 @@ def edit_item(request, item_id):
                 messages.success(request, f'Item "{updated_item.item_type} - {updated_item.serial}" updated successfully!')
                 return redirect('inventory:item_detail', pk=updated_item.pk)
                 
-            except Exception as e:
-                messages.error(request, f'Error updating item: {str(e)}')
+            except DatabaseError:
+                logger.exception("Database error updating item %s by %s", item.id, request.user.username)
+                messages.error(request, 'Error updating item. Please try again.')
     else:
         form = ItemEditForm(instance=item)
     
@@ -1203,8 +1211,9 @@ def delete_item(request, item_id):
             messages.success(request, f'Item "{item_name}" deleted successfully.')
             return redirect('inventory:item_list')
             
-        except Exception as e:
-            messages.error(request, f'Error deleting item: {str(e)}')
+        except DatabaseError:
+            logger.exception("Database error deleting item %s by %s", item.id, request.user.username)
+            messages.error(request, 'Error deleting item. Please try again.')
             return redirect('inventory:item_detail', pk=item_id)
     
     context = {
