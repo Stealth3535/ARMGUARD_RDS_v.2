@@ -182,7 +182,7 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
             if path.startswith(exempt_path):
                 return False
 
-        if self.authorized_devices.get('protect_root_path', not settings.DEBUG) and path in ('/', ''):
+        if self.authorized_devices.get('protect_root_path', not settings.DEBUG):
             return 'HIGH_SECURITY'
 
         # Check high security paths first (stricter requirements)
