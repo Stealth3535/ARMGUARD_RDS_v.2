@@ -586,7 +586,7 @@ def register_personnel(request):
 def register_item(request):
     """Register new inventory item - Unrestricted Admin and Armorer only"""
     if request.method == 'POST':
-        form = ItemRegistrationForm(request.POST)
+        form = ItemRegistrationForm(request.POST, request.FILES)
         if form.is_valid():
             try:
                 # Check if using existing QR code

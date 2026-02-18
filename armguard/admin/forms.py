@@ -581,11 +581,12 @@ class ItemRegistrationForm(forms.ModelForm):
     
     class Meta:
         model = Item
-        fields = ['item_type', 'serial', 'description', 'condition', 'status']
+        fields = ['item_type', 'serial', 'description', 'stencil_picture', 'condition', 'status']
         widgets = {
             'item_type': forms.Select(attrs={'class': 'form-control'}),
             'serial': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'stencil_picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'condition': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
         }
@@ -622,11 +623,12 @@ class ItemEditForm(forms.ModelForm):
     """Form for editing existing inventory items"""
     class Meta:
         model = Item
-        fields = ['item_type', 'serial', 'description', 'condition', 'status']
+        fields = ['item_type', 'serial', 'description', 'stencil_picture', 'condition', 'status']
         widgets = {
             'item_type': forms.Select(attrs={'class': 'form-control'}),
             'serial': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'stencil_picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'condition': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
         }
