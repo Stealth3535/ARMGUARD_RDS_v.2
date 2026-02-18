@@ -1280,8 +1280,9 @@ async function submitTransaction() {
                 itemInput.focus();
             };
             
-            // Auto-print PDF for withdrawals (Take) 
-            if (data.action === 'Take' && data.transaction_id) {
+            // Auto-print PDF for withdrawals (Take)
+            // Temporarily disabled in DEFCON mode.
+            if (mode !== 'defcon' && data.action === 'Take' && data.transaction_id) {
                 console.log('🖨️ Auto-print triggered for transaction', data.transaction_id);
                 
                 // Validate transaction ID before proceeding
