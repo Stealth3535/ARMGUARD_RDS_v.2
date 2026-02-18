@@ -259,7 +259,7 @@ fi
 print_section "Step 7: Collecting Static Files"
 
 echo -e "${YELLOW}Collecting static files...${NC}"
-.venv/bin/python manage.py collectstatic --noinput --settings=core.settings_production > /dev/null 2>&1
+.venv/bin/python manage.py collectstatic --clear --noinput --settings=core.settings_production
 check_success "Static files collected"
 
 # Step 8: Fix permissions
