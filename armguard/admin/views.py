@@ -714,9 +714,9 @@ def request_device_authorization(request):
             existing_request.save(update_fields=['requested_by'])
 
         if existing_request.status == 'pending':
-            messages.info(request, 'You already have a pending authorization request.')
-            if request.user.is_authenticated:
-                return redirect('armguard_admin:dashboard')
+            # Keep user on request page and let template show pending state.
+            # Avoid adding repeated flash messages that accumulate across redirects.
+            pass
         elif existing_request.status == 'approved':
             is_currently_authorized = middleware.is_device_authorized(
                 device_fingerprint,
