@@ -67,6 +67,15 @@
     "require_device_registration": true,
     "max_failed_attempts": 3,
     "lockout_duration_minutes": 30,
+    "protect_root_path": true,
+    "exempt_paths": [
+        "/static/",
+        "/media/",
+        "/favicon.ico",
+        "/robots.txt",
+        "/admin/device/request-authorization/",
+        "/admin/device/authorize/"
+    ],
     "restricted_paths": [
         "/transactions/create/",
         "/transactions/api/",

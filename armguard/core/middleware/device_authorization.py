@@ -38,6 +38,19 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                 # Validate production configuration
                 if not self.authorized_devices.get('security_mode'):
                     self.authorized_devices['security_mode'] = 'DEVELOPMENT' if settings.DEBUG else 'PRODUCTION'
+
+                if 'protect_root_path' not in self.authorized_devices:
+                    self.authorized_devices['protect_root_path'] = not settings.DEBUG
+
+                if 'exempt_paths' not in self.authorized_devices:
+                    self.authorized_devices['exempt_paths'] = [
+                        '/static/',
+                        '/media/',
+                        '/favicon.ico',
+                        '/robots.txt',
+                        '/admin/device/request-authorization/',
+                        '/admin/device/authorize/',
+                    ]
                     
             else:
                 # Create production-ready default configuration
@@ -48,6 +61,15 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                     "require_device_registration": not settings.DEBUG,
                     "max_failed_attempts": 3,
                     "lockout_duration_minutes": 30,
+                    "protect_root_path": not settings.DEBUG,
+                    "exempt_paths": [
+                        "/static/",
+                        "/media/",
+                        "/favicon.ico",
+                        "/robots.txt",
+                        "/admin/device/request-authorization/",
+                        "/admin/device/authorize/"
+                    ],
                     "restricted_paths": [
                         "/transactions/create/",
                         "/transactions/api/",
@@ -77,6 +99,8 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                 "devices": [],
                 "allow_all": settings.DEBUG,
                 "security_mode": "PRODUCTION",
+                "protect_root_path": not settings.DEBUG,
+                "exempt_paths": ["/static/", "/media/", "/favicon.ico", "/robots.txt", "/admin/device/request-authorization/", "/admin/device/authorize/"],
                 "restricted_paths": ["/transactions/", "/admin/", "/api/"]
             }
     
@@ -116,6 +140,14 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
     
     def is_restricted_path(self, path):
         """Check if path requires device authorization"""
+        exempt_paths = self.authorized_devices.get('exempt_paths', [])
+        for exempt_path in exempt_paths:
+            if path.startswith(exempt_path):
+                return False
+
+        if self.authorized_devices.get('protect_root_path', not settings.DEBUG) and path in ('/', ''):
+            return 'HIGH_SECURITY'
+
         # Check high security paths first (stricter requirements)
         high_security_paths = self.authorized_devices.get('high_security_paths', [])
         for restricted_path in high_security_paths:
