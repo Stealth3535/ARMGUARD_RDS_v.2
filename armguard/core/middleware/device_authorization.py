@@ -619,12 +619,12 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
 # Utility functions for device management
 def get_current_device_fingerprint(request):
     """Get current request's device fingerprint"""
-    middleware = DeviceAuthorizationMiddleware(None)
+    middleware = DeviceAuthorizationMiddleware(lambda req: None)
     return middleware.get_device_fingerprint(request)
 
 def is_device_authorized_for_path(request, path=None):
     """Check if current device is authorized for specific path"""
-    middleware = DeviceAuthorizationMiddleware(None)
+    middleware = DeviceAuthorizationMiddleware(lambda req: None)
     middleware.load_authorized_devices()
     
     check_path = path or request.path
@@ -640,7 +640,7 @@ def is_device_authorized_for_path(request, path=None):
 
 def get_device_info(request):
     """Get comprehensive device information for current request"""
-    middleware = DeviceAuthorizationMiddleware(None)
+    middleware = DeviceAuthorizationMiddleware(lambda req: None)
     middleware.load_authorized_devices()
     
     device_fingerprint = middleware.get_device_fingerprint(request)

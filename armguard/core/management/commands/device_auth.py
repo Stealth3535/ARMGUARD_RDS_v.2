@@ -77,7 +77,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            middleware = DeviceAuthorizationMiddleware(None)
+            middleware = DeviceAuthorizationMiddleware(lambda req: None)
             
             if options['list']:
                 self._list_devices(middleware)

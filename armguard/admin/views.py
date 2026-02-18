@@ -678,7 +678,7 @@ def request_device_authorization(request):
     from core.middleware.device_authorization import DeviceAuthorizationMiddleware
     from .models import DeviceAuthorizationRequest
     
-    middleware = DeviceAuthorizationMiddleware(None)
+    middleware = DeviceAuthorizationMiddleware(lambda req: None)
     device_fingerprint = middleware.get_device_fingerprint(request)
     ip_address = middleware.get_client_ip(request)
     user_agent = request.META.get('HTTP_USER_AGENT', '')

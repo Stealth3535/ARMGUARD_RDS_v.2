@@ -161,7 +161,7 @@ class DeviceAuthorizationRequest(models.Model):
         
         # Add device to authorized_devices.json
         from core.middleware.device_authorization import DeviceAuthorizationMiddleware
-        middleware = DeviceAuthorizationMiddleware(None)
+        middleware = DeviceAuthorizationMiddleware(lambda req: None)
         middleware.load_authorized_devices()
         middleware.authorize_device(
             device_fingerprint=self.device_fingerprint,

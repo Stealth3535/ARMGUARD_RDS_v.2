@@ -57,7 +57,7 @@ def check_device_authorization_status():
     
     # Test middleware instantiation
     try:
-        middleware = DeviceAuthorizationMiddleware(None)
+        middleware = DeviceAuthorizationMiddleware(lambda req: None)
         print("✅ Middleware instantiation: SUCCESS")
         
         # Check loaded config
