@@ -14,6 +14,7 @@ from django.core.cache import cache
 from django.utils import timezone
 import logging
 import hashlib
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
@@ -495,13 +496,28 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                     'message': 'Client certificate verification is required for this operation.'
                 }, status=403)
 
-            request_auth_link = '''
+            request_auth_path = '/admin/device/request-authorization/'
+            is_authenticated = hasattr(request, 'user') and request.user.is_authenticated
+            if is_authenticated:
+                request_auth_url = request_auth_path
+                cta_title = '🔐 Need Access?'
+                cta_message = 'You can request authorization for this device:'
+                cta_label = '📤 Request Device Authorization'
+            else:
+                login_url = getattr(settings, 'LOGIN_URL', '/accounts/login/')
+                separator = '&' if '?' in login_url else '?'
+                request_auth_url = f"{login_url}{separator}next={quote(request_auth_path)}"
+                cta_title = '🔐 Need Access?'
+                cta_message = 'Sign in to submit a device authorization request:'
+                cta_label = '🔑 Sign In to Request Authorization'
+
+            request_auth_link = f'''
                 <div style="margin: 2rem 0; padding: 1.5rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
-                    <h3 style="margin: 0 0 1rem 0; color: #92400e;">🔐 Need Access?</h3>
-                    <p style="margin: 0 0 1rem 0; color: #78350f;">You can request authorization for this device:</p>
-                    <a href="/admin/device/request-authorization/" 
+                    <h3 style="margin: 0 0 1rem 0; color: #92400e;">{cta_title}</h3>
+                    <p style="margin: 0 0 1rem 0; color: #78350f;">{cta_message}</p>
+                    <a href="{request_auth_url}" 
                        style="display: inline-block; padding: 0.75rem 1.5rem; background: #f59e0b; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                        📤 Request Device Authorization
+                        {cta_label}
                     </a>
                 </div>
             '''
@@ -608,15 +624,28 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                 else "UNAUTHORIZED ACCESS ATTEMPT"
             )
             
-            request_auth_link = ''
-            if hasattr(request, 'user') and request.user.is_authenticated:
-                request_auth_link = f'''
+            request_auth_path = '/admin/device/request-authorization/'
+            is_authenticated = hasattr(request, 'user') and request.user.is_authenticated
+            if is_authenticated:
+                request_auth_url = request_auth_path
+                cta_title = '🔐 Need Access?'
+                cta_message = 'You can request authorization for this device:'
+                cta_label = '📤 Request Device Authorization'
+            else:
+                login_url = getattr(settings, 'LOGIN_URL', '/accounts/login/')
+                separator = '&' if '?' in login_url else '?'
+                request_auth_url = f"{login_url}{separator}next={quote(request_auth_path)}"
+                cta_title = '🔐 Need Access?'
+                cta_message = 'Sign in to submit a device authorization request:'
+                cta_label = '🔑 Sign In to Request Authorization'
+
+            request_auth_link = f'''
                 <div style="margin: 2rem 0; padding: 1.5rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
-                    <h3 style="margin: 0 0 1rem 0; color: #92400e;">🔐 Need Access?</h3>
-                    <p style="margin: 0 0 1rem 0; color: #78350f;">You can request authorization for this device:</p>
-                    <a href="/admin/device/request-authorization/" 
+                    <h3 style="margin: 0 0 1rem 0; color: #92400e;">{cta_title}</h3>
+                    <p style="margin: 0 0 1rem 0; color: #78350f;">{cta_message}</p>
+                    <a href="{request_auth_url}" 
                        style="display: inline-block; padding: 0.75rem 1.5rem; background: #f59e0b; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                        📤 Request Device Authorization
+                        {cta_label}
                     </a>
                 </div>
                 '''
