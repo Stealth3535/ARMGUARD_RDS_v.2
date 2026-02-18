@@ -5,7 +5,7 @@ Provides device-based authorization for sensitive operations with production fea
 import json
 import os
 from datetime import datetime, time, timedelta
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.utils.deprecation import MiddlewareMixin
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -507,6 +507,8 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                     'message': 'Client certificate verification is required for this operation.'
                 }, status=403)
 
+            return HttpResponseRedirect('/admin/device/request-authorization/')
+
             request_auth_link = '''
                 <div style="margin: 2rem 0; padding: 1.5rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
                     <h3 style="margin: 0 0 1rem 0; color: #92400e;">🔐 Need Access?</h3>
@@ -619,6 +621,8 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                 "HIGH SECURITY VIOLATION" if path_security == 'HIGH_SECURITY' 
                 else "UNAUTHORIZED ACCESS ATTEMPT"
             )
+
+            return HttpResponseRedirect('/admin/device/request-authorization/')
             
             request_auth_link = '''
                 <div style="margin: 2rem 0; padding: 1.5rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
