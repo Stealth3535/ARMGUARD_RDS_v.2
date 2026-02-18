@@ -8,9 +8,10 @@ from django.contrib.auth.models import User, Group
 from django.db.models import Q, Count
 from django.conf import settings
 from django.db import transaction, DatabaseError
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
+from django.utils import timezone
 from inventory.models import Item
 from personnel.models import Personnel
 from transactions.models import Transaction
@@ -21,6 +22,7 @@ import qrcode
 from io import BytesIO
 import base64
 import logging
+from pathlib import Path
 
 from .forms import (
     UniversalForm, ItemRegistrationForm, SystemSettingsForm
@@ -701,15 +703,21 @@ def request_device_authorization(request):
             messages.info(request, 'You already have a pending authorization request.')
             return redirect('armguard_admin:dashboard')
         elif existing_request.status == 'approved':
-            messages.success(request, 'This device is already authorized.')
-            return redirect('armguard_admin:dashboard')
+            if existing_request.issued_certificate_pem and not existing_request.issued_certificate_downloaded_at:
+                messages.success(request, 'This device is approved. Download your client certificate to complete enrollment.')
+            else:
+                messages.success(request, 'This device is already authorized.')
+                return redirect('armguard_admin:dashboard')
     
     if request.method == 'POST':
         reason = request.POST.get('reason', '')
         device_name = request.POST.get('device_name', '')
+        csr_pem = request.POST.get('csr_pem', '').strip()
         
         if not reason or not device_name:
             messages.error(request, 'Please provide both device name and reason.')
+        elif csr_pem and 'BEGIN CERTIFICATE REQUEST' not in csr_pem:
+            messages.error(request, 'CSR must be a valid PEM block starting with BEGIN CERTIFICATE REQUEST.')
         else:
             try:
                 # Create authorization request
@@ -720,7 +728,8 @@ def request_device_authorization(request):
                     hostname=device_name,
                     requested_by=request.user,
                     reason=reason,
-                    device_name=device_name
+                    device_name=device_name,
+                    csr_pem=csr_pem,
                 )
             except DatabaseError:
                 logger.exception("Database error while creating device authorization request")
@@ -730,7 +739,10 @@ def request_device_authorization(request):
                 )
                 return redirect('armguard_admin:request_device_authorization')
             
-            messages.success(request, 'Device authorization request submitted successfully. An administrator will review it.')
+            if csr_pem:
+                messages.success(request, 'Device authorization request with CSR submitted successfully. Certificate will be issued automatically upon approval.')
+            else:
+                messages.success(request, 'Device authorization request submitted successfully. You can upload CSR for automated certificate issuance.')
             return redirect('armguard_admin:dashboard')
     
     context = {
@@ -782,10 +794,22 @@ def approve_device_request(request, request_id):
         device_name = request.POST.get('device_name', auth_request.device_name)
         security_level = request.POST.get('security_level', 'STANDARD')
         notes = request.POST.get('notes', '')
-        
-        auth_request.approve(request.user, device_name, security_level, notes)
-        
-        messages.success(request, f'Device "{device_name}" has been authorized successfully.')
+
+        try:
+            auth_request.approve(request.user, device_name, security_level, notes)
+        except ValueError as cert_error:
+            logger.exception("Certificate issuance failed for device request %s", auth_request.id)
+            messages.error(request, f'Could not approve request due to certificate issuance error: {cert_error}')
+            return render(request, 'admin/approve_device_request.html', {'auth_request': auth_request})
+        except DatabaseError:
+            logger.exception("Database error while approving device request %s", auth_request.id)
+            messages.error(request, 'Database error occurred while approving the request.')
+            return render(request, 'admin/approve_device_request.html', {'auth_request': auth_request})
+
+        if auth_request.issued_certificate_pem:
+            messages.success(request, f'Device "{device_name}" approved and certificate issued automatically.')
+        else:
+            messages.success(request, f'Device "{device_name}" has been authorized successfully.')
         return redirect('armguard_admin:manage_device_requests')
     
     context = {
@@ -813,6 +837,41 @@ def reject_device_request(request, request_id):
         'auth_request': auth_request,
     }
     return render(request, 'admin/reject_device_request.html', context)
+
+
+@login_required
+def download_device_certificate(request, request_id):
+    """Allow requester (or superuser) to download issued client certificate once."""
+    from .models import DeviceAuthorizationRequest
+
+    auth_request = get_object_or_404(DeviceAuthorizationRequest, id=request_id, status='approved')
+
+    if not (request.user.is_superuser or auth_request.requested_by_id == request.user.id):
+        messages.error(request, 'You do not have permission to download this certificate.')
+        return redirect('armguard_admin:dashboard')
+
+    if not auth_request.issued_certificate_pem:
+        messages.error(request, 'No issued certificate is available for this request.')
+        return redirect('armguard_admin:request_device_authorization')
+
+    if auth_request.issued_certificate_downloaded_at and not request.user.is_superuser:
+        messages.warning(request, 'Certificate bundle has already been downloaded. Contact administrator for re-issue.')
+        return redirect('armguard_admin:dashboard')
+
+    bundle_parts = [auth_request.issued_certificate_pem.strip()]
+    ca_cert_path = Path(getattr(settings, 'MTLS_CLIENT_CA_CERT_PATH', ''))
+    if ca_cert_path.exists():
+        bundle_parts.append(ca_cert_path.read_text(encoding='utf-8').strip())
+
+    bundle_content = "\n\n".join(part for part in bundle_parts if part) + "\n"
+    response = HttpResponse(bundle_content, content_type='application/x-pem-file')
+    response['Content-Disposition'] = f'attachment; filename="armguard-device-{auth_request.id}.pem"'
+
+    if not auth_request.issued_certificate_downloaded_at:
+        auth_request.issued_certificate_downloaded_at = timezone.now()
+        auth_request.save(update_fields=['issued_certificate_downloaded_at'])
+
+    return response
 
 
 @login_required

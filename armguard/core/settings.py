@@ -678,6 +678,9 @@ MTLS_HEADER_DN = config('MTLS_HEADER_DN', default='HTTP_X_SSL_CLIENT_DN')
 MTLS_HEADER_SERIAL = config('MTLS_HEADER_SERIAL', default='HTTP_X_SSL_CLIENT_SERIAL')
 MTLS_HEADER_FINGERPRINT = config('MTLS_HEADER_FINGERPRINT', default='HTTP_X_SSL_CLIENT_FINGERPRINT')
 MTLS_ALLOW_MISSING_ON_EXEMPT_PATHS = config('MTLS_ALLOW_MISSING_ON_EXEMPT_PATHS', default=True, cast=bool)
+MTLS_CLIENT_CA_CERT_PATH = config('MTLS_CLIENT_CA_CERT_PATH', default='/etc/nginx/ssl/client_ca.crt')
+MTLS_CLIENT_CA_KEY_PATH = config('MTLS_CLIENT_CA_KEY_PATH', default='/etc/nginx/ssl/private/client_ca.key')
+MTLS_CLIENT_CERT_VALIDITY_DAYS = config('MTLS_CLIENT_CERT_VALIDITY_DAYS', default=365, cast=int)
 
 # Rate Limiting Configuration
 RATELIMIT_ENABLE = config('RATELIMIT_ENABLE', default=True, cast=bool)

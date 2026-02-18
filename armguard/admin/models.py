@@ -4,6 +4,10 @@ Admin Models - Audit logging and tracking
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.conf import settings
+import subprocess
+import tempfile
+from pathlib import Path
 
 
 class AuditLog(models.Model):
@@ -128,6 +132,7 @@ class DeviceAuthorizationRequest(models.Model):
     requested_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='device_requests')
     requested_at = models.DateTimeField(auto_now_add=True)
     reason = models.TextField(help_text="Why do you need authorization for this device?")
+    csr_pem = models.TextField(blank=True, help_text="Optional PEM CSR submitted by requesting device")
     
     # Approval Information
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -140,6 +145,10 @@ class DeviceAuthorizationRequest(models.Model):
     security_level = models.CharField(max_length=20, choices=SECURITY_LEVEL_CHOICES, default='STANDARD')
     can_transact = models.BooleanField(default=True)
     max_daily_transactions = models.IntegerField(default=50)
+    issued_certificate_pem = models.TextField(blank=True)
+    issued_certificate_serial = models.CharField(max_length=128, blank=True)
+    issued_certificate_issued_at = models.DateTimeField(null=True, blank=True)
+    issued_certificate_downloaded_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         ordering = ['-requested_at']
@@ -148,6 +157,72 @@ class DeviceAuthorizationRequest(models.Model):
     
     def __str__(self):
         return f"{self.device_fingerprint[:16]}... - {self.status}"
+
+    def _run_openssl(self, command_args):
+        try:
+            return subprocess.run(
+                command_args,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError as command_error:
+            raise ValueError("OpenSSL binary is not installed on the server") from command_error
+        except subprocess.CalledProcessError as command_error:
+            stderr = (command_error.stderr or '').strip()
+            raise ValueError(f"OpenSSL command failed: {stderr}") from command_error
+
+    def _issue_client_certificate_from_csr(self):
+        csr_content = (self.csr_pem or '').strip()
+        if not csr_content:
+            return None, None
+
+        ca_cert_path = Path(getattr(settings, 'MTLS_CLIENT_CA_CERT_PATH', ''))
+        ca_key_path = Path(getattr(settings, 'MTLS_CLIENT_CA_KEY_PATH', ''))
+        validity_days = int(getattr(settings, 'MTLS_CLIENT_CERT_VALIDITY_DAYS', 365))
+
+        if not ca_cert_path.exists() or not ca_key_path.exists():
+            raise ValueError(
+                f"mTLS CA files are not configured correctly. Expected cert at {ca_cert_path} and key at {ca_key_path}."
+            )
+
+        with tempfile.TemporaryDirectory() as work_dir:
+            work_dir_path = Path(work_dir)
+            csr_path = work_dir_path / 'device.csr'
+            cert_path = work_dir_path / 'device.crt'
+            ext_path = work_dir_path / 'client.ext'
+
+            csr_path.write_text(csr_content, encoding='utf-8')
+            ext_path.write_text(
+                "\n".join([
+                    "basicConstraints=CA:FALSE",
+                    "keyUsage = digitalSignature, keyEncipherment",
+                    "extendedKeyUsage = clientAuth",
+                    f"subjectAltName = URI:armguard-device:{self.device_fingerprint}",
+                ]),
+                encoding='utf-8',
+            )
+
+            self._run_openssl(['openssl', 'req', '-in', str(csr_path), '-noout'])
+            self._run_openssl([
+                'openssl', 'x509', '-req',
+                '-in', str(csr_path),
+                '-CA', str(ca_cert_path),
+                '-CAkey', str(ca_key_path),
+                '-CAcreateserial',
+                '-out', str(cert_path),
+                '-days', str(validity_days),
+                '-sha256',
+                '-extfile', str(ext_path),
+            ])
+
+            cert_pem = cert_path.read_text(encoding='utf-8')
+            serial_output = self._run_openssl([
+                'openssl', 'x509', '-in', str(cert_path), '-noout', '-serial'
+            ]).stdout.strip()
+            cert_serial = serial_output.split('=', 1)[1] if '=' in serial_output else serial_output
+
+        return cert_pem, cert_serial
     
     def approve(self, reviewer, device_name, security_level='STANDARD', notes=''):
         """Approve the device authorization request"""
@@ -157,6 +232,14 @@ class DeviceAuthorizationRequest(models.Model):
         self.review_notes = notes
         self.device_name = device_name
         self.security_level = security_level
+
+        cert_pem, cert_serial = self._issue_client_certificate_from_csr()
+        if cert_pem:
+            self.issued_certificate_pem = cert_pem
+            self.issued_certificate_serial = cert_serial or ''
+            self.issued_certificate_issued_at = timezone.now()
+            self.issued_certificate_downloaded_at = None
+
         self.save()
         
         # Add device to authorized_devices.json

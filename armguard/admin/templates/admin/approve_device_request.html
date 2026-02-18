@@ -13,6 +13,7 @@
         <div><strong>Requested by:</strong> {{ auth_request.requested_by.username }}</div>
         <div><strong>Requested at:</strong> {{ auth_request.requested_at|date:"M d, Y H:i" }}</div>
         <div><strong>Reason:</strong> {{ auth_request.reason }}</div>
+        <div><strong>CSR Submitted:</strong> {% if auth_request.csr_pem %}Yes (certificate will be auto-issued){% else %}No{% endif %}</div>
     </div>
 
     <form method="post">

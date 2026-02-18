@@ -216,6 +216,28 @@
                 {% endif %}
                 <br><br>You can submit a new request below.
             </div>
+
+            {% elif existing_request.status == 'approved' %}
+            <div class="alert alert-info">
+                <strong>✅ Device Approved</strong><br>
+                This device has been approved.
+                {% if existing_request.issued_certificate_pem %}
+                    {% if existing_request.issued_certificate_downloaded_at %}
+                    Certificate bundle was already downloaded on {{ existing_request.issued_certificate_downloaded_at|date:"M d, Y H:i" }}.
+                    {% else %}
+                    Download your certificate bundle and install it on this device.
+                    {% endif %}
+                {% else %}
+                No certificate was issued with this request.
+                {% endif %}
+            </div>
+            {% if existing_request.issued_certificate_pem and not existing_request.issued_certificate_downloaded_at %}
+            <a href="{% url 'armguard_admin:download_device_certificate' existing_request.id %}" class="btn-submit" style="text-decoration: none; text-align: center; display: block;">
+                ⬇️ Download Client Certificate Bundle
+            </a>
+            {% else %}
+            <a href="{% url 'armguard_admin:dashboard' %}" class="btn-submit" style="text-decoration: none; text-align: center; display: block;">Return to Dashboard</a>
+            {% endif %}
             {% endif %}
         {% endif %}
         
@@ -261,6 +283,16 @@
                           placeholder="Explain why you need authorization for this device..."
                           required></textarea>
                 <p class="help-text">Provide a detailed explanation for your authorization request</p>
+            </div>
+
+            <div class="form-group">
+                <label for="csr_pem">Client Certificate Signing Request (CSR) <small>(optional)</small></label>
+                <textarea id="csr_pem"
+                          name="csr_pem"
+                          class="form-control"
+                          rows="6"
+                          placeholder="-----BEGIN CERTIFICATE REQUEST-----\n...\n-----END CERTIFICATE REQUEST-----"></textarea>
+                <p class="help-text">If provided, certificate issuance will be automated on admin approval.</p>
             </div>
             
             <button type="submit" class="btn-submit">
