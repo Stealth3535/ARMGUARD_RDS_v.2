@@ -42,6 +42,12 @@ REDIS_TUNE_MODE="${REDIS_TUNE_MODE:-idempotent}"
 CREATE_SUPERUSER="${CREATE_SUPERUSER:-prompt}"
 GUNICORN_BIND_HOST="${GUNICORN_BIND_HOST:-127.0.0.1}"
 GUNICORN_BIND_PORT="${GUNICORN_BIND_PORT:-18000}"
+MTLS_ENFORCE="${MTLS_ENFORCE:-no}"
+if [[ "${MTLS_ENFORCE}" =~ ^([Yy][Ee][Ss]|[Yy]|1|[Tt][Rr][Uu][Ee])$ ]]; then
+    MTLS_ENABLED_VALUE="True"
+else
+    MTLS_ENABLED_VALUE="False"
+fi
 
 # Print banner
 print_banner() {
@@ -521,6 +527,15 @@ SECURITY_HEADERS_ENABLED=True
 REQUEST_LOGGING_ENABLED=True
 SINGLE_SESSION_ENFORCEMENT=True
 
+# mTLS + Application Authorization
+MTLS_ENABLED=${MTLS_ENABLED_VALUE}
+MTLS_REQUIRED_SECURITY_LEVEL=HIGH_SECURITY
+MTLS_TRUST_PROXY_HEADERS=True
+MTLS_HEADER_VERIFY=HTTP_X_SSL_CLIENT_VERIFY
+MTLS_HEADER_DN=HTTP_X_SSL_CLIENT_DN
+MTLS_HEADER_SERIAL=HTTP_X_SSL_CLIENT_SERIAL
+MTLS_HEADER_FINGERPRINT=HTTP_X_SSL_CLIENT_FINGERPRINT
+
 # Admin Restrictions
 ADMIN_RESTRICTION_SYSTEM_ENABLED=True
 
@@ -807,6 +822,10 @@ EOF
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_set_header X-Network-Type "LAN";
+        proxy_set_header X-SSL-Client-Verify \$ssl_client_verify;
+        proxy_set_header X-SSL-Client-DN \$ssl_client_s_dn;
+        proxy_set_header X-SSL-Client-Serial \$ssl_client_serial;
+        proxy_set_header X-SSL-Client-Fingerprint \$ssl_client_fingerprint;
     }
 }
 
@@ -863,6 +882,10 @@ EOF
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_set_header X-Network-Type "WAN";
+        proxy_set_header X-SSL-Client-Verify \$ssl_client_verify;
+        proxy_set_header X-SSL-Client-DN \$ssl_client_s_dn;
+        proxy_set_header X-SSL-Client-Serial \$ssl_client_serial;
+        proxy_set_header X-SSL-Client-Fingerprint \$ssl_client_fingerprint;
     }
     
     location = /robots.txt {
@@ -937,6 +960,10 @@ EOF
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header X-SSL-Client-Verify \$ssl_client_verify;
+        proxy_set_header X-SSL-Client-DN \$ssl_client_s_dn;
+        proxy_set_header X-SSL-Client-Serial \$ssl_client_serial;
+        proxy_set_header X-SSL-Client-Fingerprint \$ssl_client_fingerprint;
         proxy_redirect off;
         
         # Timeouts

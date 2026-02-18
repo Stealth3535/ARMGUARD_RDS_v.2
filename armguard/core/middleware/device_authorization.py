@@ -186,8 +186,53 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                 return 'RESTRICTED'
                 
         return False
+
+    def _security_rank(self, level):
+        rank_map = {
+            'STANDARD': 1,
+            'RESTRICTED': 2,
+            'HIGH_SECURITY': 3,
+        }
+        return rank_map.get((level or 'STANDARD').upper(), 1)
+
+    def _mtls_required_for_security(self, required_security):
+        if not getattr(settings, 'MTLS_ENABLED', False):
+            return False
+
+        min_level = getattr(settings, 'MTLS_REQUIRED_SECURITY_LEVEL', 'HIGH_SECURITY')
+        return self._security_rank(required_security) >= self._security_rank(min_level)
+
+    def _get_mtls_context(self, request):
+        """Read mTLS verification context from trusted reverse-proxy headers."""
+        verify_header = getattr(settings, 'MTLS_HEADER_VERIFY', 'HTTP_X_SSL_CLIENT_VERIFY')
+        dn_header = getattr(settings, 'MTLS_HEADER_DN', 'HTTP_X_SSL_CLIENT_DN')
+        serial_header = getattr(settings, 'MTLS_HEADER_SERIAL', 'HTTP_X_SSL_CLIENT_SERIAL')
+        fingerprint_header = getattr(settings, 'MTLS_HEADER_FINGERPRINT', 'HTTP_X_SSL_CLIENT_FINGERPRINT')
+
+        if not getattr(settings, 'MTLS_TRUST_PROXY_HEADERS', True):
+            return {
+                'verified': False,
+                'verify_status': 'UNTRUSTED_PROXY_HEADERS',
+                'subject_dn': '',
+                'serial': '',
+                'fingerprint': '',
+            }
+
+        verify_status = (request.META.get(verify_header, '') or '').strip().upper()
+        subject_dn = (request.META.get(dn_header, '') or '').strip()
+        serial = (request.META.get(serial_header, '') or '').strip()
+        fingerprint = (request.META.get(fingerprint_header, '') or '').strip()
+        verified = verify_status == 'SUCCESS'
+
+        return {
+            'verified': verified,
+            'verify_status': verify_status or 'NONE',
+            'subject_dn': subject_dn,
+            'serial': serial,
+            'fingerprint': fingerprint,
+        }
     
-    def is_device_authorized(self, device_fingerprint, ip_address, path=None, user=None):
+    def is_device_authorized(self, device_fingerprint, ip_address, path=None, user=None, required_security=None):
         """Check if device is authorized with enhanced security checks"""
         self._last_auth_reason = 'authorized'
 
@@ -214,6 +259,25 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
             self._record_failed_attempt(device_fingerprint, ip_address)
             self._last_auth_reason = 'device_not_registered'
             return False
+
+        # Enforce required security tier for the requested path
+        if required_security is None and path:
+            required_security = self.is_restricted_path(path)
+
+        if required_security:
+            device_security_level = device_config.get('security_level', 'STANDARD')
+            required_rank = self._security_rank(required_security)
+            device_rank = self._security_rank(device_security_level)
+
+            if device_rank < required_rank:
+                logger.warning(
+                    "Device security level insufficient: device=%s required=%s path=%s",
+                    device_security_level,
+                    required_security,
+                    path,
+                )
+                self._last_auth_reason = f'insufficient_security_level_{device_security_level.lower()}_for_{required_security.lower()}'
+                return False
             
         # Check if device is active
         if not device_config.get('active', True):
@@ -388,10 +452,68 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
         # Get device information
         device_fingerprint = self.get_device_fingerprint(request)
         ip_address = self.get_client_ip(request)
+        mtls_context = self._get_mtls_context(request)
+        request.mtls_context = mtls_context
+
+        if self._mtls_required_for_security(path_security) and not mtls_context.get('verified', False):
+            self._last_auth_reason = f"mtls_required_but_not_verified_{mtls_context.get('verify_status', 'NONE').lower()}"
+            user = getattr(request, 'user', None)
+
+            self._persist_access_log(
+                request=request,
+                user=user,
+                device_fingerprint=device_fingerprint,
+                ip_address=ip_address,
+                security_level=path_security,
+                is_authorized=False,
+                reason=self._last_auth_reason,
+                response_status=403,
+            )
+
+            logger.warning(
+                "mTLS verification failed for protected path: status=%s path=%s ip=%s user=%s",
+                mtls_context.get('verify_status', 'NONE'),
+                request.path,
+                ip_address,
+                getattr(user, 'username', 'Anonymous')
+            )
+
+            if request.path.startswith('/api/') or 'api' in request.path:
+                return JsonResponse({
+                    'error': 'mTLS verification required',
+                    'code': 'MTLS_REQUIRED',
+                    'security_level': path_security,
+                    'verify_status': mtls_context.get('verify_status', 'NONE'),
+                    'message': 'Client certificate verification is required for this operation.'
+                }, status=403)
+
+            return HttpResponseForbidden('''
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>mTLS Verification Required</title>
+                    <style>
+                        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 2rem; background: #f3f4f6; }
+                        .container { max-width: 700px; margin: 0 auto; background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border-left: 6px solid #ef4444; }
+                        h1 { color: #991b1b; font-size: 2rem; margin: 0 0 1rem 0; }
+                        p { color: #374151; line-height: 1.6; }
+                        code { background: #fee2e2; padding: 0.25rem 0.5rem; border-radius: 4px; color: #7f1d1d; font-family: monospace; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>CLIENT CERTIFICATE REQUIRED</h1>
+                        <p><strong>This operation requires verified mTLS client certificate authentication.</strong></p>
+                        <p>Certificate verification status: <code>'''+ mtls_context.get('verify_status', 'NONE') +'''</code></p>
+                        <p>Contact your administrator to enroll this device certificate and try again.</p>
+                    </div>
+                </body>
+                </html>
+            ''')
         
         # Check authorization with enhanced security
         user = getattr(request, 'user', None)
-        if not self.is_device_authorized(device_fingerprint, ip_address, request.path, user):
+        if not self.is_device_authorized(device_fingerprint, ip_address, request.path, user, path_security):
             # Log detailed unauthorized attempt
             logger.warning(
                 f"Unauthorized device access attempt: "
@@ -636,7 +758,7 @@ def is_device_authorized_for_path(request, path=None):
     ip_address = middleware.get_client_ip(request)
     user = getattr(request, 'user', None)
     
-    return middleware.is_device_authorized(device_fingerprint, ip_address, check_path, user)
+    return middleware.is_device_authorized(device_fingerprint, ip_address, check_path, user, path_security)
 
 def get_device_info(request):
     """Get comprehensive device information for current request"""
@@ -658,6 +780,12 @@ def get_device_info(request):
         'fingerprint': device_fingerprint,
         'ip_address': ip_address,
         'config': device_config,
-        'is_authorized': middleware.is_device_authorized(device_fingerprint, ip_address, request.path, getattr(request, 'user', None)),
+        'is_authorized': middleware.is_device_authorized(
+            device_fingerprint,
+            ip_address,
+            request.path,
+            getattr(request, 'user', None),
+            middleware.is_restricted_path(request.path)
+        ),
         'is_locked_out': middleware._is_device_locked_out(device_fingerprint)
     }

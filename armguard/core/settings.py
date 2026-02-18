@@ -669,6 +669,16 @@ CSRF_COOKIE_HTTPONLY = False  # Must be False for JavaScript access to CSRF toke
 CSRF_COOKIE_SAMESITE = config('CSRF_COOKIE_SAMESITE', default='Lax')
 CSRF_USE_SESSIONS = False  # Store CSRF token in cookies, not sessions
 
+# mTLS + application authorization integration
+MTLS_ENABLED = config('MTLS_ENABLED', default=False, cast=bool)
+MTLS_REQUIRED_SECURITY_LEVEL = config('MTLS_REQUIRED_SECURITY_LEVEL', default='HIGH_SECURITY').upper()
+MTLS_TRUST_PROXY_HEADERS = config('MTLS_TRUST_PROXY_HEADERS', default=True, cast=bool)
+MTLS_HEADER_VERIFY = config('MTLS_HEADER_VERIFY', default='HTTP_X_SSL_CLIENT_VERIFY')
+MTLS_HEADER_DN = config('MTLS_HEADER_DN', default='HTTP_X_SSL_CLIENT_DN')
+MTLS_HEADER_SERIAL = config('MTLS_HEADER_SERIAL', default='HTTP_X_SSL_CLIENT_SERIAL')
+MTLS_HEADER_FINGERPRINT = config('MTLS_HEADER_FINGERPRINT', default='HTTP_X_SSL_CLIENT_FINGERPRINT')
+MTLS_ALLOW_MISSING_ON_EXEMPT_PATHS = config('MTLS_ALLOW_MISSING_ON_EXEMPT_PATHS', default=True, cast=bool)
+
 # Rate Limiting Configuration
 RATELIMIT_ENABLE = config('RATELIMIT_ENABLE', default=True, cast=bool)
 RATELIMIT_REQUESTS_PER_MINUTE = config('RATELIMIT_REQUESTS_PER_MINUTE', default=60, cast=int)

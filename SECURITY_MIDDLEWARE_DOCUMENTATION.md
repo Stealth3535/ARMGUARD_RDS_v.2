@@ -18,6 +18,46 @@ ArmGuard implements a **military-grade, multi-layer security middleware architec
 
 ---
 
+## 🔐 **mTLS + App Authorization (Implemented)**
+
+ArmGuard now supports a combined architecture:
+
+- **mTLS identity proof** via reverse-proxy certificate verification headers.
+- **Application authorization** via existing role checks, device approval workflow, security levels, and audit logging.
+
+### **Django Settings (core/settings.py)**
+
+- `MTLS_ENABLED` (default: `False`)
+- `MTLS_REQUIRED_SECURITY_LEVEL` (default: `HIGH_SECURITY`)
+- `MTLS_TRUST_PROXY_HEADERS` (default: `True`)
+- `MTLS_HEADER_VERIFY` (default: `HTTP_X_SSL_CLIENT_VERIFY`)
+- `MTLS_HEADER_DN` (default: `HTTP_X_SSL_CLIENT_DN`)
+- `MTLS_HEADER_SERIAL` (default: `HTTP_X_SSL_CLIENT_SERIAL`)
+- `MTLS_HEADER_FINGERPRINT` (default: `HTTP_X_SSL_CLIENT_FINGERPRINT`)
+
+### **Enforcement Behavior**
+
+- If `MTLS_ENABLED=True`, requests at or above `MTLS_REQUIRED_SECURITY_LEVEL` require certificate verification status `SUCCESS`.
+- Failing requests are denied with HTTP 403 and recorded in `DeviceAccessLog` with reason `mtls_required_but_not_verified_*`.
+- Existing device authorization checks still apply (security tier, lockout, IP match, active window, user bindings).
+
+### **Nginx Header Forwarding**
+
+Proxy config now forwards:
+
+- `X-SSL-Client-Verify` (`$ssl_client_verify`)
+- `X-SSL-Client-DN` (`$ssl_client_s_dn`)
+- `X-SSL-Client-Serial` (`$ssl_client_serial`)
+- `X-SSL-Client-Fingerprint` (`$ssl_client_fingerprint`)
+
+### **Deployment Toggle**
+
+`deployment_A/methods/production/deploy-armguard.sh` now supports:
+
+- `MTLS_ENFORCE=yes` to generate `.env` with `MTLS_ENABLED=True`
+
+---
+
 ## 🏗️ **SECURITY ARCHITECTURE OVERVIEW**
 
 ### **Multi-Layer Defense Strategy**
