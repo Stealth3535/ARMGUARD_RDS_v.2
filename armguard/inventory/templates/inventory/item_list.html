@@ -232,6 +232,23 @@
         flex-wrap: wrap;
         margin-top: 1rem;
     }
+
+    .quick-filter-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.75rem;
+        align-items: center;
+    }
+
+    .quick-filter-title {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #6b7280;
+        margin-right: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
     
     .filter-chip {
         padding: 0.5rem 1rem;
@@ -612,11 +629,31 @@
         
         <!-- Quick Filters -->
         <div class="quick-filters">
-            <span class="filter-chip" data-filter="rifles"><i class="fas fa-crosshairs"></i> Rifles</span>
-            <span class="filter-chip" data-filter="pistols"><i class="fas fa-bullseye"></i> Pistols</span>
-            <span class="filter-chip" data-filter="available">✅ Available</span>
-            <span class="filter-chip" data-filter="issued">📤 Issued</span>
-            <span class="filter-chip" data-filter="maintenance">🔧 Maintenance</span>
+            <div class="quick-filter-group">
+                <span class="quick-filter-title">Type</span>
+                <span class="filter-chip active" data-group="type" data-value="all">All Types</span>
+                <span class="filter-chip" data-group="type" data-value="M14">M14</span>
+                <span class="filter-chip" data-group="type" data-value="M16">M16</span>
+                <span class="filter-chip" data-group="type" data-value="M4">M4 Carbine</span>
+                <span class="filter-chip" data-group="type" data-value="GLOCK">Glock Pistol</span>
+                <span class="filter-chip" data-group="type" data-value="45">.45 Pistol</span>
+            </div>
+            <div class="quick-filter-group">
+                <span class="quick-filter-title">Status</span>
+                <span class="filter-chip active" data-group="status" data-value="all">All Status</span>
+                <span class="filter-chip" data-group="status" data-value="Available">Available</span>
+                <span class="filter-chip" data-group="status" data-value="Issued">Issued</span>
+                <span class="filter-chip" data-group="status" data-value="Maintenance">Maintenance</span>
+                <span class="filter-chip" data-group="status" data-value="Retired">Retired</span>
+            </div>
+            <div class="quick-filter-group">
+                <span class="quick-filter-title">Condition</span>
+                <span class="filter-chip active" data-group="condition" data-value="all">All Conditions</span>
+                <span class="filter-chip" data-group="condition" data-value="Good">Good</span>
+                <span class="filter-chip" data-group="condition" data-value="Fair">Fair</span>
+                <span class="filter-chip" data-group="condition" data-value="Poor">Poor</span>
+                <span class="filter-chip" data-group="condition" data-value="Damaged">Damaged</span>
+            </div>
         </div>
     </div>
 
@@ -738,70 +775,87 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Search functionality
     const searchInput = document.getElementById('item-search');
+    const typeFilter = document.getElementById('type-filter');
+    const statusFilter = document.getElementById('status-filter');
+    const conditionFilter = document.getElementById('condition-filter');
+    const filterChips = document.querySelectorAll('.filter-chip');
+
+    function syncPillsFromSelects() {
+        filterChips.forEach(chip => {
+            chip.classList.remove('active');
+            const group = chip.dataset.group;
+            const value = chip.dataset.value;
+
+            if (group === 'type' && typeFilter && typeFilter.value === value) {
+                chip.classList.add('active');
+            }
+            if (group === 'status' && statusFilter && statusFilter.value === value) {
+                chip.classList.add('active');
+            }
+            if (group === 'condition' && conditionFilter && conditionFilter.value === value) {
+                chip.classList.add('active');
+            }
+        });
+    }
+
+    function applyAllFilters() {
+        const rows = document.querySelectorAll('#inventory-table tbody tr');
+        const searchTerm = (searchInput?.value || '').toLowerCase().trim();
+        const selectedType = typeFilter?.value || 'all';
+        const selectedStatus = statusFilter?.value || 'all';
+        const selectedCondition = conditionFilter?.value || 'all';
+
+        rows.forEach(row => {
+            const itemType = row.getAttribute('data-type');
+            const itemStatus = row.getAttribute('data-status');
+            const itemCondition = row.getAttribute('data-condition');
+            const searchData = (row.getAttribute('data-search') || '').toLowerCase();
+
+            // Keep empty-state row hidden whenever filtering logic runs
+            if (!itemStatus) {
+                row.style.display = 'none';
+                return;
+            }
+
+            const matchesSearch = !searchTerm || searchData.includes(searchTerm);
+            const matchesType = selectedType === 'all' || itemType === selectedType;
+            const matchesStatus = selectedStatus === 'all' || itemStatus === selectedStatus;
+            const matchesCondition = selectedCondition === 'all' || itemCondition === selectedCondition;
+
+            row.style.display = (matchesSearch && matchesType && matchesStatus && matchesCondition) ? '' : 'none';
+        });
+
+        updateCount('inventory-table', 'item-count');
+        updateStatistics();
+    }
     
     if (searchInput) {
         searchInput.addEventListener('input', debounce(function() {
-            filterTable('inventory-table', this.value);
+            applyAllFilters();
         }, 300));
     }
-    
+
     // Type filter
-    const typeFilter = document.getElementById('type-filter');
     if (typeFilter) {
         typeFilter.addEventListener('change', function() {
-            const type = this.value;
-            const rows = document.querySelectorAll('#inventory-table tbody tr');
-            
-            rows.forEach(row => {
-                if (!type || type === 'all') {
-                    row.style.display = '';
-                } else {
-                    const typeData = row.getAttribute('data-type');
-                    row.style.display = typeData === type ? '' : 'none';
-                }
-            });
-            updateCount('inventory-table', 'item-count');
-            updateStatistics();
+            syncPillsFromSelects();
+            applyAllFilters();
         });
     }
-    
+
     // Status filter
-    const statusFilter = document.getElementById('status-filter');
     if (statusFilter) {
         statusFilter.addEventListener('change', function() {
-            const status = this.value;
-            const rows = document.querySelectorAll('#inventory-table tbody tr');
-            
-            rows.forEach(row => {
-                if (!status || status === 'all') {
-                    row.style.display = '';
-                } else {
-                    const statusData = row.getAttribute('data-status');
-                    row.style.display = statusData === status ? '' : 'none';
-                }
-            });
-            updateCount('inventory-table', 'item-count');
-            updateStatistics();
+            syncPillsFromSelects();
+            applyAllFilters();
         });
     }
-    
+
     // Condition filter
-    const conditionFilter = document.getElementById('condition-filter');
     if (conditionFilter) {
         conditionFilter.addEventListener('change', function() {
-            const condition = this.value;
-            const rows = document.querySelectorAll('#inventory-table tbody tr');
-            
-            rows.forEach(row => {
-                if (!condition || condition === 'all') {
-                    row.style.display = '';
-                } else {
-                    const conditionData = row.getAttribute('data-condition');
-                    row.style.display = conditionData === condition ? '' : 'none';
-                }
-            });
-            updateCount('inventory-table', 'item-count');
-            updateStatistics();
+            syncPillsFromSelects();
+            applyAllFilters();
         });
     }
     
@@ -813,46 +867,37 @@ document.addEventListener('DOMContentLoaded', function() {
             if (typeFilter) typeFilter.value = 'all';
             if (statusFilter) statusFilter.value = 'all';
             if (conditionFilter) conditionFilter.value = 'all';
-            
-            const rows = document.querySelectorAll('#inventory-table tbody tr');
-            rows.forEach(row => row.style.display = '');
-            
-            updateCount('inventory-table', 'item-count');
-            updateStatistics();
+
+            syncPillsFromSelects();
+
+            applyAllFilters();
         });
     }
-    
+
     // Quick filter chips
-    const filterChips = document.querySelectorAll('.filter-chip');
     filterChips.forEach(chip => {
         chip.addEventListener('click', function() {
-            // Toggle active class
-            const isActive = this.classList.contains('active');
-            filterChips.forEach(c => c.classList.remove('active'));
-            
-            if (!isActive) {
-                this.classList.add('active');
-                const filterValue = this.dataset.filter;
-                
-                if (filterValue === 'rifles') {
-                    applyQuickFilter('data-type', ['M14', 'M16', 'M4']);
-                } else if (filterValue === 'pistols') {
-                    applyQuickFilter('data-type', ['GLOCK', '45']);
-                } else {
-                    applyQuickFilter('data-status', [filterValue]);
-                }
-            } else {
-                const rows = document.querySelectorAll('#inventory-table tbody tr');
-                rows.forEach(row => row.style.display = '');
+            const group = this.dataset.group;
+            const value = this.dataset.value;
+
+            if (group === 'type' && typeFilter) {
+                typeFilter.value = value;
             }
-            updateCount('inventory-table', 'item-count');
-            updateStatistics();
+            if (group === 'status' && statusFilter) {
+                statusFilter.value = value;
+            }
+            if (group === 'condition' && conditionFilter) {
+                conditionFilter.value = value;
+            }
+
+            syncPillsFromSelects();
+            applyAllFilters();
         });
     });
     
     // Initial statistics update
-    updateStatistics();
-    updateCount('inventory-table', 'item-count');
+    syncPillsFromSelects();
+    applyAllFilters();
 });
 
 // Debounce function for search input
@@ -862,38 +907,6 @@ function debounce(func, delay) {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => func.apply(this, args), delay);
     };
-}
-
-// Filter table based on search input
-function filterTable(tableId, searchTerm) {
-    const rows = document.querySelectorAll(`#${tableId} tbody tr`);
-    const term = searchTerm.toLowerCase();
-    
-    rows.forEach(row => {
-        const searchData = row.getAttribute('data-search');
-        if (searchData && searchData.includes(term)) {
-            row.style.display = '';
-        } else if (term === '') {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-    updateCount(tableId, 'item-count');
-}
-
-// Apply quick filter
-function applyQuickFilter(attribute, values) {
-    const rows = document.querySelectorAll('#inventory-table tbody tr');
-    
-    rows.forEach(row => {
-        const attrValue = row.getAttribute(attribute);
-        if (values.includes(attrValue)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
 }
 
 // Update visible count
