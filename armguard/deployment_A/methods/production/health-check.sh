@@ -229,6 +229,20 @@ if [ -d "$PROJECT_DIR/staticfiles" ]; then
     STATIC_COUNT=$(find "$PROJECT_DIR/staticfiles" -type f 2>/dev/null | wc -l)
     if [ "$STATIC_COUNT" -gt 0 ]; then
         check_pass "Static files collected ($STATIC_COUNT files)"
+        if netstat -tuln | grep -q ":443 "; then
+            STATIC_STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "https://${CONNECTIVITY_HOST}/static/admin/css/login.css" 2>/dev/null || true)
+        else
+            STATIC_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "http://${CONNECTIVITY_HOST}/static/admin/css/login.css" 2>/dev/null || true)
+        fi
+        STATIC_STATUS=${STATIC_STATUS:-000}
+
+        if [ "$STATIC_STATUS" = "200" ]; then
+            check_pass "Static endpoint reachable (/static/admin/css/login.css)"
+        elif [ "$STATIC_STATUS" = "000" ]; then
+            check_fail "Static endpoint not reachable"
+        else
+            check_warn "Static endpoint returned status: $STATIC_STATUS"
+        fi
     else
         check_warn "Static files directory empty"
     fi

@@ -75,6 +75,27 @@ check_root() {
     fi
 }
 
+ensure_nginx_static_access() {
+    local static_dir="${PROJECT_DIR}/staticfiles"
+    local media_dir="${PROJECT_DIR}/media"
+    local home_dir
+    home_dir="$(dirname "$PROJECT_DIR")"
+
+    if ! id www-data >/dev/null 2>&1; then
+        return
+    fi
+
+    # Ensure nginx can traverse to and read collected static/media assets.
+    if command -v setfacl >/dev/null 2>&1; then
+        setfacl -m u:www-data:x "$home_dir" "$PROJECT_DIR" 2>/dev/null || true
+        setfacl -R -m u:www-data:rX "$static_dir" "$media_dir" 2>/dev/null || true
+        setfacl -dR -m u:www-data:rX "$static_dir" "$media_dir" 2>/dev/null || true
+    else
+        chmod o+x "$home_dir" "$PROJECT_DIR" 2>/dev/null || true
+        chmod -R o+rX "$static_dir" "$media_dir" 2>/dev/null || true
+    fi
+}
+
 # Prompt for configuration
 get_configuration() {
     echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}"
@@ -563,6 +584,7 @@ setup_database() {
     
     # Ensure the entire project directory has correct ownership
     chown -R ${RUN_USER}:${RUN_GROUP} "${PROJECT_DIR}"
+    ensure_nginx_static_access
     echo -e "${GREEN}✓ Directories created and permissions set${NC}"
     
     if [[ "$USE_POSTGRESQL" =~ ^[Yy] ]]; then
@@ -693,6 +715,7 @@ EOF
     
     echo -e "${YELLOW}Setting permissions...${NC}"
     chown -R ${RUN_USER}:${RUN_GROUP} "$PROJECT_DIR"
+    ensure_nginx_static_access
     
     echo -e "${YELLOW}Starting Gunicorn service...${NC}"
     systemctl daemon-reload

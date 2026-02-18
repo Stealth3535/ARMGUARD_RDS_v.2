@@ -69,8 +69,29 @@ fi
 ensure_shared_group() {
     groupadd -f "$RUN_GROUP"
     usermod -a -G "$RUN_GROUP" "$RUN_USER" 2>/dev/null || true
+    usermod -a -G "$RUN_GROUP" "www-data" 2>/dev/null || true
     if [ -n "$SUDO_USER" ]; then
         usermod -a -G "$RUN_GROUP" "$SUDO_USER" 2>/dev/null || true
+    fi
+}
+
+ensure_nginx_static_access() {
+    local static_dir="${PROJECT_DIR}/staticfiles"
+    local media_dir="${PROJECT_DIR}/media"
+    local parent_dir
+    parent_dir="$(dirname "$PROJECT_DIR")"
+
+    if ! id www-data >/dev/null 2>&1; then
+        return
+    fi
+
+    if command -v setfacl >/dev/null 2>&1; then
+        setfacl -m u:www-data:x "$parent_dir" "$PROJECT_DIR" 2>/dev/null || true
+        setfacl -R -m u:www-data:rX "$static_dir" "$media_dir" 2>/dev/null || true
+        setfacl -dR -m u:www-data:rX "$static_dir" "$media_dir" 2>/dev/null || true
+    else
+        chmod o+x "$parent_dir" "$PROJECT_DIR" 2>/dev/null || true
+        chmod -R o+rX "$static_dir" "$media_dir" 2>/dev/null || true
     fi
 }
 
@@ -240,6 +261,7 @@ echo -e "${YELLOW}Setting file permissions...${NC}"
 chown -R $RUN_USER:$RUN_GROUP "$PROJECT_DIR"
 chmod -R g+rwX "$PROJECT_DIR"
 find "$PROJECT_DIR" -type d -exec chmod g+s {} \;
+ensure_nginx_static_access
 check_success "Permissions set"
 
 # Step 9: Restart service
