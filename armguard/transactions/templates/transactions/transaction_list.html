@@ -499,6 +499,23 @@ const scannerCapture = {
     lastKeyTime: 0,
     timeoutMs: 120
 };
+let defconAutoSubmitting = false;
+let personnelValidated = false;
+let itemValidated = false;
+
+function tryAutoSubmitDefcon() {
+    if (modeSelect.value !== 'defcon') return;
+    if (defconAutoSubmitting) return;
+
+    if (!personnelValidated || !itemValidated) return;
+
+    defconAutoSubmitting = true;
+    setTimeout(() => {
+        submitTransaction().finally(() => {
+            defconAutoSubmitting = false;
+        });
+    }, 180);
+}
 
 function resetScannerBuffer() {
     scannerCapture.buffer = '';
@@ -543,6 +560,7 @@ function fillScannedField(parsedScan) {
         personnelInput.value = parsedScan.value;
         personnelInput.dispatchEvent(new Event('blur'));
         showNotification(`Scanned personnel ID: ${parsedScan.value}`, 'info');
+        tryAutoSubmitDefcon();
         return;
     }
 
@@ -550,6 +568,7 @@ function fillScannedField(parsedScan) {
         itemInput.value = parsedScan.value;
         itemInput.dispatchEvent(new Event('blur'));
         showNotification(`Scanned item ID: ${parsedScan.value}`, 'info');
+        tryAutoSubmitDefcon();
     }
 }
 
@@ -633,8 +652,6 @@ modeSelect.addEventListener('change', function() {
 setDefconActionState();
 
 document.addEventListener('keydown', function(e) {
-    if (modeSelect.value !== 'defcon') return;
-
     if (e.ctrlKey || e.altKey || e.metaKey) return;
 
     if (e.key === 'Enter' || e.key === 'Tab') {
@@ -644,7 +661,9 @@ document.addEventListener('keydown', function(e) {
             resetScannerBuffer();
             processScannerInput(payload);
         } else {
+            e.preventDefault();
             resetScannerBuffer();
+            tryAutoSubmitDefcon();
         }
         return;
     }
@@ -675,6 +694,7 @@ const personnelInfo = document.getElementById('personnelInfo');
 personnelInput.addEventListener('blur', async function() {
     const personnelId = this.value.trim();
     if (!personnelId) {
+        personnelValidated = false;
         personnelInfo.style.display = 'none';
         return;
     }
@@ -683,18 +703,22 @@ personnelInput.addEventListener('blur', async function() {
         const response = await fetch(`/api/personnel/${personnelId}/`);
         if (response.ok) {
             const data = await response.json();
+            personnelValidated = true;
             personnelInfo.className = 'info-text success';
             personnelInfo.textContent = `✓ ${data.firstname} ${data.middle_initial ? data.middle_initial + '.' : ''} ${data.surname} - ${data.rank}`;
             personnelInfo.style.display = 'block';
             
             // Show automatic notification for successful personnel scan
             showNotification(`Personnel scanned: ${data.firstname} ${data.surname} - ${data.rank}`, 'success');
+            tryAutoSubmitDefcon();
         } else {
+            personnelValidated = false;
             personnelInfo.className = 'info-text error';
             personnelInfo.textContent = '✗ Personnel not found';
             personnelInfo.style.display = 'block';
         }
     } catch (error) {
+        personnelValidated = false;
         personnelInfo.className = 'info-text error';
         personnelInfo.textContent = '✗ Error validating personnel';
         personnelInfo.style.display = 'block';
@@ -709,6 +733,7 @@ itemInput.addEventListener('blur', async function() {
     const itemId = this.value.trim();
     console.log('Item validation triggered for:', itemId); // Debug log
     if (!itemId) {
+        itemValidated = false;
         itemInfo.style.display = 'none';
         return;
     }
@@ -724,6 +749,7 @@ itemInput.addEventListener('blur', async function() {
             console.log('API Response data:', data); // Debug log
             const action = actionSelect.value;
             const mode = modeSelect.value;
+            itemValidated = true;
             
             // Always show item info first
             itemInfo.className = 'info-text success';
@@ -734,6 +760,7 @@ itemInput.addEventListener('blur', async function() {
             if (mode === 'defcon') {
                 if (data.status !== 'Available') {
                     actionWarning = ` ⚠ Defcon mode allows withdrawal only. Item must be Available.`;
+                    itemValidated = false;
                 }
             } else if (action === 'withdraw' && data.status !== 'Available') {
                 actionWarning = ` ⚠ Item not available for withdrawal`;
@@ -763,16 +790,27 @@ itemInput.addEventListener('blur', async function() {
             }
             
             itemInfo.style.display = 'block';
+            tryAutoSubmitDefcon();
         } else {
+            itemValidated = false;
             itemInfo.className = 'info-text error';
             itemInfo.textContent = '✗ Item not found';
             itemInfo.style.display = 'block';
         }
     } catch (error) {
+        itemValidated = false;
         itemInfo.className = 'info-text error';
         itemInfo.textContent = '✗ Error validating item';
         itemInfo.style.display = 'block';
     }
+});
+
+personnelInput.addEventListener('input', function() {
+    personnelValidated = false;
+});
+
+itemInput.addEventListener('input', function() {
+    itemValidated = false;
 });
 
 // Prevent any automatic form submission
