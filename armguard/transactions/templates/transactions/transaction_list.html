@@ -310,10 +310,7 @@
     
     <!-- Page Header -->
     <div class="page-header">
-        <div>
-            <h1 class="page-title">Transactions</h1>
-            <p class="page-subtitle"><span id="totalTransactionsCount">{{ recent_transactions.count }}</span> Total Transactions</p>
-        </div>
+        <span id="totalTransactionsCount" style="display:none;">{{ transaction_mode_counts.total_transactions }}</span>
         <div class="tx-dashboard-grid">
             <div class="tx-stat-card available">
                 <div class="tx-stat-title">Available Items</div>
@@ -354,17 +351,15 @@
                 </div>
             </div>
 
-            <div class="tx-stat-card defcon">
-                <div class="tx-stat-title">Defcon Totals</div>
+            <div class="tx-stat-card defcon" id="modeTotalsCard">
+                <div class="tx-stat-title">Mode Totals</div>
                 <div class="tx-mode-breakdown">
+                    <div><strong>DEFCON</strong></div>
+                    <div></div>
                     <div>Released: <strong id="defconReleasedCount">{{ transaction_mode_counts.defcon_released }}</strong></div>
                     <div>Returned: <strong id="defconReturnedCount">{{ transaction_mode_counts.defcon_returned }}</strong></div>
-                </div>
-            </div>
-
-            <div class="tx-stat-card normal">
-                <div class="tx-stat-title">Normal Totals</div>
-                <div class="tx-mode-breakdown">
+                    <div style="margin-top: 0.35rem;"><strong>NORMAL</strong></div>
+                    <div></div>
                     <div>Released: <strong id="normalReleasedCount">{{ transaction_mode_counts.normal_released }}</strong></div>
                     <div>Returned: <strong id="normalReturnedCount">{{ transaction_mode_counts.normal_returned }}</strong></div>
                 </div>
