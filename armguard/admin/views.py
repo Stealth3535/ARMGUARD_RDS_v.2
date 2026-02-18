@@ -684,9 +684,17 @@ def request_device_authorization(request):
     user_agent = request.META.get('HTTP_USER_AGENT', '')
     
     # Check if request already exists
-    existing_request = DeviceAuthorizationRequest.objects.filter(
-        device_fingerprint=device_fingerprint
-    ).first()
+    try:
+        existing_request = DeviceAuthorizationRequest.objects.filter(
+            device_fingerprint=device_fingerprint
+        ).first()
+    except DatabaseError:
+        logger.exception("Database error while loading device authorization requests")
+        messages.error(
+            request,
+            'Device authorization database is not ready yet. Please contact your administrator to run migrations.'
+        )
+        existing_request = None
     
     if existing_request:
         if existing_request.status == 'pending':
@@ -703,16 +711,24 @@ def request_device_authorization(request):
         if not reason or not device_name:
             messages.error(request, 'Please provide both device name and reason.')
         else:
-            # Create authorization request
-            auth_request = DeviceAuthorizationRequest.objects.create(
-                device_fingerprint=device_fingerprint,
-                ip_address=ip_address,
-                user_agent=user_agent,
-                hostname=device_name,
-                requested_by=request.user,
-                reason=reason,
-                device_name=device_name
-            )
+            try:
+                # Create authorization request
+                DeviceAuthorizationRequest.objects.create(
+                    device_fingerprint=device_fingerprint,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                    hostname=device_name,
+                    requested_by=request.user,
+                    reason=reason,
+                    device_name=device_name
+                )
+            except DatabaseError:
+                logger.exception("Database error while creating device authorization request")
+                messages.error(
+                    request,
+                    'Could not submit request because device authorization database is not ready. Please contact administrator.'
+                )
+                return redirect('armguard_admin:request_device_authorization')
             
             messages.success(request, 'Device authorization request submitted successfully. An administrator will review it.')
             return redirect('armguard_admin:dashboard')
