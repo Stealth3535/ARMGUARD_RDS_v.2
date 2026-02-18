@@ -672,7 +672,6 @@ def system_settings(request):
     return render(request, 'admin/system_settings.html', context)
 
 
-@login_required
 def request_device_authorization(request):
     """
     Request device authorization for current device
@@ -685,6 +684,9 @@ def request_device_authorization(request):
     ip_address = middleware.get_client_ip(request)
     user_agent = request.META.get('HTTP_USER_AGENT', '')
     
+    if request.method == 'POST' and not request.user.is_authenticated:
+        return redirect(f"/login/?next=/admin/device/request-authorization/")
+
     # Check if request already exists
     try:
         existing_request = DeviceAuthorizationRequest.objects.filter(
@@ -711,13 +713,15 @@ def request_device_authorization(request):
 
         if existing_request.status == 'pending':
             messages.info(request, 'You already have a pending authorization request.')
-            return redirect('armguard_admin:dashboard')
+            if request.user.is_authenticated:
+                return redirect('armguard_admin:dashboard')
         elif existing_request.status == 'approved':
             if existing_request.issued_certificate_pem and not existing_request.issued_certificate_downloaded_at:
                 messages.success(request, 'This device is approved. Download your client certificate to complete enrollment.')
             else:
                 messages.success(request, 'This device is already authorized.')
-                return redirect('armguard_admin:dashboard')
+                if request.user.is_authenticated:
+                    return redirect('armguard_admin:dashboard')
     
     if request.method == 'POST':
         reason = request.POST.get('reason', '')
