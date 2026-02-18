@@ -493,6 +493,104 @@ const roundsRow = document.getElementById('roundsRow');
 const actionSelect = document.getElementById('actionSelect');
 const scanButtonsRow = document.querySelector('.scan-buttons');
 
+const scannerCapture = {
+    buffer: '',
+    timer: null,
+    lastKeyTime: 0,
+    timeoutMs: 120
+};
+
+function resetScannerBuffer() {
+    scannerCapture.buffer = '';
+    scannerCapture.lastKeyTime = 0;
+    if (scannerCapture.timer) {
+        clearTimeout(scannerCapture.timer);
+        scannerCapture.timer = null;
+    }
+}
+
+function parseScannedPayload(rawPayload) {
+    const raw = (rawPayload || '').trim();
+    if (!raw) return null;
+
+    const upperRaw = raw.toUpperCase();
+
+    if (upperRaw.startsWith('PERSONNEL:')) {
+        const parts = raw.split(':');
+        return { type: 'personnel', value: (parts[1] || '').trim() };
+    }
+
+    if (upperRaw.startsWith('ITEM:')) {
+        const parts = raw.split(':');
+        return { type: 'item', value: (parts[1] || '').trim() };
+    }
+
+    if (upperRaw.startsWith('PE-') || upperRaw.startsWith('PO-')) {
+        return { type: 'personnel', value: raw };
+    }
+
+    if (upperRaw.startsWith('ITM-') || upperRaw.startsWith('I')) {
+        return { type: 'item', value: raw };
+    }
+
+    return { type: 'unknown', value: raw };
+}
+
+function fillScannedField(parsedScan) {
+    if (!parsedScan || !parsedScan.value) return;
+
+    if (parsedScan.type === 'personnel') {
+        personnelInput.value = parsedScan.value;
+        personnelInput.dispatchEvent(new Event('blur'));
+        showNotification(`Scanned personnel ID: ${parsedScan.value}`, 'info');
+        return;
+    }
+
+    if (parsedScan.type === 'item') {
+        itemInput.value = parsedScan.value;
+        itemInput.dispatchEvent(new Event('blur'));
+        showNotification(`Scanned item ID: ${parsedScan.value}`, 'info');
+    }
+}
+
+async function resolveAndFillUnknownScan(rawValue) {
+    const encoded = encodeURIComponent(rawValue);
+
+    try {
+        const personnelResponse = await fetch(`/api/personnel/${encoded}/`);
+        if (personnelResponse.ok) {
+            fillScannedField({ type: 'personnel', value: rawValue });
+            return;
+        }
+    } catch (error) {
+        console.warn('Personnel lookup failed for unknown scan:', error);
+    }
+
+    try {
+        const itemResponse = await fetch(`/api/items/${encoded}/`);
+        if (itemResponse.ok) {
+            fillScannedField({ type: 'item', value: rawValue });
+            return;
+        }
+    } catch (error) {
+        console.warn('Item lookup failed for unknown scan:', error);
+    }
+
+    showNotification(`Unrecognized scan payload: ${rawValue}`, 'error');
+}
+
+async function processScannerInput(rawPayload) {
+    const parsed = parseScannedPayload(rawPayload);
+    if (!parsed || !parsed.value) return;
+
+    if (parsed.type === 'unknown') {
+        await resolveAndFillUnknownScan(parsed.value);
+        return;
+    }
+
+    fillScannedField(parsed);
+}
+
 function setDefconActionState() {
     const isDefconMode = modeSelect.value === 'defcon';
     const returnOption = actionSelect.querySelector('option[value="return"]');
@@ -533,6 +631,42 @@ modeSelect.addEventListener('change', function() {
 });
 
 setDefconActionState();
+
+document.addEventListener('keydown', function(e) {
+    if (modeSelect.value !== 'defcon') return;
+
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+    if (e.key === 'Enter' || e.key === 'Tab') {
+        if (scannerCapture.buffer.length >= 4) {
+            e.preventDefault();
+            const payload = scannerCapture.buffer;
+            resetScannerBuffer();
+            processScannerInput(payload);
+        } else {
+            resetScannerBuffer();
+        }
+        return;
+    }
+
+    if (e.key.length !== 1) return;
+
+    const now = Date.now();
+    if (scannerCapture.lastKeyTime && (now - scannerCapture.lastKeyTime) > scannerCapture.timeoutMs) {
+        scannerCapture.buffer = '';
+    }
+
+    scannerCapture.buffer += e.key;
+    scannerCapture.lastKeyTime = now;
+
+    if (scannerCapture.timer) {
+        clearTimeout(scannerCapture.timer);
+    }
+
+    scannerCapture.timer = setTimeout(() => {
+        resetScannerBuffer();
+    }, scannerCapture.timeoutMs);
+});
 
 // Personnel validation
 const personnelInput = document.getElementById('personnelInput');
