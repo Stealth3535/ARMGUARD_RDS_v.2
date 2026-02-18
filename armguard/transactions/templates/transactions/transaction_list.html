@@ -173,6 +173,11 @@
     .container.defcon-lock .filter-bar {
         display: none !important;
     }
+
+    .container.defcon-lock .page-header {
+        display: block !important;
+        margin-bottom: 1rem;
+    }
     
     .issued-items-section, .transaction-history {
         margin-top: 40px;
@@ -244,7 +249,7 @@
     <div class="page-header">
         <div>
             <h1 class="page-title">Transactions</h1>
-            <p class="page-subtitle">{{ recent_transactions.count }} Total Transactions</p>
+            <p class="page-subtitle"><span id="totalTransactionsCount">{{ recent_transactions.count }}</span> Total Transactions</p>
         </div>
     </div>
 
@@ -511,6 +516,7 @@ const magsRow = document.getElementById('magsRow');
 const roundsRow = document.getElementById('roundsRow');
 const actionSelect = document.getElementById('actionSelect');
 const scanButtonsRow = document.querySelector('.scan-buttons');
+const totalTransactionsCountElement = document.getElementById('totalTransactionsCount');
 
 const scannerCapture = {
     buffer: '',
@@ -518,22 +524,25 @@ const scannerCapture = {
     lastKeyTime: 0,
     timeoutMs: 120
 };
-let defconAutoSubmitting = false;
+let hotkeySubmitting = false;
 let personnelValidated = false;
 let itemValidated = false;
 
-function tryAutoSubmitDefcon() {
-    if (modeSelect.value !== 'defcon') return;
-    if (defconAutoSubmitting) return;
-
+function trySubmitOnHotkey() {
+    if (hotkeySubmitting) return;
     if (!personnelValidated || !itemValidated) return;
 
-    defconAutoSubmitting = true;
-    setTimeout(() => {
-        submitTransaction().finally(() => {
-            defconAutoSubmitting = false;
-        });
-    }, 180);
+    hotkeySubmitting = true;
+    submitTransaction().finally(() => {
+        hotkeySubmitting = false;
+    });
+}
+
+function incrementHeaderTransactionCount() {
+    if (!totalTransactionsCountElement) return;
+    const currentValue = parseInt(totalTransactionsCountElement.textContent, 10);
+    if (Number.isNaN(currentValue)) return;
+    totalTransactionsCountElement.textContent = String(currentValue + 1);
 }
 
 function resetScannerBuffer() {
@@ -579,7 +588,6 @@ function fillScannedField(parsedScan) {
         personnelInput.value = parsedScan.value;
         personnelInput.dispatchEvent(new Event('blur'));
         showNotification(`Scanned personnel ID: ${parsedScan.value}`, 'info');
-        tryAutoSubmitDefcon();
         return;
     }
 
@@ -587,7 +595,6 @@ function fillScannedField(parsedScan) {
         itemInput.value = parsedScan.value;
         itemInput.dispatchEvent(new Event('blur'));
         showNotification(`Scanned item ID: ${parsedScan.value}`, 'info');
-        tryAutoSubmitDefcon();
     }
 }
 
@@ -672,8 +679,19 @@ function setDefconLockLayout() {
     }
 }
 
-modeSelect.addEventListener('change', function() {
-    if (this.value === 'defcon') {
+function applyTransactionMode(mode, persist = true) {
+    modeSelect.value = mode;
+
+    if (persist) {
+        localStorage.setItem('transactions_mode', mode);
+        if (mode === 'defcon') {
+            localStorage.setItem('transactions_defcon_lock', '1');
+        } else {
+            localStorage.removeItem('transactions_defcon_lock');
+        }
+    }
+
+    if (mode === 'defcon') {
         dutyTypeRow.style.display = 'none';
         magsRow.style.display = 'none';
         roundsRow.style.display = 'none';
@@ -682,12 +700,24 @@ modeSelect.addEventListener('change', function() {
         magsRow.style.display = 'grid';
         roundsRow.style.display = 'grid';
     }
+
     setDefconActionState();
     setDefconLockLayout();
+}
+
+modeSelect.addEventListener('change', function() {
+    applyTransactionMode(this.value, true);
 });
 
-setDefconActionState();
-setDefconLockLayout();
+const defconLockFlag = localStorage.getItem('transactions_defcon_lock') === '1';
+const savedMode = localStorage.getItem('transactions_mode');
+if (defconLockFlag) {
+    applyTransactionMode('defcon', false);
+} else if (savedMode === 'normal' || savedMode === 'defcon') {
+    applyTransactionMode(savedMode, false);
+} else {
+    applyTransactionMode(modeSelect.value, false);
+}
 
 document.addEventListener('keydown', function(e) {
     if (e.ctrlKey || e.altKey || e.metaKey) return;
@@ -697,11 +727,13 @@ document.addEventListener('keydown', function(e) {
             e.preventDefault();
             const payload = scannerCapture.buffer;
             resetScannerBuffer();
-            processScannerInput(payload);
+            processScannerInput(payload).then(() => {
+                trySubmitOnHotkey();
+            });
         } else {
             e.preventDefault();
             resetScannerBuffer();
-            tryAutoSubmitDefcon();
+            trySubmitOnHotkey();
         }
         return;
     }
@@ -748,7 +780,6 @@ personnelInput.addEventListener('blur', async function() {
             
             // Show automatic notification for successful personnel scan
             showNotification(`Personnel scanned: ${data.firstname} ${data.surname} - ${data.rank}`, 'success');
-            tryAutoSubmitDefcon();
         } else {
             personnelValidated = false;
             personnelInfo.className = 'info-text error';
@@ -828,7 +859,6 @@ itemInput.addEventListener('blur', async function() {
             }
             
             itemInfo.style.display = 'block';
-            tryAutoSubmitDefcon();
         } else {
             itemValidated = false;
             itemInfo.className = 'info-text error';
@@ -945,6 +975,17 @@ async function submitTransaction() {
             const data = await response.json();
             console.log('Transaction response:', data); // Debug log
             showNotification('✓ Transaction #' + data.transaction_id + ' completed successfully!', 'success');
+            incrementHeaderTransactionCount();
+
+            const prepareNextDefconTransaction = () => {
+                itemInput.value = '';
+                itemValidated = false;
+                itemInfo.style.display = 'none';
+                document.getElementById('notes').value = '';
+                document.getElementById('mags').value = '';
+                document.getElementById('rounds').value = '';
+                itemInput.focus();
+            };
             
             // Auto-print PDF for withdrawals (Take) 
             if (data.action === 'Take' && data.transaction_id) {
@@ -1032,15 +1073,23 @@ async function submitTransaction() {
                     }, 500);
                 }
                 
-                // Reload transaction list after printing
-                setTimeout(() => {
-                    console.log('↻ Reloading transaction list...');
-                    location.reload();
-                }, 12000);
+                if (mode === 'defcon') {
+                    prepareNextDefconTransaction();
+                } else {
+                    // Reload transaction list after printing
+                    setTimeout(() => {
+                        console.log('↻ Reloading transaction list...');
+                        location.reload();
+                    }, 12000);
+                }
             } else {
-                // For Return transactions, reload after short delay
-                console.log('Return transaction completed, reloading...');
-                setTimeout(() => location.reload(), 1200);
+                if (mode === 'defcon') {
+                    prepareNextDefconTransaction();
+                } else {
+                    // For Return transactions, reload after short delay
+                    console.log('Return transaction completed, reloading...');
+                    setTimeout(() => location.reload(), 1200);
+                }
             }
         } else {
             const error = await response.json();
