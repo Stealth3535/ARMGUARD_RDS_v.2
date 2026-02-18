@@ -726,16 +726,29 @@ def request_device_authorization(request):
                 required_security='HIGH_SECURITY',
             )
 
+            mtls_context = middleware._get_mtls_context(request)
+            mtls_required_for_admin = middleware._mtls_required_for_security('HIGH_SECURITY')
+            mtls_verified = mtls_context.get('verified', False)
+
             if is_currently_authorized:
-                if existing_request.issued_certificate_pem and not existing_request.issued_certificate_downloaded_at:
-                    messages.success(request, 'This device is approved. Download your client certificate to complete enrollment.')
-                    if not request.user.is_authenticated:
-                        return redirect('/login/?next=/admin/device/request-authorization/')
+                if mtls_required_for_admin and not mtls_verified:
+                    if existing_request.issued_certificate_pem and not existing_request.issued_certificate_downloaded_at:
+                        messages.success(request, 'This device is approved. Download your client certificate to complete enrollment.')
+                    else:
+                        messages.warning(
+                            request,
+                            'This device is approved, but mTLS client certificate verification is still required before accessing protected pages.'
+                        )
                 else:
-                    messages.success(request, 'This device is already authorized.')
-                    if request.user.is_authenticated:
-                        return redirect('armguard_admin:dashboard')
-                    return redirect('/login/?next=/admin/')
+                    if existing_request.issued_certificate_pem and not existing_request.issued_certificate_downloaded_at:
+                        messages.success(request, 'This device is approved. Download your client certificate to complete enrollment.')
+                        if not request.user.is_authenticated:
+                            return redirect('/login/?next=/admin/device/request-authorization/')
+                    else:
+                        messages.success(request, 'This device is already authorized.')
+                        if request.user.is_authenticated:
+                            return redirect('armguard_admin:dashboard')
+                        return redirect('/login/?next=/admin/')
             else:
                 stale_approved_request = existing_request
                 existing_request = None
