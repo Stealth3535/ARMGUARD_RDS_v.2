@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Approve Device Request - ArmGuard{% endblock %}
+
+{% block content %}
+<div style="max-width: 760px; margin: 2rem auto; background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 6px 20px rgba(0,0,0,0.08);">
+    <h2 style="margin-top: 0;">✅ Approve Device Request</h2>
+    <p style="color: #6b7280;">Review this device request and confirm authorization settings.</p>
+
+    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+        <div><strong>Device:</strong> {{ auth_request.hostname|default:'Unknown' }}</div>
+        <div><strong>IP:</strong> {{ auth_request.ip_address }}</div>
+        <div><strong>Requested by:</strong> {{ auth_request.requested_by.username }}</div>
+        <div><strong>Requested at:</strong> {{ auth_request.requested_at|date:"M d, Y H:i" }}</div>
+        <div><strong>Reason:</strong> {{ auth_request.reason }}</div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div style="margin-bottom: 1rem;">
+            <label for="device_name" style="display:block; font-weight:600; margin-bottom:0.35rem;">Device Name</label>
+            <input id="device_name" name="device_name" type="text" required value="{{ auth_request.device_name|default:auth_request.hostname }}"
+                   style="width:100%; padding:0.7rem; border:1px solid #d1d5db; border-radius:8px;">
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label for="security_level" style="display:block; font-weight:600; margin-bottom:0.35rem;">Security Level</label>
+            <select id="security_level" name="security_level" style="width:100%; padding:0.7rem; border:1px solid #d1d5db; border-radius:8px;">
+                <option value="STANDARD">STANDARD</option>
+                <option value="RESTRICTED">RESTRICTED</option>
+                <option value="HIGH_SECURITY">HIGH_SECURITY</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 1.25rem;">
+            <label for="notes" style="display:block; font-weight:600; margin-bottom:0.35rem;">Review Notes (optional)</label>
+            <textarea id="notes" name="notes" rows="4" style="width:100%; padding:0.7rem; border:1px solid #d1d5db; border-radius:8px;"></textarea>
+        </div>
+
+        <div style="display:flex; gap:0.75rem;">
+            <a href="{% url 'armguard_admin:manage_device_requests' %}" style="padding:0.7rem 1rem; border:1px solid #d1d5db; border-radius:8px; text-decoration:none; color:#374151;">Cancel</a>
+            <button type="submit" style="padding:0.7rem 1rem; border:none; border-radius:8px; background:#16a34a; color:#fff; font-weight:600; cursor:pointer;">
+                Approve Device
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
