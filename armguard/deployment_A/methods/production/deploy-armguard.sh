@@ -1115,6 +1115,9 @@ EOF
 
 # Final steps and summary
 final_summary() {
+    local ADMIN_PATH="${ADMIN_URL#/}"
+    ADMIN_PATH="${ADMIN_PATH%/}"
+
     echo ""
     echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║          ArmGuard Deployment Complete!                    ║${NC}"
@@ -1155,7 +1158,8 @@ final_summary() {
         echo ""
     fi
     
-    echo "Admin URL:            https://${DOMAIN}/${ADMIN_URL}/"
+    echo "Admin URL (Domain):   https://${DOMAIN}/${ADMIN_PATH}/"
+    echo "Admin URL (Server IP): https://${SERVER_IP}/${ADMIN_PATH}/"
     echo ""
     echo "Project Directory:    ${PROJECT_DIR}"
     echo "Virtual Environment:  ${PROJECT_DIR}/.venv"
@@ -1254,13 +1258,14 @@ EOF
 Application URLs:
 - Main: http${USE_SSL:+s}://${DOMAIN}
 - IP: http${USE_SSL:+s}://${SERVER_IP}
-- Admin: http${USE_SSL:+s}://${DOMAIN}/${ADMIN_URL}/
+    - Admin (Domain): http${USE_SSL:+s}://${DOMAIN}/${ADMIN_PATH}/
+    - Admin (IP): http${USE_SSL:+s}://${SERVER_IP}/${ADMIN_PATH}/
 
 Configuration:
 - Project: ${PROJECT_DIR}
 - .env file: ${PROJECT_DIR}/.env
 - Django Secret Key: ${DJANGO_SECRET_KEY}
-- Admin URL Path: /${ADMIN_URL}/
+    - Admin URL Path: /${ADMIN_PATH}/
 
 EOF
 
