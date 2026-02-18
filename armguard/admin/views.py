@@ -754,11 +754,18 @@ def manage_device_requests(request):
     requests_qs = DeviceAuthorizationRequest.objects.all()
     if status_filter and status_filter != 'all':
         requests_qs = requests_qs.filter(status=status_filter)
+
+    pending_count = DeviceAuthorizationRequest.objects.filter(status='pending').count()
+    approved_count = DeviceAuthorizationRequest.objects.filter(status='approved').count()
+    rejected_count = DeviceAuthorizationRequest.objects.filter(status='rejected').count()
     
     context = {
         'device_requests': requests_qs,
+        'requests': requests_qs,
         'status_filter': status_filter,
-        'pending_count': DeviceAuthorizationRequest.objects.filter(status='pending').count(),
+        'pending_count': pending_count,
+        'approved_count': approved_count,
+        'rejected_count': rejected_count,
     }
     return render(request, 'admin/manage_device_requests.html', context)
 

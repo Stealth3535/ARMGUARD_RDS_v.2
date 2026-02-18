@@ -374,7 +374,7 @@
     <div class="table-header">
         <div class="table-title">
             <span>Device Authorization Requests</span>
-            <span class="count-badge">Total: {{ requests.count }}</span>
+            <span class="count-badge">Total: {{ device_requests.count }}</span>
         </div>
     </div>
     <table>
@@ -388,7 +388,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for request in requests %}
+            {% for request in device_requests %}
             <tr>
                 <td>
                     <div class="device-info">
