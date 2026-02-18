@@ -653,6 +653,9 @@ EOF
     
     echo -e "${YELLOW}Running migrations...${NC}"
     .venv/bin/python manage.py migrate --settings=core.settings_production
+
+    echo -e "${YELLOW}Running Django deployment checks...${NC}"
+    .venv/bin/python manage.py check --deploy --settings=core.settings_production
     
     case "${CREATE_SUPERUSER}" in
         never|skip|no)

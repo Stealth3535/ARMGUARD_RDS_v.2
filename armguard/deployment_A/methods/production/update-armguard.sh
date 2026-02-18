@@ -103,6 +103,38 @@ ensure_nginx_static_access() {
     fi
 }
 
+get_env_value() {
+    local key="$1"
+    local value
+
+    if [ ! -f "$PROJECT_DIR/.env" ]; then
+        return 0
+    fi
+
+    value=$(grep -E "^${key}=" "$PROJECT_DIR/.env" | tail -n 1 | cut -d= -f2-)
+    value="${value%\"}"
+    value="${value#\"}"
+    echo "$value"
+}
+
+is_true() {
+    case "$1" in
+        [Tt][Rr][Uu][Ee]|[Yy][Ee][Ss]|[Yy]|1|on|ON)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+DB_TYPE="none"
+PG_DB_NAME=""
+PG_DB_USER=""
+PG_DB_PASSWORD=""
+PG_DB_HOST="localhost"
+PG_DB_PORT="5432"
+
 ensure_shared_group
 
 # Check if project directory exists
@@ -148,9 +180,33 @@ if [ -f "$PROJECT_DIR/db.sqlite3" ]; then
     DB_SIZE=$(du -h "$PROJECT_DIR/db.sqlite3" | cut -f1)
     echo -e "${GREEN}✓ Database found (Size: $DB_SIZE)${NC}"
     HAS_DATABASE=true
+    DB_TYPE="sqlite"
 else
-    echo -e "${YELLOW}⚠ No database found (first run?)${NC}"
-    HAS_DATABASE=false
+    USE_POSTGRESQL_VALUE=$(get_env_value "USE_POSTGRESQL")
+    if is_true "$USE_POSTGRESQL_VALUE"; then
+        PG_DB_NAME=$(get_env_value "DB_NAME")
+        PG_DB_USER=$(get_env_value "DB_USER")
+        PG_DB_PASSWORD=$(get_env_value "DB_PASSWORD")
+        PG_DB_HOST=$(get_env_value "DB_HOST")
+        PG_DB_PORT=$(get_env_value "DB_PORT")
+        PG_DB_HOST=${PG_DB_HOST:-localhost}
+        PG_DB_PORT=${PG_DB_PORT:-5432}
+
+        if [ -n "$PG_DB_NAME" ] && [ -n "$PG_DB_USER" ] && command -v pg_dump >/dev/null 2>&1; then
+            echo -e "${GREEN}✓ PostgreSQL database configured (${PG_DB_NAME}@${PG_DB_HOST}:${PG_DB_PORT})${NC}"
+            HAS_DATABASE=true
+            DB_TYPE="postgres"
+        else
+            echo -e "${YELLOW}⚠ PostgreSQL configured but backup prerequisites are incomplete${NC}"
+            echo -e "${YELLOW}  Ensure pg_dump is installed and DB_NAME/DB_USER are set in .env${NC}"
+            HAS_DATABASE=false
+            DB_TYPE="postgres"
+        fi
+    else
+        echo -e "${YELLOW}⚠ No database found (first run?)${NC}"
+        HAS_DATABASE=false
+        DB_TYPE="none"
+    fi
 fi
 
 echo -e "${YELLOW}Checking virtual environment...${NC}"
@@ -167,21 +223,39 @@ print_section "Step 2: Backing Up Database"
 if [ "$HAS_DATABASE" = true ]; then
     echo -e "${YELLOW}Creating backup directory...${NC}"
     mkdir -p "$BACKUP_DIR"
-    chown $RUN_USER:$RUN_USER "$BACKUP_DIR"
+    chown $RUN_USER:$RUN_GROUP "$BACKUP_DIR"
     check_success "Backup directory created"
-    
-    BACKUP_FILE="$BACKUP_DIR/db.sqlite3.backup_${TIMESTAMP}"
-    echo -e "${YELLOW}Backing up database to: $(basename $BACKUP_FILE)${NC}"
-    cp "$PROJECT_DIR/db.sqlite3" "$BACKUP_FILE"
-    check_success "Database backed up"
+
+    if [ "$DB_TYPE" = "sqlite" ]; then
+        BACKUP_FILE="$BACKUP_DIR/db.sqlite3.backup_${TIMESTAMP}"
+        echo -e "${YELLOW}Backing up SQLite database to: $(basename $BACKUP_FILE)${NC}"
+        cp "$PROJECT_DIR/db.sqlite3" "$BACKUP_FILE"
+        check_success "SQLite database backed up"
+    elif [ "$DB_TYPE" = "postgres" ]; then
+        BACKUP_FILE="$BACKUP_DIR/postgres_${PG_DB_NAME}.backup_${TIMESTAMP}.sql.gz"
+        echo -e "${YELLOW}Backing up PostgreSQL database to: $(basename $BACKUP_FILE)${NC}"
+        if [ -n "$PG_DB_PASSWORD" ]; then
+            PGPASSWORD="$PG_DB_PASSWORD" pg_dump -h "$PG_DB_HOST" -p "$PG_DB_PORT" -U "$PG_DB_USER" "$PG_DB_NAME" | gzip > "$BACKUP_FILE"
+        else
+            pg_dump -h "$PG_DB_HOST" -p "$PG_DB_PORT" -U "$PG_DB_USER" "$PG_DB_NAME" | gzip > "$BACKUP_FILE"
+        fi
+        check_success "PostgreSQL database backed up"
+    else
+        echo -e "${YELLOW}⚠ Database type not recognized, backup skipped${NC}"
+    fi
     
     echo -e "${GREEN}✓ Backup location: $BACKUP_FILE${NC}"
     
     # Keep only last 5 backups
     echo -e "${YELLOW}Cleaning old backups (keeping last 5)...${NC}"
     cd "$BACKUP_DIR"
-    ls -t db.sqlite3.backup_* 2>/dev/null | tail -n +6 | xargs -r rm
-    BACKUP_COUNT=$(ls -1 db.sqlite3.backup_* 2>/dev/null | wc -l)
+    if [ "$DB_TYPE" = "postgres" ]; then
+        ls -t "postgres_${PG_DB_NAME}.backup_"*.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm
+        BACKUP_COUNT=$(ls -1 "postgres_${PG_DB_NAME}.backup_"*.sql.gz 2>/dev/null | wc -l)
+    else
+        ls -t db.sqlite3.backup_* 2>/dev/null | tail -n +6 | xargs -r rm
+        BACKUP_COUNT=$(ls -1 db.sqlite3.backup_* 2>/dev/null | wc -l)
+    fi
     echo -e "${GREEN}✓ Backups retained: $BACKUP_COUNT${NC}"
 else
     echo -e "${YELLOW}⚠ No database to backup${NC}"
@@ -255,6 +329,10 @@ else
     echo -e "${GREEN}✓ No pending migrations${NC}"
 fi
 
+echo -e "${YELLOW}Running Django deployment checks...${NC}"
+.venv/bin/python manage.py check --deploy --settings=core.settings_production
+check_success "Django deployment checks passed"
+
 # Step 7: Collect static files
 print_section "Step 7: Collecting Static Files"
 
@@ -269,6 +347,10 @@ echo -e "${YELLOW}Setting file permissions...${NC}"
 chown -R $RUN_USER:$RUN_GROUP "$PROJECT_DIR"
 chmod -R g+rwX "$PROJECT_DIR"
 find "$PROJECT_DIR" -type d -exec chmod g+s {} \;
+if [ -f "$PROJECT_DIR/.env" ]; then
+    chown $RUN_USER:$RUN_GROUP "$PROJECT_DIR/.env"
+    chmod 600 "$PROJECT_DIR/.env"
+fi
 ensure_nginx_static_access
 check_success "Permissions set"
 
@@ -353,11 +435,19 @@ systemctl status $SERVICE_NAME --no-pager -l | grep -E "Active:|Main PID:|Memory
 echo ""
 echo -e "${CYAN}Database:${NC}"
 if [ "$HAS_DATABASE" = true ]; then
-    NEW_SIZE=$(du -h "$PROJECT_DIR/db.sqlite3" | cut -f1)
     echo -e "  • Status:         ${GREEN}✓ Preserved${NC}"
-    echo -e "  • Size:           ${YELLOW}${NEW_SIZE}${NC}"
-    echo -e "  • Backup:         ${YELLOW}$(basename $BACKUP_FILE)${NC}"
-    echo -e "  • Backup Location: ${YELLOW}${BACKUP_DIR}${NC}"
+    if [ "$DB_TYPE" = "sqlite" ] && [ -f "$PROJECT_DIR/db.sqlite3" ]; then
+        NEW_SIZE=$(du -h "$PROJECT_DIR/db.sqlite3" | cut -f1)
+        echo -e "  • Type:           ${YELLOW}SQLite${NC}"
+        echo -e "  • Size:           ${YELLOW}${NEW_SIZE}${NC}"
+    elif [ "$DB_TYPE" = "postgres" ]; then
+        echo -e "  • Type:           ${YELLOW}PostgreSQL${NC}"
+        echo -e "  • Database:       ${YELLOW}${PG_DB_NAME}${NC}"
+    fi
+    if [ -n "$BACKUP_FILE" ]; then
+        echo -e "  • Backup:         ${YELLOW}$(basename $BACKUP_FILE)${NC}"
+        echo -e "  • Backup Location: ${YELLOW}${BACKUP_DIR}${NC}"
+    fi
 fi
 
 echo ""
@@ -370,7 +460,11 @@ echo -e "  • List backups:   ${YELLOW}ls -lh $BACKUP_DIR${NC}"
 if [ "$HAS_DATABASE" = true ] && [ -f "$BACKUP_FILE" ]; then
     echo ""
     echo -e "${CYAN}Restore Backup (if needed):${NC}"
-    echo -e "  ${YELLOW}sudo cp $BACKUP_FILE $PROJECT_DIR/db.sqlite3${NC}"
+    if [ "$DB_TYPE" = "postgres" ]; then
+        echo -e "  ${YELLOW}gzip -dc $BACKUP_FILE | PGPASSWORD='<db_password>' psql -h $PG_DB_HOST -p $PG_DB_PORT -U $PG_DB_USER -d $PG_DB_NAME${NC}"
+    else
+        echo -e "  ${YELLOW}sudo cp $BACKUP_FILE $PROJECT_DIR/db.sqlite3${NC}"
+    fi
     echo -e "  ${YELLOW}sudo systemctl restart $SERVICE_NAME${NC}"
 fi
 

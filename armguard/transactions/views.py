@@ -6,6 +6,7 @@ from django.views.generic import ListView, DetailView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Q
+from django.db import DatabaseError
 from django.http import JsonResponse
 from django.contrib import messages
 from .models import Transaction
@@ -20,6 +21,10 @@ from core.notifications import (
     broadcast_transaction_created,
     broadcast_transaction_returned
 )
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def is_admin_or_armorer(user):
@@ -43,10 +48,8 @@ class TransactionListView(LoginRequiredMixin, ListView):
         try:
             queryset = super().get_queryset()
             return queryset.select_related('personnel', 'item').order_by('-date_time')
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error in TransactionListView.get_queryset: {e}")
+        except DatabaseError:
+            logger.exception("Database error in TransactionListView.get_queryset")
             # Return empty queryset on error
             return Transaction.objects.none()
     
@@ -62,15 +65,14 @@ class TransactionListView(LoginRequiredMixin, ListView):
                 action='Take'
             ).select_related('personnel', 'item').order_by('-date_time')
             return context
-        except Exception as e:
-            import logging
-            import traceback
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error in TransactionListView.get_context_data: {e}")
-            logger.error(traceback.format_exc())
+        except DatabaseError:
+            logger.exception("Database error in TransactionListView.get_context_data")
             # Return minimal context on error
-            context = super(ListView, self).get_context_data(**kwargs)
-            context['error_message'] = str(e)
+            context = {
+                'can_create_transaction': is_admin_or_armorer(self.request.user),
+                'issued_items': Transaction.objects.none(),
+                'error_message': 'Unable to load transaction data right now. Please try again.'
+            }
             return context
 
 
