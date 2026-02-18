@@ -188,12 +188,20 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
         return False
 
     def _security_rank(self, level):
+        normalized_level = (level or 'STANDARD').upper()
+        aliases = {
+            'HIGH': 'HIGH_SECURITY',
+            'MILITARY': 'HIGH_SECURITY',
+            'DEVELOPMENT': 'STANDARD',
+        }
+        normalized_level = aliases.get(normalized_level, normalized_level)
+
         rank_map = {
             'STANDARD': 1,
             'RESTRICTED': 2,
             'HIGH_SECURITY': 3,
         }
-        return rank_map.get((level or 'STANDARD').upper(), 1)
+        return rank_map.get(normalized_level, 1)
 
     def _mtls_required_for_security(self, required_security):
         if not getattr(settings, 'MTLS_ENABLED', False):

@@ -35,7 +35,7 @@
                 "development"
             ],
             "max_daily_transactions": 100,
-            "security_level": "HIGH",
+            "security_level": "HIGH_SECURITY",
             "last_updated": "2026-02-09T20:52:45.209447"
         },
         {
