@@ -195,6 +195,19 @@
         color: #2c3e50;
         text-align: right;
     }
+
+    .stencil-preview {
+        max-width: 220px;
+        max-height: 160px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        object-fit: contain;
+        background: #fff;
+        padding: 0.25rem;
+        display: block;
+        margin-left: auto;
+        margin-bottom: 0.5rem;
+    }
     
     .category-indicator {
         display: inline-flex;
@@ -325,6 +338,18 @@
                     <span class="condition-badge condition-{{ item.condition|lower }}">
                         {{ item.condition }}
                     </span>
+                </div>
+            </div>
+
+            <div class="detail-item">
+                <div class="detail-label">Stencil Image</div>
+                <div class="detail-value">
+                    {% if item.stencil_picture %}
+                        <img src="{{ item.stencil_picture.url }}" alt="Stencil image for {{ item.item_type }} {{ item.serial }}" class="stencil-preview">
+                        <a href="{{ item.stencil_picture.url }}" target="_blank" rel="noopener">View full image</a>
+                    {% else %}
+                        <em style="color: #7f8c8d;">No stencil image uploaded</em>
+                    {% endif %}
                 </div>
             </div>
         </div>
