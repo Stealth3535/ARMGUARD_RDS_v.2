@@ -26,7 +26,32 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
     def __init__(self, get_response):
         super().__init__(get_response)
         self.authorized_devices_file = Path(settings.BASE_DIR) / 'authorized_devices.json'
+        self._last_auth_reason = 'not_evaluated'
         self.load_authorized_devices()
+
+    def _persist_access_log(self, request, user, device_fingerprint, ip_address, security_level, is_authorized, reason, response_status):
+        """Persist device access decisions for forensic analysis."""
+        try:
+            from admin.models import DeviceAccessLog
+
+            db_user = None
+            if user is not None and getattr(user, 'is_authenticated', False):
+                db_user = user
+
+            DeviceAccessLog.objects.create(
+                user=db_user,
+                path=request.path,
+                method=request.method,
+                ip_address=ip_address or None,
+                device_fingerprint=device_fingerprint,
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:2000],
+                security_level=security_level if security_level in {'STANDARD', 'RESTRICTED', 'HIGH_SECURITY'} else 'RESTRICTED',
+                is_authorized=is_authorized,
+                reason=(reason or '')[:255],
+                response_status=response_status,
+            )
+        except Exception as log_error:
+            logger.error(f"Failed to persist device access log: {log_error}")
     
     def load_authorized_devices(self):
         """Load authorized devices from JSON file with production defaults"""
@@ -164,13 +189,17 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
     
     def is_device_authorized(self, device_fingerprint, ip_address, path=None, user=None):
         """Check if device is authorized with enhanced security checks"""
+        self._last_auth_reason = 'authorized'
+
         # Check if device is locked out
         if self._is_device_locked_out(device_fingerprint):
             logger.warning(f"Device {device_fingerprint[:8]}... is locked out due to failed attempts")
+            self._last_auth_reason = 'locked_out'
             return False
             
         # Development mode bypass
         if self.authorized_devices.get('allow_all', False) and settings.DEBUG:
+            self._last_auth_reason = 'allow_all_debug'
             return True
         
         device_config = None
@@ -183,11 +212,13 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
         
         if not device_config:
             self._record_failed_attempt(device_fingerprint, ip_address)
+            self._last_auth_reason = 'device_not_registered'
             return False
             
         # Check if device is active
         if not device_config.get('active', True):
             logger.warning(f"Device {device_config.get('name', 'Unknown')} is deactivated")
+            self._last_auth_reason = 'device_deactivated'
             return False
             
         # Check IP address match (if specified)
@@ -195,16 +226,19 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
         if device_ip and device_ip != ip_address:
             logger.warning(f"Device IP mismatch: expected {device_ip}, got {ip_address}")
             self._record_failed_attempt(device_fingerprint, ip_address)
+            self._last_auth_reason = 'ip_mismatch'
             return False
             
         # Check active hours (if specified)
         if not self._is_within_active_hours(device_config):
             logger.warning(f"Device {device_config.get('name')} accessed outside active hours")
+            self._last_auth_reason = 'outside_active_hours'
             return False
             
         # Check transaction limits
         if path and 'transaction' in path.lower():
             if not self._check_transaction_limits(device_config, device_fingerprint):
+                self._last_auth_reason = 'daily_transaction_limit_exceeded'
                 return False
                 
         # Check user authorization for device (if specified)
@@ -215,6 +249,7 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
             if not any(group in authorized_users for group in user_groups):
                 if user.username.lower() not in authorized_users:
                     logger.warning(f"User {user.username} not authorized for device {device_config.get('name')}")
+                    self._last_auth_reason = 'user_not_authorized_for_device'
                     return False
         
         return True
@@ -373,6 +408,16 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
             
             # Return appropriate response
             if request.path.startswith('/api/') or 'api' in request.path:
+                self._persist_access_log(
+                    request=request,
+                    user=user,
+                    device_fingerprint=device_fingerprint,
+                    ip_address=ip_address,
+                    security_level=path_security,
+                    is_authorized=False,
+                    reason=self._last_auth_reason,
+                    response_status=403,
+                )
                 return JsonResponse({
                     'error': 'Device not authorized for this operation',
                     'code': 'DEVICE_NOT_AUTHORIZED',
@@ -401,6 +446,17 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                 </div>
                 '''
             
+            self._persist_access_log(
+                request=request,
+                user=user,
+                device_fingerprint=device_fingerprint,
+                ip_address=ip_address,
+                security_level=path_security,
+                is_authorized=False,
+                reason=self._last_auth_reason,
+                response_status=403,
+            )
+
             return HttpResponseForbidden(f'''
                 <!DOCTYPE html>
                 <html>
@@ -457,6 +513,17 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
         
         # Log successful authorization
         logger.info(f"Device authorized: {device_fingerprint[:8]}... from {ip_address} accessing {request.path}")
+
+        self._persist_access_log(
+            request=request,
+            user=user,
+            device_fingerprint=device_fingerprint,
+            ip_address=ip_address,
+            security_level=path_security,
+            is_authorized=True,
+            reason=self._last_auth_reason,
+            response_status=200,
+        )
         
         return None
     

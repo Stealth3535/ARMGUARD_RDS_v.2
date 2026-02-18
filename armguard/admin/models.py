@@ -181,3 +181,46 @@ class DeviceAuthorizationRequest(models.Model):
         self.reviewed_at = timezone.now()
         self.review_notes = notes
         self.save()
+
+
+class DeviceAccessLog(models.Model):
+    """Persistent forensic log of device authorization checks."""
+
+    SECURITY_LEVEL_CHOICES = [
+        ('STANDARD', 'Standard'),
+        ('RESTRICTED', 'Restricted'),
+        ('HIGH_SECURITY', 'High Security'),
+    ]
+
+    checked_at = models.DateTimeField(default=timezone.now)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='device_access_logs'
+    )
+
+    path = models.CharField(max_length=500)
+    method = models.CharField(max_length=10)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    device_fingerprint = models.CharField(max_length=64)
+    user_agent = models.TextField(blank=True)
+
+    security_level = models.CharField(max_length=20, choices=SECURITY_LEVEL_CHOICES, default='RESTRICTED')
+    is_authorized = models.BooleanField(default=False)
+    reason = models.CharField(max_length=255, blank=True)
+    response_status = models.PositiveSmallIntegerField(default=200)
+
+    class Meta:
+        ordering = ['-checked_at']
+        indexes = [
+            models.Index(fields=['-checked_at']),
+            models.Index(fields=['device_fingerprint', '-checked_at']),
+            models.Index(fields=['is_authorized', '-checked_at']),
+            models.Index(fields=['ip_address', '-checked_at']),
+        ]
+
+    def __str__(self):
+        decision = 'AUTHORIZED' if self.is_authorized else 'BLOCKED'
+        return f"{decision} {self.method} {self.path} ({self.ip_address})"
