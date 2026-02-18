@@ -491,6 +491,7 @@ const dutyTypeRow = document.getElementById('dutyTypeRow');
 const magsRow = document.getElementById('magsRow');
 const roundsRow = document.getElementById('roundsRow');
 const actionSelect = document.getElementById('actionSelect');
+const scanButtonsRow = document.querySelector('.scan-buttons');
 
 function setDefconActionState() {
     const isDefconMode = modeSelect.value === 'defcon';
@@ -499,12 +500,18 @@ function setDefconActionState() {
     if (isDefconMode) {
         actionSelect.value = 'withdraw';
         actionSelect.disabled = true;
+        if (scanButtonsRow) {
+            scanButtonsRow.style.display = 'none';
+        }
         if (returnOption) {
             returnOption.disabled = true;
             returnOption.hidden = true;
         }
     } else {
         actionSelect.disabled = false;
+        if (scanButtonsRow) {
+            scanButtonsRow.style.display = 'grid';
+        }
         if (returnOption) {
             returnOption.disabled = false;
             returnOption.hidden = false;
