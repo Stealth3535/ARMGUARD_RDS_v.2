@@ -490,6 +490,27 @@ const modeSelect = document.getElementById('modeSelect');
 const dutyTypeRow = document.getElementById('dutyTypeRow');
 const magsRow = document.getElementById('magsRow');
 const roundsRow = document.getElementById('roundsRow');
+const actionSelect = document.getElementById('actionSelect');
+
+function setDefconActionState() {
+    const isDefconMode = modeSelect.value === 'defcon';
+    const returnOption = actionSelect.querySelector('option[value="return"]');
+
+    if (isDefconMode) {
+        actionSelect.value = 'withdraw';
+        actionSelect.disabled = true;
+        if (returnOption) {
+            returnOption.disabled = true;
+            returnOption.hidden = true;
+        }
+    } else {
+        actionSelect.disabled = false;
+        if (returnOption) {
+            returnOption.disabled = false;
+            returnOption.hidden = false;
+        }
+    }
+}
 
 modeSelect.addEventListener('change', function() {
     if (this.value === 'defcon') {
@@ -501,7 +522,10 @@ modeSelect.addEventListener('change', function() {
         magsRow.style.display = 'grid';
         roundsRow.style.display = 'grid';
     }
+    setDefconActionState();
 });
+
+setDefconActionState();
 
 // Personnel validation
 const personnelInput = document.getElementById('personnelInput');
@@ -539,7 +563,6 @@ personnelInput.addEventListener('blur', async function() {
 // Item validation
 const itemInput = document.getElementById('itemInput');
 const itemInfo = document.getElementById('itemInfo');
-const actionSelect = document.getElementById('actionSelect');
 
 itemInput.addEventListener('blur', async function() {
     const itemId = this.value.trim();
@@ -559,6 +582,7 @@ itemInput.addEventListener('blur', async function() {
             const data = await response.json();
             console.log('API Response data:', data); // Debug log
             const action = actionSelect.value;
+            const mode = modeSelect.value;
             
             // Always show item info first
             itemInfo.className = 'info-text success';
@@ -566,7 +590,11 @@ itemInput.addEventListener('blur', async function() {
             
             // Check action compatibility and suggest if needed
             let actionWarning = '';
-            if (action === 'withdraw' && data.status !== 'Available') {
+            if (mode === 'defcon') {
+                if (data.status !== 'Available') {
+                    actionWarning = ` ⚠ Defcon mode allows withdrawal only. Item must be Available.`;
+                }
+            } else if (action === 'withdraw' && data.status !== 'Available') {
                 actionWarning = ` ⚠ Item not available for withdrawal`;
             } else if (action === 'return' && data.status !== 'Issued') {
                 actionWarning = ` ⚠ Item not issued - should withdraw instead`;
@@ -687,7 +715,8 @@ async function submitTransaction() {
             body: JSON.stringify({
                 personnel_id: personnelId,
                 item_id: itemId,
-                action: action === 'withdraw' ? 'Take' : 'Return',
+                action: mode === 'defcon' ? 'Take' : (action === 'withdraw' ? 'Take' : 'Return'),
+                mode: mode,
                 notes: notes,
                 mags: mags || 0,
                 rounds: rounds || 0,

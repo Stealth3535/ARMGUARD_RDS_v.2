@@ -86,6 +86,7 @@ def create_transaction(request):
         personnel_id = data.get('personnel_id')
         item_id = data.get('item_id')
         action = data.get('action')  # 'Take' or 'Return'
+        mode = str(data.get('mode', 'normal')).strip().lower()
         notes = data.get('notes', '')
         mags = data.get('mags', 0)
         rounds = data.get('rounds', 0)
@@ -99,6 +100,14 @@ def create_transaction(request):
         if action not in ['Take', 'Return']:
             messages.error(request, 'Invalid action type')
             return JsonResponse({'error': 'Action must be "Take" or "Return"'}, status=400)
+
+        if mode not in ['normal', 'defcon']:
+            messages.error(request, 'Invalid transaction mode')
+            return JsonResponse({'error': 'Mode must be "normal" or "defcon"'}, status=400)
+
+        if mode == 'defcon' and action != 'Take':
+            messages.error(request, 'Defcon mode allows Withdraw transactions only')
+            return JsonResponse({'error': 'Defcon mode allows Withdraw transactions only'}, status=400)
         
         # Use atomic transaction with audit context
         with transaction.atomic():
