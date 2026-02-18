@@ -165,7 +165,7 @@
         {% endfor %}
     {% endif %}
     
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         
         <div class="form-section">
@@ -200,6 +200,21 @@
                 <p class="help-text">Additional details about this item</p>
                 {% if form.description.errors %}
                     <span class="error">{{ form.description.errors }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.stencil_picture.id_for_label }}">
+                    Stencil Picture
+                </label>
+                {{ form.stencil_picture }}
+                {% if item.stencil_picture %}
+                    <p class="help-text">
+                        Current: <a href="{{ item.stencil_picture.url }}" target="_blank" rel="noopener">View current stencil image</a>
+                    </p>
+                {% endif %}
+                {% if form.stencil_picture.errors %}
+                    <span class="error">{{ form.stencil_picture.errors }}</span>
                 {% endif %}
             </div>
         </div>

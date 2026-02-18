@@ -5,6 +5,8 @@ Based on APP/app/backend/database.py items table
 
 from django.db import models
 from django.utils import timezone
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from core.validator import validate_item_data
 
 
@@ -96,6 +98,12 @@ class Item(models.Model):
     
     def save(self, *args, **kwargs):
         """Override save to validate and generate ID if not set"""
+        previous_stencil = None
+        if self.pk:
+            previous_item = Item.objects.filter(pk=self.pk).only('stencil_picture').first()
+            if previous_item and previous_item.stencil_picture:
+                previous_stencil = previous_item.stencil_picture
+
         errors = validate_item_data(self)
         if errors:
             raise ValueError(f"Item validation failed: {errors}")
@@ -114,4 +122,15 @@ class Item(models.Model):
         if not self.qr_code:
             self.qr_code = self.id
         super().save(*args, **kwargs)
+
+        if previous_stencil:
+            stencil_changed = not self.stencil_picture or previous_stencil.name != self.stencil_picture.name
+            if stencil_changed:
+                previous_stencil.delete(save=False)
+
+
+@receiver(post_delete, sender=Item)
+def delete_item_stencil_on_item_delete(sender, instance, **kwargs):
+    if instance.stencil_picture:
+        instance.stencil_picture.delete(save=False)
 

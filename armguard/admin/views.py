@@ -1319,7 +1319,7 @@ def edit_item(request, item_id):
     item = get_object_or_404(Item, pk=item_id)
     
     if request.method == 'POST':
-        form = ItemEditForm(request.POST, instance=item)
+        form = ItemEditForm(request.POST, request.FILES, instance=item)
         if form.is_valid():
             try:
                 # Store old values for audit
