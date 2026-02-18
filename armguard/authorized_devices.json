@@ -73,8 +73,10 @@
         "/media/",
         "/favicon.ico",
         "/robots.txt",
-        "/admin/device/request-authorization/",
-        "/admin/device/authorize/"
+        "/login/",
+        "/accounts/login/",
+        "/logout/",
+        "/admin/device/request-authorization/"
     ],
     "restricted_paths": [
         "/transactions/create/",

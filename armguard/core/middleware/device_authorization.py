@@ -67,15 +67,25 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                 if 'protect_root_path' not in self.authorized_devices:
                     self.authorized_devices['protect_root_path'] = not settings.DEBUG
 
-                if 'exempt_paths' not in self.authorized_devices:
-                    self.authorized_devices['exempt_paths'] = [
-                        '/static/',
-                        '/media/',
-                        '/favicon.ico',
-                        '/robots.txt',
-                        '/admin/device/request-authorization/',
-                        '/admin/device/authorize/',
-                    ]
+                default_exempt_paths = [
+                    '/static/',
+                    '/media/',
+                    '/favicon.ico',
+                    '/robots.txt',
+                    '/login/',
+                    '/accounts/login/',
+                    '/logout/',
+                    '/admin/device/request-authorization/',
+                ]
+                configured_exempt_paths = self.authorized_devices.get('exempt_paths', [])
+                normalized_exempt_paths = [
+                    path for path in configured_exempt_paths
+                    if path != '/admin/device/authorize/'
+                ]
+                for required_path in default_exempt_paths:
+                    if required_path not in normalized_exempt_paths:
+                        normalized_exempt_paths.append(required_path)
+                self.authorized_devices['exempt_paths'] = normalized_exempt_paths
                     
             else:
                 # Create production-ready default configuration
@@ -92,8 +102,10 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                         "/media/",
                         "/favicon.ico",
                         "/robots.txt",
-                        "/admin/device/request-authorization/",
-                        "/admin/device/authorize/"
+                        "/login/",
+                        "/accounts/login/",
+                        "/logout/",
+                        "/admin/device/request-authorization/"
                     ],
                     "restricted_paths": [
                         "/transactions/create/",
@@ -125,7 +137,7 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                 "allow_all": settings.DEBUG,
                 "security_mode": "PRODUCTION",
                 "protect_root_path": not settings.DEBUG,
-                "exempt_paths": ["/static/", "/media/", "/favicon.ico", "/robots.txt", "/admin/device/request-authorization/", "/admin/device/authorize/"],
+                "exempt_paths": ["/static/", "/media/", "/favicon.ico", "/robots.txt", "/login/", "/accounts/login/", "/logout/", "/admin/device/request-authorization/"],
                 "restricted_paths": ["/transactions/", "/admin/", "/api/"]
             }
     
