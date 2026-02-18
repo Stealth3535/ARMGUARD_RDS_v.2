@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}View Device Request - ArmGuard{% endblock %}
+
+{% block content %}
+<div style="max-width: 780px; margin: 2rem auto; background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 6px 20px rgba(0,0,0,0.08);">
+    <h2 style="margin-top: 0;">👁️ Device Request Details</h2>
+
+    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin: 1rem 0; line-height: 1.8;">
+        <div><strong>Device:</strong> {{ auth_request.hostname|default:'Unknown' }}</div>
+        <div><strong>Device Name:</strong> {{ auth_request.device_name|default:'N/A' }}</div>
+        <div><strong>Fingerprint:</strong> {{ auth_request.device_fingerprint }}</div>
+        <div><strong>IP:</strong> {{ auth_request.ip_address }}</div>
+        <div><strong>Requested by:</strong> {{ auth_request.requested_by.username }}</div>
+        <div><strong>Requested at:</strong> {{ auth_request.requested_at|date:"M d, Y H:i" }}</div>
+        <div><strong>Status:</strong> {{ auth_request.status|upper }}</div>
+        <div><strong>Reviewed by:</strong> {{ auth_request.reviewed_by.username|default:'N/A' }}</div>
+        <div><strong>Reviewed at:</strong> {{ auth_request.reviewed_at|date:"M d, Y H:i"|default:'N/A' }}</div>
+        <div><strong>Security Level:</strong> {{ auth_request.security_level }}</div>
+        <div><strong>CSR Submitted:</strong> {% if auth_request.csr_pem %}Yes{% else %}No{% endif %}</div>
+        <div><strong>Certificate Issued:</strong> {% if auth_request.issued_certificate_pem %}Yes{% else %}No{% endif %}</div>
+        {% if auth_request.review_notes %}
+        <div><strong>Review Notes:</strong> {{ auth_request.review_notes }}</div>
+        {% endif %}
+        <div><strong>Reason:</strong> {{ auth_request.reason }}</div>
+    </div>
+
+    <div style="display:flex; gap:0.75rem; flex-wrap: wrap;">
+        <a href="{% url 'armguard_admin:manage_device_requests' %}" style="padding:0.7rem 1rem; border:1px solid #d1d5db; border-radius:8px; text-decoration:none; color:#374151;">Back</a>
+        {% if auth_request.status == 'approved' %}
+        <a href="{% url 'armguard_admin:edit_device_request' auth_request.id %}" style="padding:0.7rem 1rem; border:none; border-radius:8px; background:#16a34a; color:#fff; text-decoration:none; font-weight:600;">Edit</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

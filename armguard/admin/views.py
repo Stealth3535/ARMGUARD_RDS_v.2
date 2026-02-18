@@ -840,6 +840,87 @@ def reject_device_request(request, request_id):
 
 
 @login_required
+@user_passes_test(is_superuser)
+def view_device_request(request, request_id):
+    """View details of a device authorization request."""
+    from .models import DeviceAuthorizationRequest
+
+    auth_request = get_object_or_404(DeviceAuthorizationRequest, id=request_id)
+    context = {
+        'auth_request': auth_request,
+    }
+    return render(request, 'admin/view_device_request.html', context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+def edit_approved_device_request(request, request_id):
+    """Edit an approved device authorization request and re-sync authorized device config."""
+    from .models import DeviceAuthorizationRequest
+    from core.middleware.device_authorization import DeviceAuthorizationMiddleware
+
+    auth_request = get_object_or_404(DeviceAuthorizationRequest, id=request_id, status='approved')
+
+    if request.method == 'POST':
+        device_name = request.POST.get('device_name', auth_request.device_name).strip()
+        security_level = request.POST.get('security_level', auth_request.security_level).strip()
+        notes = request.POST.get('notes', auth_request.review_notes).strip()
+
+        if not device_name:
+            messages.error(request, 'Device name is required.')
+        else:
+            auth_request.device_name = device_name
+            auth_request.security_level = security_level
+            auth_request.review_notes = notes
+            auth_request.save(update_fields=['device_name', 'security_level', 'review_notes'])
+
+            middleware = DeviceAuthorizationMiddleware(lambda req: None)
+            middleware.load_authorized_devices()
+            middleware.authorize_device(
+                device_fingerprint=auth_request.device_fingerprint,
+                device_name=auth_request.device_name,
+                ip_address=auth_request.ip_address,
+                description=f"Requested by {auth_request.requested_by.username}: {auth_request.reason}",
+                can_transact=auth_request.can_transact,
+                security_level=auth_request.security_level,
+                roles=[],
+                max_daily_transactions=auth_request.max_daily_transactions
+            )
+
+            messages.success(request, f'Device request "{device_name}" updated successfully.')
+            return redirect('armguard_admin:manage_device_requests')
+
+    context = {
+        'auth_request': auth_request,
+    }
+    return render(request, 'admin/edit_device_request.html', context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+@require_POST
+def delete_device_request(request, request_id):
+    """Delete a device authorization request (and revoke from authorized devices if approved)."""
+    from .models import DeviceAuthorizationRequest
+    from core.middleware.device_authorization import DeviceAuthorizationMiddleware
+
+    auth_request = get_object_or_404(DeviceAuthorizationRequest, id=request_id)
+    request_label = auth_request.device_name or auth_request.hostname or auth_request.device_fingerprint[:8]
+    was_approved = auth_request.status == 'approved'
+    device_fingerprint = auth_request.device_fingerprint
+
+    auth_request.delete()
+
+    if was_approved:
+        middleware = DeviceAuthorizationMiddleware(lambda req: None)
+        middleware.load_authorized_devices()
+        middleware.revoke_device(device_fingerprint, reason='Deleted by admin from approved requests')
+
+    messages.success(request, f'Device request "{request_label}" deleted successfully.')
+    return redirect('armguard_admin:manage_device_requests')
+
+
+@login_required
 def download_device_certificate(request, request_id):
     """Allow requester (or superuser) to download issued client certificate once."""
     from .models import DeviceAuthorizationRequest

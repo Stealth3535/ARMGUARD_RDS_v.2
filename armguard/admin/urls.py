@@ -45,6 +45,9 @@ urlpatterns = [
     # Device Authorization
     path('device/request-authorization/', views.request_device_authorization, name='request_device_authorization'),
     path('device/requests/', views.manage_device_requests, name='manage_device_requests'),
+    path('device/requests/<int:request_id>/view/', views.view_device_request, name='view_device_request'),
+    path('device/requests/<int:request_id>/edit/', views.edit_approved_device_request, name='edit_device_request'),
+    path('device/requests/<int:request_id>/delete/', views.delete_device_request, name='delete_device_request'),
     path('device/requests/<int:request_id>/approve/', views.approve_device_request, name='approve_device_request'),
     path('device/requests/<int:request_id>/reject/', views.reject_device_request, name='reject_device_request'),
     path('device/requests/<int:request_id>/certificate/', views.download_device_certificate, name='download_device_certificate'),
