@@ -18,6 +18,66 @@
         color: #7f8c8d;
         font-size: 1rem;
     }
+
+    .tx-dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1rem;
+        margin-top: 1.25rem;
+    }
+
+    .tx-stat-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1rem 1.2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-top: 4px solid #cbd5e1;
+    }
+
+    .tx-stat-card.available { border-top-color: #10b981; }
+    .tx-stat-card.issued { border-top-color: #f59e0b; }
+    .tx-stat-card.total { border-top-color: #667eea; }
+    .tx-stat-card.defcon { border-top-color: #dc2626; }
+    .tx-stat-card.normal { border-top-color: #2563eb; }
+
+    .tx-stat-title {
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #6b7280;
+        font-weight: 700;
+        margin-bottom: 0.4rem;
+    }
+
+    .tx-stat-value {
+        font-size: 2.2rem;
+        line-height: 1;
+        font-weight: 800;
+        color: #111827;
+        margin-bottom: 0.35rem;
+    }
+
+    .tx-stat-note {
+        font-size: 0.95rem;
+        color: #047857;
+        margin-bottom: 0.45rem;
+    }
+
+    .tx-stat-breakdown,
+    .tx-mode-breakdown {
+        font-size: 0.95rem;
+        color: #374151;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.2rem 0.7rem;
+    }
+
+    .tx-stat-breakdown div,
+    .tx-mode-breakdown div {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
     
     .view-selector {
         background: white;
@@ -162,7 +222,10 @@
 
     .container.defcon-lock {
         height: calc(100vh - 120px);
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-bottom: 120px;
+        -webkit-overflow-scrolling: touch;
     }
 
     .container.defcon-lock .page-header,
@@ -250,6 +313,62 @@
         <div>
             <h1 class="page-title">Transactions</h1>
             <p class="page-subtitle"><span id="totalTransactionsCount">{{ recent_transactions.count }}</span> Total Transactions</p>
+        </div>
+        <div class="tx-dashboard-grid">
+            <div class="tx-stat-card available">
+                <div class="tx-stat-title">Available Items</div>
+                <div class="tx-stat-value" id="availableItemsCount">{{ inventory_counts.available }}</div>
+                <div class="tx-stat-note">Ready for deployment</div>
+                <div class="tx-stat-breakdown">
+                    <div>M14: <strong id="availableTypeM14">{{ inventory_counts.by_status_type.Available.M14 }}</strong></div>
+                    <div>M16: <strong id="availableTypeM16">{{ inventory_counts.by_status_type.Available.M16 }}</strong></div>
+                    <div>M4: <strong id="availableTypeM4">{{ inventory_counts.by_status_type.Available.M4 }}</strong></div>
+                    <div>Glock: <strong id="availableTypeGLOCK">{{ inventory_counts.by_status_type.Available.GLOCK }}</strong></div>
+                    <div>.45: <strong id="availableTypeP45">{{ inventory_counts.by_status_type.Available.P45 }}</strong></div>
+                </div>
+            </div>
+
+            <div class="tx-stat-card issued">
+                <div class="tx-stat-title">Currently Issued</div>
+                <div class="tx-stat-value" id="issuedItemsCount">{{ inventory_counts.issued }}</div>
+                <div class="tx-stat-note">In field operations</div>
+                <div class="tx-stat-breakdown">
+                    <div>M14: <strong id="issuedTypeM14">{{ inventory_counts.by_status_type.Issued.M14 }}</strong></div>
+                    <div>M16: <strong id="issuedTypeM16">{{ inventory_counts.by_status_type.Issued.M16 }}</strong></div>
+                    <div>M4: <strong id="issuedTypeM4">{{ inventory_counts.by_status_type.Issued.M4 }}</strong></div>
+                    <div>Glock: <strong id="issuedTypeGLOCK">{{ inventory_counts.by_status_type.Issued.GLOCK }}</strong></div>
+                    <div>.45: <strong id="issuedTypeP45">{{ inventory_counts.by_status_type.Issued.P45 }}</strong></div>
+                </div>
+            </div>
+
+            <div class="tx-stat-card total">
+                <div class="tx-stat-title">Total Inventory</div>
+                <div class="tx-stat-value" id="totalInventoryCount">{{ inventory_counts.total }}</div>
+                <div class="tx-stat-note">Complete arsenal</div>
+                <div class="tx-stat-breakdown">
+                    <div>M14: <strong>{{ inventory_counts.by_status_type.Total.M14 }}</strong></div>
+                    <div>M16: <strong>{{ inventory_counts.by_status_type.Total.M16 }}</strong></div>
+                    <div>M4: <strong>{{ inventory_counts.by_status_type.Total.M4 }}</strong></div>
+                    <div>Glock: <strong>{{ inventory_counts.by_status_type.Total.GLOCK }}</strong></div>
+                    <div>.45: <strong>{{ inventory_counts.by_status_type.Total.P45 }}</strong></div>
+                </div>
+            </div>
+
+            <div class="tx-stat-card defcon">
+                <div class="tx-stat-title">Defcon Totals</div>
+                <div class="tx-mode-breakdown">
+                    <div>Released: <strong id="defconReleasedCount">{{ transaction_mode_counts.defcon_released }}</strong></div>
+                    <div>Returned: <strong id="defconReturnedCount">{{ transaction_mode_counts.defcon_returned }}</strong></div>
+                </div>
+            </div>
+
+            <div class="tx-stat-card normal">
+                <div class="tx-stat-title">Normal Totals</div>
+                <div class="tx-mode-breakdown">
+                    <div>Released: <strong id="normalReleasedCount">{{ transaction_mode_counts.normal_released }}</strong></div>
+                    <div>Returned: <strong id="normalReturnedCount">{{ transaction_mode_counts.normal_returned }}</strong></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -517,6 +636,20 @@ const roundsRow = document.getElementById('roundsRow');
 const actionSelect = document.getElementById('actionSelect');
 const scanButtonsRow = document.querySelector('.scan-buttons');
 const totalTransactionsCountElement = document.getElementById('totalTransactionsCount');
+const availableItemsCountElement = document.getElementById('availableItemsCount');
+const issuedItemsCountElement = document.getElementById('issuedItemsCount');
+const defconReleasedCountElement = document.getElementById('defconReleasedCount');
+const defconReturnedCountElement = document.getElementById('defconReturnedCount');
+const normalReleasedCountElement = document.getElementById('normalReleasedCount');
+const normalReturnedCountElement = document.getElementById('normalReturnedCount');
+
+const itemTypeAliases = {
+    M14: 'M14',
+    M16: 'M16',
+    M4: 'M4',
+    GLOCK: 'GLOCK',
+    45: 'P45'
+};
 
 const scannerCapture = {
     buffer: '',
@@ -543,6 +676,57 @@ function incrementHeaderTransactionCount() {
     const currentValue = parseInt(totalTransactionsCountElement.textContent, 10);
     if (Number.isNaN(currentValue)) return;
     totalTransactionsCountElement.textContent = String(currentValue + 1);
+}
+
+function adjustCountElement(element, delta) {
+    if (!element) return;
+    const currentValue = parseInt(element.textContent, 10);
+    if (Number.isNaN(currentValue)) return;
+    element.textContent = String(Math.max(0, currentValue + delta));
+}
+
+function updateElementById(id, delta) {
+    const element = document.getElementById(id);
+    adjustCountElement(element, delta);
+}
+
+function updateDashboardAfterSubmit(responseData, selectedMode) {
+    incrementHeaderTransactionCount();
+
+    const action = responseData?.action;
+    const transactionMode = (selectedMode || 'normal').toLowerCase();
+    const rawItemType = responseData?.transaction?.item?.type;
+    const itemType = itemTypeAliases[rawItemType] || rawItemType;
+
+    if (transactionMode === 'defcon') {
+        if (action === 'Take') {
+            adjustCountElement(defconReleasedCountElement, 1);
+        } else if (action === 'Return') {
+            adjustCountElement(defconReturnedCountElement, 1);
+        }
+    } else {
+        if (action === 'Take') {
+            adjustCountElement(normalReleasedCountElement, 1);
+        } else if (action === 'Return') {
+            adjustCountElement(normalReturnedCountElement, 1);
+        }
+    }
+
+    if (action === 'Take') {
+        adjustCountElement(availableItemsCountElement, -1);
+        adjustCountElement(issuedItemsCountElement, 1);
+        if (itemType) {
+            updateElementById(`availableType${itemType}`, -1);
+            updateElementById(`issuedType${itemType}`, 1);
+        }
+    } else if (action === 'Return') {
+        adjustCountElement(availableItemsCountElement, 1);
+        adjustCountElement(issuedItemsCountElement, -1);
+        if (itemType) {
+            updateElementById(`availableType${itemType}`, 1);
+            updateElementById(`issuedType${itemType}`, -1);
+        }
+    }
 }
 
 function resetScannerBuffer() {
@@ -975,7 +1159,7 @@ async function submitTransaction() {
             const data = await response.json();
             console.log('Transaction response:', data); // Debug log
             showNotification('✓ Transaction #' + data.transaction_id + ' completed successfully!', 'success');
-            incrementHeaderTransactionCount();
+            updateDashboardAfterSubmit(data, mode);
 
             const prepareNextDefconTransaction = () => {
                 itemInput.value = '';

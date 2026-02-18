@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, DetailView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.db import DatabaseError
 from django.http import JsonResponse
 from django.contrib import messages
@@ -64,6 +64,41 @@ class TransactionListView(LoginRequiredMixin, ListView):
                 item_id__in=issued_items_ids,
                 action='Take'
             ).select_related('personnel', 'item').order_by('-date_time')
+
+            items = Item.objects.all()
+            type_keys = ['M14', 'M16', 'M4', 'GLOCK', 'P45']
+            status_type_counts = {
+                'Available': {key: 0 for key in type_keys},
+                'Issued': {key: 0 for key in type_keys},
+                'Total': {key: 0 for key in type_keys},
+            }
+
+            grouped_items = items.values('status', 'item_type').annotate(total=Count('id'))
+            for grouped in grouped_items:
+                status = grouped['status']
+                raw_item_type = grouped['item_type']
+                item_type = 'P45' if raw_item_type == '45' else raw_item_type
+                total = grouped['total']
+                if item_type in status_type_counts['Total']:
+                    status_type_counts['Total'][item_type] += total
+                    if status in status_type_counts:
+                        status_type_counts[status][item_type] += total
+
+            context['inventory_counts'] = {
+                'available': items.filter(status=Item.STATUS_AVAILABLE).count(),
+                'issued': items.filter(status=Item.STATUS_ISSUED).count(),
+                'total': items.count(),
+                'by_status_type': status_type_counts,
+            }
+
+            context['transaction_mode_counts'] = {
+                'defcon_released': Transaction.objects.filter(transaction_mode=Transaction.MODE_DEFCON, action=Transaction.ACTION_TAKE).count(),
+                'defcon_returned': Transaction.objects.filter(transaction_mode=Transaction.MODE_DEFCON, action=Transaction.ACTION_RETURN).count(),
+                'normal_released': Transaction.objects.filter(transaction_mode=Transaction.MODE_NORMAL, action=Transaction.ACTION_TAKE).count(),
+                'normal_returned': Transaction.objects.filter(transaction_mode=Transaction.MODE_NORMAL, action=Transaction.ACTION_RETURN).count(),
+                'total_transactions': Transaction.objects.count(),
+            }
+
             return context
         except DatabaseError:
             logger.exception("Database error in TransactionListView.get_context_data")
@@ -71,7 +106,24 @@ class TransactionListView(LoginRequiredMixin, ListView):
             context = {
                 'can_create_transaction': is_admin_or_armorer(self.request.user),
                 'issued_items': Transaction.objects.none(),
-                'error_message': 'Unable to load transaction data right now. Please try again.'
+                'error_message': 'Unable to load transaction data right now. Please try again.',
+                'inventory_counts': {
+                    'available': 0,
+                    'issued': 0,
+                    'total': 0,
+                    'by_status_type': {
+                        'Available': {'M14': 0, 'M16': 0, 'M4': 0, 'GLOCK': 0, 'P45': 0},
+                        'Issued': {'M14': 0, 'M16': 0, 'M4': 0, 'GLOCK': 0, 'P45': 0},
+                        'Total': {'M14': 0, 'M16': 0, 'M4': 0, 'GLOCK': 0, 'P45': 0},
+                    },
+                },
+                'transaction_mode_counts': {
+                    'defcon_released': 0,
+                    'defcon_returned': 0,
+                    'normal_released': 0,
+                    'normal_returned': 0,
+                    'total_transactions': 0,
+                },
             }
             return context
 

@@ -24,6 +24,13 @@ class Transaction(models.Model):
         (ACTION_TAKE, 'Take/Withdraw'),
         (ACTION_RETURN, 'Return'),
     ]
+
+    MODE_NORMAL = 'normal'
+    MODE_DEFCON = 'defcon'
+    MODE_CHOICES = [
+        (MODE_NORMAL, 'Normal Mode'),
+        (MODE_DEFCON, 'Defcon Mode'),
+    ]
     
     # Auto-increment ID
     id = models.AutoField(primary_key=True)
@@ -52,6 +59,7 @@ class Transaction(models.Model):
     
     # Transaction Details
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    transaction_mode = models.CharField(max_length=20, choices=MODE_CHOICES, default=MODE_NORMAL)
     date_time = models.DateTimeField(default=timezone.now)
     
     # Additional fields for withdrawals

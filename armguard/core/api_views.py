@@ -164,6 +164,7 @@ def create_transaction(request):
                     'personnel': personnel,
                     'item': item,
                     'action': action,
+                    'transaction_mode': mode,
                     'notes': notes,
                     'mags': mags,
                     'rounds': rounds,
