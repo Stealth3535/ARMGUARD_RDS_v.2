@@ -5,7 +5,7 @@ Provides device-based authorization for sensitive operations with production fea
 import json
 import os
 from datetime import datetime, time, timedelta
-from django.http import JsonResponse, HttpResponseForbidden, HttpResponseRedirect
+from django.http import JsonResponse, HttpResponseRedirect
 from django.utils.deprecation import MiddlewareMixin
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -508,75 +508,6 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                 }, status=403)
 
             return HttpResponseRedirect('/admin/device/request-authorization/')
-
-            request_auth_link = '''
-                <div style="margin: 2rem 0; padding: 1.5rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
-                    <h3 style="margin: 0 0 1rem 0; color: #92400e;">🔐 Need Access?</h3>
-                    <p style="margin: 0 0 1rem 0; color: #78350f;">You can request authorization for this device:</p>
-                    <a href="/admin/device/request-authorization/" 
-                       style="display: inline-block; padding: 0.75rem 1.5rem; background: #f59e0b; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                        📤 Request Device Authorization
-                    </a>
-                </div>
-            '''
-
-            return HttpResponseForbidden(f'''
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Device Not Authorized</title>
-                    <style>
-                        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 2rem; background: #f3f4f6; }}
-                        .container {{ max-width: 700px; margin: 0 auto; background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border-left: 6px solid #ef4444; }}
-                        h1 {{ color: #991b1b; font-size: 2rem; margin: 0 0 1rem 0; }}
-                        .icon {{ font-size: 4rem; text-align: center; margin-bottom: 1rem; }}
-                        p {{ color: #374151; line-height: 1.6; }}
-                        code {{ background: #fee2e2; padding: 0.25rem 0.5rem; border-radius: 4px; color: #7f1d1d; font-family: monospace; }}
-                        .info-box {{ background: #fef2f2; border: 2px solid #fee2e2; padding: 1rem; border-radius: 8px; margin: 1.5rem 0; }}
-                        .info-row {{ display: flex; justify-content: space-between; margin-bottom: 0.5rem; }}
-                        .info-label {{ font-weight: 600; color: #991b1b; }}
-                        small {{ color: #6b7280; }}
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="icon">🚨</div>
-                        <h1>HIGH SECURITY VIOLATION</h1>
-                        <p><strong>This device is not authorized to perform sensitive military operations.</strong></p>
-                        <p>Verified mTLS client certificate is required for this operation.</p>
-                        
-                        <div class="info-box">
-                            <div class="info-row">
-                                <span class="info-label">Device ID:</span>
-                                <code>{device_fingerprint[:16]}...</code>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">IP Address:</span>
-                                <code>{ip_address}</code>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Timestamp:</span>
-                                <code>{timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC")}</code>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Security Level:</span>
-                                <code>{path_security}</code>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">mTLS Verify:</span>
-                                <code>{mtls_context.get('verify_status', 'NONE')}</code>
-                            </div>
-                        </div>
-                        
-                        {request_auth_link}
-                        
-                        <p style="margin-top: 2rem;"><em>If you believe this is an error, contact your system administrator.</em></p>
-                        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 2rem 0;">
-                        <small>ArmGuard Military Security System</small>
-                    </div>
-                </body>
-                </html>
-            ''')
         
         # Check authorization with enhanced security
         user = getattr(request, 'user', None)
@@ -616,25 +547,6 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                     'timestamp': timezone.now().isoformat()
                 }, status=403)
             
-            # Return enhanced HTML response with request authorization link
-            security_message = (
-                "HIGH SECURITY VIOLATION" if path_security == 'HIGH_SECURITY' 
-                else "UNAUTHORIZED ACCESS ATTEMPT"
-            )
-
-            return HttpResponseRedirect('/admin/device/request-authorization/')
-            
-            request_auth_link = '''
-                <div style="margin: 2rem 0; padding: 1.5rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">
-                    <h3 style="margin: 0 0 1rem 0; color: #92400e;">🔐 Need Access?</h3>
-                    <p style="margin: 0 0 1rem 0; color: #78350f;">You can request authorization for this device:</p>
-                    <a href="/admin/device/request-authorization/" 
-                       style="display: inline-block; padding: 0.75rem 1.5rem; background: #f59e0b; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
-                        📤 Request Device Authorization
-                    </a>
-                </div>
-                '''
-            
             self._persist_access_log(
                 request=request,
                 user=user,
@@ -646,59 +558,7 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
                 response_status=403,
             )
 
-            return HttpResponseForbidden(f'''
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Device Not Authorized</title>
-                    <style>
-                        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 2rem; background: #f3f4f6; }}
-                        .container {{ max-width: 700px; margin: 0 auto; background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border-left: 6px solid #ef4444; }}
-                        h1 {{ color: #991b1b; font-size: 2rem; margin: 0 0 1rem 0; }}
-                        .icon {{ font-size: 4rem; text-align: center; margin-bottom: 1rem; }}
-                        p {{ color: #374151; line-height: 1.6; }}
-                        code {{ background: #fee2e2; padding: 0.25rem 0.5rem; border-radius: 4px; color: #7f1d1d; font-family: monospace; }}
-                        .info-box {{ background: #fef2f2; border: 2px solid #fee2e2; padding: 1rem; border-radius: 8px; margin: 1.5rem 0; }}
-                        .info-row {{ display: flex; justify-content: space-between; margin-bottom: 0.5rem; }}
-                        .info-label {{ font-weight: 600; color: #991b1b; }}
-                        small {{ color: #6b7280; }}
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="icon">🚨</div>
-                        <h1>{security_message}</h1>
-                        <p><strong>This device is not authorized to perform sensitive military operations.</strong></p>
-                        <p>All unauthorized access attempts are logged and monitored for security purposes.</p>
-                        
-                        <div class="info-box">
-                            <div class="info-row">
-                                <span class="info-label">Device ID:</span>
-                                <code>{device_fingerprint[:16]}...</code>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">IP Address:</span>
-                                <code>{ip_address}</code>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Timestamp:</span>
-                                <code>{timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC")}</code>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Security Level:</span>
-                                <code>{path_security}</code>
-                            </div>
-                        </div>
-                        
-                        {request_auth_link}
-                        
-                        <p style="margin-top: 2rem;"><em>If you believe this is an error, contact your system administrator.</em></p>
-                        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 2rem 0;">
-                        <small>ArmGuard Military Security System</small>
-                    </div>
-                </body>
-                </html>
-            ''')
+            return HttpResponseRedirect('/admin/device/request-authorization/')
         
         # Log successful authorization
         logger.info(f"Device authorized: {device_fingerprint[:8]}... from {ip_address} accessing {request.path}")
