@@ -236,11 +236,16 @@
     }
 
     .container.defcon-lock {
-        height: calc(100vh - 120px);
+        height: calc(100vh - 72px);
         overflow-y: auto;
         overflow-x: hidden;
-        padding-bottom: 120px;
+        padding-bottom: 2rem;
         -webkit-overflow-scrolling: touch;
+    }
+
+    body.defcon-lock footer,
+    body.defcon-lock .footer {
+        display: none !important;
     }
 
     .container.defcon-lock .page-header,
@@ -254,7 +259,101 @@
 
     .container.defcon-lock .page-header {
         display: block !important;
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .container.defcon-lock .tx-dashboard-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+    }
+
+    .container.defcon-lock .tx-stat-card {
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+    }
+
+    .container.defcon-lock .tx-stat-title {
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .container.defcon-lock .tx-stat-value {
+        font-size: 2rem;
+        margin-bottom: 0.2rem;
+    }
+
+    .container.defcon-lock .tx-stat-note,
+    .container.defcon-lock .tx-stat-breakdown,
+    .container.defcon-lock .tx-mode-breakdown {
+        font-size: 0.9rem;
+    }
+
+    .container.defcon-lock .mode-action-row {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        margin-bottom: 0.75rem;
+        padding: 0.5rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+    }
+
+    .container.defcon-lock .transaction-form {
+        margin-bottom: 0;
+        padding: 1.1rem 1.2rem;
+        border-radius: 10px;
+    }
+
+    .container.defcon-lock .transaction-form h3 {
+        margin-bottom: 0.85rem;
+        font-size: 1.25rem;
+    }
+
+    .container.defcon-lock .form-row {
+        grid-template-columns: 170px 1fr;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+
+    .container.defcon-lock .form-row label {
+        padding-top: 7px;
+    }
+
+    .container.defcon-lock #notes {
+        min-height: 70px;
+    }
+
+    @media (max-width: 1200px) {
+        .container.defcon-lock .tx-dashboard-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .container.defcon-lock {
+            height: calc(100vh - 64px);
+            padding-bottom: 1rem;
+        }
+
+        .container.defcon-lock .tx-dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .container.defcon-lock .mode-action-row {
+            grid-template-columns: 1fr;
+        }
+
+        .container.defcon-lock .form-row {
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .container.defcon-lock .form-row label {
+            padding-top: 0;
+        }
     }
     
     .issued-items-section, .transaction-history {
