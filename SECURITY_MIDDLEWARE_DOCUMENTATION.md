@@ -50,6 +50,16 @@ Proxy config now forwards:
 - `X-SSL-Client-Serial` (`$ssl_client_serial`)
 - `X-SSL-Client-Fingerprint` (`$ssl_client_fingerprint`)
 
+For strict mTLS enforcement, enable client cert verification in your HTTPS server block:
+
+```nginx
+ssl_client_certificate /etc/nginx/ssl/client_ca.crt;
+ssl_verify_client optional;
+ssl_verify_depth 2;
+```
+
+Then switch to `ssl_verify_client on;` after enrollment rollout is complete.
+
 ### **Deployment Toggle**
 
 `deployment_A/methods/production/deploy-armguard.sh` now supports:
