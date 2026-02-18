@@ -1160,6 +1160,17 @@ final_summary() {
     
     echo "Admin URL (Domain):   https://${DOMAIN}/${ADMIN_PATH}/"
     echo "Admin URL (Server IP): https://${SERVER_IP}/${ADMIN_PATH}/"
+
+    # Quick post-deploy endpoint probes (uses -k for mkcert/self-signed certs)
+    local LOGIN_STATUS ADMIN_STATUS
+    LOGIN_STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "https://${SERVER_IP}/login/" || true)
+    ADMIN_STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "https://${SERVER_IP}/${ADMIN_PATH}/" || true)
+    LOGIN_STATUS=${LOGIN_STATUS:-000}
+    ADMIN_STATUS=${ADMIN_STATUS:-000}
+    echo ""
+    echo -e "${CYAN}Endpoint Probe:${NC}"
+    echo "  Login (IP):          https://${SERVER_IP}/login/  [HTTP ${LOGIN_STATUS}]"
+    echo "  Admin (IP):          https://${SERVER_IP}/${ADMIN_PATH}/  [HTTP ${ADMIN_STATUS}]"
     echo ""
     echo "Project Directory:    ${PROJECT_DIR}"
     echo "Virtual Environment:  ${PROJECT_DIR}/.venv"
