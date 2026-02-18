@@ -154,6 +154,25 @@
     .btn-submit-transaction:hover {
         background: #218838;
     }
+
+    body.defcon-lock {
+        overflow: hidden;
+        height: 100vh;
+    }
+
+    .container.defcon-lock {
+        height: calc(100vh - 120px);
+        overflow: hidden;
+    }
+
+    .container.defcon-lock .page-header,
+    .container.defcon-lock .issued-items-section,
+    .container.defcon-lock .transaction-history,
+    .container.defcon-lock .view-selector,
+    .container.defcon-lock .search-bar,
+    .container.defcon-lock .filter-bar {
+        display: none !important;
+    }
     
     .issued-items-section, .transaction-history {
         margin-top: 40px;
@@ -636,6 +655,23 @@ function setDefconActionState() {
     }
 }
 
+function setDefconLockLayout() {
+    const isDefconMode = modeSelect.value === 'defcon';
+    const mainContainer = document.querySelector('.container');
+
+    if (isDefconMode) {
+        document.body.classList.add('defcon-lock');
+        if (mainContainer) {
+            mainContainer.classList.add('defcon-lock');
+        }
+    } else {
+        document.body.classList.remove('defcon-lock');
+        if (mainContainer) {
+            mainContainer.classList.remove('defcon-lock');
+        }
+    }
+}
+
 modeSelect.addEventListener('change', function() {
     if (this.value === 'defcon') {
         dutyTypeRow.style.display = 'none';
@@ -647,9 +683,11 @@ modeSelect.addEventListener('change', function() {
         roundsRow.style.display = 'grid';
     }
     setDefconActionState();
+    setDefconLockLayout();
 });
 
 setDefconActionState();
+setDefconLockLayout();
 
 document.addEventListener('keydown', function(e) {
     if (e.ctrlKey || e.altKey || e.metaKey) return;
