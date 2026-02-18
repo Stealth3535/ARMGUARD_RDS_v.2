@@ -152,26 +152,6 @@
     <p>The registration has been completed successfully.</p>
 </div>
 
-{% if qr_code %}
-<div class="qr-container">
-    <h2>QR Code Generated</h2>
-    <p>A QR code has been generated for {{ personnel_name }}. You can print or save it for future use.</p>
-    
-    <div class="qr-grid">
-        <div class="qr-card" style="margin: 0 auto;">
-            <h3>Personnel QR Code</h3>
-            <img src="data:image/png;base64,{{ qr_code }}" alt="Personnel QR Code">
-        </div>
-    </div>
-</div>
-{% else %}
-<div class="qr-container">
-    <div class="no-qr-message">
-        <h3>QR Code Status</h3>\n        <p><strong>No QR code was generated for this registration.</strong></p>\n        <p>This might happen if:</p>\n        <ul style=\"text-align: left; display: inline-block; margin: 1rem 0;\">\n            <li>Only a user account was created (without personnel record)</li>\n            <li>There was an error during QR code generation</li>\n            <li>The session data was lost</li>\n        </ul>\n        <p style=\"margin-top: 1rem;\"><em>Personnel records will have QR codes generated automatically.</em></p>"
-    </div>
-</div>
-{% endif %}
-
 <div class="action-buttons">
     <a href="{% url 'armguard_admin:registration' %}" class="btn btn-primary">➕ Register Another User</a>
     <a href="{% url 'armguard_admin:user_management' %}" class="btn btn-secondary">👥 View All Users</a>
