@@ -42,18 +42,20 @@ body {
 
 /* Header Actions Bar */
 .header-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-3) var(--space-6);
-    background-color: var(--neutral-100);
+    background-color: var(--white);
     border-bottom: var(--border) solid var(--neutral-200);
+    box-shadow: var(--shadow-sm);
+}
+
+.header-actions .container {
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
 }
 
 .welcome-text {
     font-size: var(--text-sm);
     font-weight: var(--font-medium);
-    color: var(--neutral-700);
+    color: var(--neutral-600);
 }
 
 .btn-logout {
