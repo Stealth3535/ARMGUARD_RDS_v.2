@@ -26,6 +26,7 @@
     </div>
     {% endif %}
     
+    {% block global_messages %}
     <!-- Messages -->
     {% if messages %}
     <div class="container">
@@ -36,6 +37,7 @@
         {% endfor %}
     </div>
     {% endif %}
+    {% endblock %}
 
     <main class="container">
         {% block content %}{% endblock %}

@@ -147,6 +147,9 @@ class TransactionFormFiller:
         else:
             issued_by = transaction.issued_by.get_full_name() if transaction.issued_by else "N/A"
         
+        transaction_mode = (getattr(transaction, 'transaction_mode', '') or '').lower()
+        purpose_value = 'DEFCON' if transaction_mode == 'defcon' else (transaction.duty_type or 'duty security')
+
         return {
             'date': transaction.date_time.strftime('%d/%m/%Y'),
             'time': transaction.date_time.strftime('%H:%M:%S'),
@@ -163,7 +166,7 @@ class TransactionFormFiller:
             'action': transaction.action,
             'mags': str(transaction.mags) if transaction.mags else '0',
             'rounds': str(transaction.rounds) if transaction.rounds else '0',
-            'duty_type': transaction.duty_type or 'duty security',
+            'duty_type': purpose_value,
             'notes': transaction.notes or '',
             'issued_by': issued_by,
         }
