@@ -309,12 +309,21 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
             return True
         
         device_config = None
-        # Find device configuration
-        for device in self.authorized_devices.get('devices', []):
-            if (device.get('fingerprint') == device_fingerprint or 
-                device.get('ip') == ip_address):
+        devices = self.authorized_devices.get('devices', [])
+
+        # 1) Primary match: exact fingerprint
+        for device in devices:
+            if device.get('fingerprint') == device_fingerprint:
                 device_config = device
                 break
+
+        # 2) Backward-compatibility fallback: IP match only for legacy records
+        # that do not yet have a stored fingerprint.
+        if not device_config:
+            for device in devices:
+                if not device.get('fingerprint') and device.get('ip') == ip_address:
+                    device_config = device
+                    break
         
         if not device_config:
             self._record_failed_attempt(device_fingerprint, ip_address)
@@ -646,8 +655,14 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
         # Check if device already exists
         device_updated = False
         for device in self.authorized_devices.get('devices', []):
-            if (device.get('fingerprint') == device_fingerprint or 
-                (ip_address and device.get('ip') == ip_address)):
+            if (
+                device.get('fingerprint') == device_fingerprint
+                or (
+                    ip_address
+                    and device.get('ip') == ip_address
+                    and not device.get('fingerprint')
+                )
+            ):
                 # Update existing device
                 device.update(new_device)
                 device_updated = True
@@ -668,21 +683,37 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
         logger.info(f"Device {action}: {device_name} ({device_fingerprint[:8]}...) - Security: {security_level}")
         return True
     
-    def revoke_device(self, device_fingerprint, reason="Manual revocation"):
+    def revoke_device(self, device_fingerprint, reason="Manual revocation", ip_address=None):
         """Revoke device authorization with audit trail"""
+        revoked_any = False
+
         for device in self.authorized_devices.get('devices', []):
-            if device.get('fingerprint') == device_fingerprint:
+            fingerprint_match = device.get('fingerprint') == device_fingerprint
+            legacy_ip_match = bool(
+                ip_address and not device.get('fingerprint') and device.get('ip') == ip_address
+            )
+
+            if fingerprint_match or legacy_ip_match:
                 device['active'] = False
                 device['revoked_at'] = timezone.now().isoformat()
                 device['revocation_reason'] = reason
                 
                 # Clear any lockouts for this device
-                lockout_key = f"device_lockout_{device_fingerprint}"
+                fingerprint_for_cache = device.get('fingerprint') or device_fingerprint
+                lockout_key = f"device_lockout_{fingerprint_for_cache}"
+                attempts_key = f"device_attempts_{fingerprint_for_cache}"
                 cache.delete(lockout_key)
-                
-                self.save_authorized_devices()
-                logger.warning(f"Device revoked: {device.get('name', 'Unknown')} ({device_fingerprint[:8]}...) - Reason: {reason}")
-                return True
+                cache.delete(attempts_key)
+
+                logger.warning(
+                    f"Device revoked: {device.get('name', 'Unknown')} "
+                    f"({(device.get('fingerprint') or device_fingerprint)[:8]}...) - Reason: {reason}"
+                )
+                revoked_any = True
+
+        if revoked_any:
+            self.save_authorized_devices()
+            return True
         return False
     
     def get_device_stats(self):
@@ -744,8 +775,10 @@ def get_device_info(request):
     # Find device config
     device_config = None
     for device in middleware.authorized_devices.get('devices', []):
-        if (device.get('fingerprint') == device_fingerprint or 
-            device.get('ip') == ip_address):
+        if (
+            device.get('fingerprint') == device_fingerprint
+            or (not device.get('fingerprint') and device.get('ip') == ip_address)
+        ):
             device_config = device
             break
     

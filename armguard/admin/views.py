@@ -983,15 +983,18 @@ def delete_device_request(request, request_id):
 
     auth_request = get_object_or_404(DeviceAuthorizationRequest, id=request_id)
     request_label = auth_request.device_name or auth_request.hostname or auth_request.device_fingerprint[:8]
-    was_approved = auth_request.status == 'approved'
     device_fingerprint = auth_request.device_fingerprint
+    ip_address = auth_request.ip_address
 
     auth_request.delete()
 
-    if was_approved:
-        middleware = DeviceAuthorizationMiddleware(lambda req: None)
-        middleware.load_authorized_devices()
-        middleware.revoke_device(device_fingerprint, reason='Deleted by admin from approved requests')
+    middleware = DeviceAuthorizationMiddleware(lambda req: None)
+    middleware.load_authorized_devices()
+    middleware.revoke_device(
+        device_fingerprint,
+        reason='Deleted by admin from device requests',
+        ip_address=ip_address,
+    )
 
     messages.success(request, f'Device request "{request_label}" deleted successfully.')
     return redirect('armguard_admin:manage_device_requests')
