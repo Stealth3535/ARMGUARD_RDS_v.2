@@ -72,10 +72,6 @@
             </a>
             {% endif %}
             
-            <a href="{% url 'personnel:personnel_profile_list' %}" class="btn btn-secondary btn-block">
-                <i class="fas fa-id-card"></i> View Personnel
-            </a>
-            
             {% if can_edit and user.is_superuser or is_admin_group or is_armorer_group %}
             <a href="{% url 'armguard_admin:register_item' %}" class="btn btn-info btn-block">
                 <i class="fas fa-plus-square"></i> Add Item
