@@ -455,7 +455,7 @@
                             <div class="action-links">
                                 <a href="{% url 'personnel:personnel_profile_detail' person.id %}">View</a>
                                 {% if user.is_superuser or 'Admin' in user.groups.all|join:',' %}
-                                    <a href="{% url 'armguard_admin:registration' %}">Edit</a>
+                                    <a href="{% url 'armguard_admin:edit_personnel' person.id %}">Edit</a>
                                 {% endif %}
                             </div>
                         </td>
