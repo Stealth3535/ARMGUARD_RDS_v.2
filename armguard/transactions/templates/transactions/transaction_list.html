@@ -723,6 +723,14 @@ function openQrScanner(targetInputId) {
             setTimeout(() => {
                 console.log('Triggering blur event for:', currentQrTarget); // Debug log
                 input.dispatchEvent(new Event('blur'));
+
+                // Auto-tab to next field when personnel input was scanned.
+                if (currentQrTarget === 'personnelInput') {
+                    itemInput.focus();
+                    itemInput.select();
+                } else if (currentQrTarget === 'itemInput') {
+                    focusAfterItemScan();
+                }
             }, 100);
         },
         errorMessage => {}
@@ -771,6 +779,20 @@ const scannerCapture = {
 let hotkeySubmitting = false;
 let personnelValidated = false;
 let itemValidated = false;
+let suppressPersonnelAutoTab = false;
+
+function focusAfterItemScan() {
+    const notesInput = document.getElementById('notes');
+    if (notesInput) {
+        notesInput.focus();
+        return;
+    }
+
+    const submitButton = document.querySelector('.btn-submit-transaction');
+    if (submitButton) {
+        submitButton.focus();
+    }
+}
 
 function trySubmitOnHotkey() {
     if (hotkeySubmitting) return;
@@ -880,14 +902,31 @@ function fillScannedField(parsedScan) {
     if (!parsedScan || !parsedScan.value) return;
 
     if (parsedScan.type === 'personnel') {
+        const scannedWhileItemFocused = (
+            (document.activeElement && document.activeElement.id === 'itemInput') ||
+            currentQrTarget === 'itemInput'
+        );
+
+        if (scannedWhileItemFocused) {
+            itemInput.value = '';
+            itemValidated = false;
+            itemInfo.style.display = 'none';
+            suppressPersonnelAutoTab = true;
+        }
+
         personnelInput.value = parsedScan.value;
         personnelInput.dispatchEvent(new Event('blur'));
         showNotification(`Scanned personnel ID: ${parsedScan.value}`, 'info');
 
         // Immediate tab behavior right after scan capture.
         setTimeout(() => {
-            itemInput.focus();
-            itemInput.select();
+            if (scannedWhileItemFocused) {
+                personnelInput.focus();
+                personnelInput.select();
+            } else {
+                itemInput.focus();
+                itemInput.select();
+            }
         }, 80);
         return;
     }
@@ -896,6 +935,10 @@ function fillScannedField(parsedScan) {
         itemInput.value = parsedScan.value;
         itemInput.dispatchEvent(new Event('blur'));
         showNotification(`Scanned item ID: ${parsedScan.value}`, 'info');
+
+        setTimeout(() => {
+            focusAfterItemScan();
+        }, 80);
     }
 }
 
@@ -1093,8 +1136,14 @@ personnelInput.addEventListener('blur', async function() {
             showNotification(`Personnel scanned: ${data.firstname} ${data.surname} - ${data.rank}`, 'success');
 
             // Move directly to Item ID input after successful personnel validation
-            itemInput.focus();
-            itemInput.select();
+            if (suppressPersonnelAutoTab) {
+                suppressPersonnelAutoTab = false;
+                personnelInput.focus();
+                personnelInput.select();
+            } else {
+                itemInput.focus();
+                itemInput.select();
+            }
         } else {
             personnelValidated = false;
             personnelInfo.className = 'info-text error';
