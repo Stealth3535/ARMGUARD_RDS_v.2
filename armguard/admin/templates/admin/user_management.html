@@ -1018,15 +1018,15 @@ function showAuditHistory(element) {
                     <td>
                         <strong>{{ person.get_full_name }}</strong>
                         {% if person.email %}
-                        <br><small style="color: #666;">📧 {{ person.email }}</small>
+                        <br><small style="color: #666;">{{ person.email }}</small>
                         {% endif %}
                     </td>
                     <td>
                         {% if person.rank %}
                             {% if person.is_officer %}
-                            <span class="badge badge-officer">🎖️ {{ person.rank }}</span>
+                            <span class="badge badge-officer">{{ person.rank }}</span>
                             {% else %}
-                            <span class="badge badge-enlisted">🪖 {{ person.rank }}</span>
+                            <span class="badge badge-enlisted">{{ person.rank }}</span>
                             {% endif %}
                         {% else %}
                             <span style="color: #999;">—</span>
@@ -1035,11 +1035,11 @@ function showAuditHistory(element) {
                     <td><code>{{ person.get_serial_display }}</code></td>
                     <td>
                         {% if person.classification == 'OFFICER' %}
-                        <span class="badge badge-officer">🎖️ OFFICER</span>
+                        <span class="badge badge-officer">OFFICER</span>
                         {% elif person.classification == 'ENLISTED PERSONNEL' %}
-                        <span class="badge badge-enlisted">🪖 ENLISTED</span>
+                        <span class="badge badge-enlisted">ENLISTED</span>
                         {% elif person.classification == 'SUPERUSER' %}
-                        <span class="badge badge-superuser">🔐 SUPERUSER</span>
+                        <span class="badge badge-superuser">SUPERUSER</span>
                         {% else %}
                         <span class="badge" style="background: #f3f4f6; color: #666;">{{ person.classification }}</span>
                         {% endif %}
@@ -1049,13 +1049,13 @@ function showAuditHistory(element) {
                     </td>
                     <td>
                         {% if person.status == 'Active' %}
-                        <span class="badge badge-active">✅ Active</span>
+                        <span class="badge badge-active">Active</span>
                         {% elif person.status == 'Inactive' %}
-                        <span class="badge badge-inactive">⚠️ Inactive</span>
+                        <span class="badge badge-inactive">Inactive</span>
                         {% elif person.status == 'Suspended' %}
-                        <span class="badge" style="background: #fef3c7; color: #92400e;">⏸️ Suspended</span>
+                        <span class="badge" style="background: #fef3c7; color: #92400e;">Suspended</span>
                         {% elif person.status == 'Archived' %}
-                        <span class="badge" style="background: #e5e7eb; color: #374151;">📦 Archived</span>
+                        <span class="badge" style="background: #e5e7eb; color: #374151;">Archived</span>
                         {% else %}
                         <span class="badge" style="background: #f3f4f6; color: #666;">{{ person.status }}</span>
                         {% endif %}
@@ -1063,7 +1063,7 @@ function showAuditHistory(element) {
                     <td>
                         <small>
                             {% if person.tel %}
-                            📱 {{ person.tel }}
+                            {{ person.tel }}
                             {% else %}
                             <span style="color: #999;">—</span>
                             {% endif %}
@@ -1072,12 +1072,12 @@ function showAuditHistory(element) {
                     <td>
                         <span class="badge" style="background: #f3f4f6; color: #666;">v{{ person.version }}</span>
                         {% if person.modified_by %}
-                        <br><small style="color: #666;" title="Last modified by {{ person.modified_by.username }}">👤 {{ person.modified_by.username }}</small>
+                        <br><small style="color: #666;" title="Last modified by {{ person.modified_by.username }}">{{ person.modified_by.username }}</small>
                         {% endif %}
                     </td>
                     <td>
                         {% if person.user %}
-                        <span class="badge badge-linked">🔗 {{ person.user.username }}</span>
+                        <span class="badge badge-linked">{{ person.user.username }}</span>
                         {% else %}
                         <span style="color: #999;">—</span>
                         {% endif %}
