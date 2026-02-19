@@ -111,6 +111,14 @@
     .stat-info {
         flex: 1;
     }
+
+    .stat-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 0.22rem;
+    }
     
     .stat-icon {
         width: 46px;
@@ -152,7 +160,7 @@
         font-size: 2rem;
         font-weight: 800;
         color: #111827;
-        margin-bottom: 0.1rem;
+        margin-bottom: 0;
         line-height: 1;
         background: linear-gradient(135deg, var(--card-color) 0%, #374151 100%);
         -webkit-background-clip: text;
@@ -166,7 +174,7 @@
         text-transform: uppercase;
         letter-spacing: 0.05em;
         font-weight: 600;
-        margin-bottom: 0.22rem;
+        margin-bottom: 0;
     }
     
     .stat-change {
@@ -488,6 +496,10 @@
         .stat-value {
             font-size: 1.65rem;
         }
+
+        .stat-head {
+            align-items: center;
+        }
         
         .table-wrapper {
             overflow-x: auto;
@@ -552,8 +564,10 @@
         <div class="stat-card available">
             <div class="stat-content">
                 <div class="stat-info">
-                    <div class="stat-value" id="availableCount">0</div>
-                    <div class="stat-label">Available Items</div>
+                    <div class="stat-head">
+                        <div class="stat-label">Available Items</div>
+                        <div class="stat-value" id="availableCount">0</div>
+                    </div>
                     <div class="stat-change">
                         <i class="fas fa-arrow-up"></i>
                         Ready for deployment
@@ -569,8 +583,10 @@
         <div class="stat-card issued">
             <div class="stat-content">
                 <div class="stat-info">
-                    <div class="stat-value" id="issuedCount">0</div>
-                    <div class="stat-label">Currently Issued</div>
+                    <div class="stat-head">
+                        <div class="stat-label">Currently Issued</div>
+                        <div class="stat-value" id="issuedCount">0</div>
+                    </div>
                     <div class="stat-change">
                         <i class="fas fa-user-check"></i>
                         In field operations
@@ -586,8 +602,10 @@
         <div class="stat-card maintenance">
             <div class="stat-content">
                 <div class="stat-info">
-                    <div class="stat-value" id="maintenanceCount">0</div>
-                    <div class="stat-label">Under Maintenance</div>
+                    <div class="stat-head">
+                        <div class="stat-label">Under Maintenance</div>
+                        <div class="stat-value" id="maintenanceCount">0</div>
+                    </div>
                     <div class="stat-change negative">
                         <i class="fas fa-exclamation-triangle"></i>
                         Requires attention
@@ -603,8 +621,10 @@
         <div class="stat-card total">
             <div class="stat-content">
                 <div class="stat-info">
-                    <div class="stat-value" id="totalCount">{{ items|length|default:0 }}</div>
-                    <div class="stat-label">Total Inventory</div>
+                    <div class="stat-head">
+                        <div class="stat-label">Total Inventory</div>
+                        <div class="stat-value" id="totalCount">{{ items|length|default:0 }}</div>
+                    </div>
                     <div class="stat-change">
                         <i class="fas fa-database"></i>
                         Complete arsenal
