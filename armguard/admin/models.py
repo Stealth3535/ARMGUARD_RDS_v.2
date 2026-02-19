@@ -5,6 +5,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.conf import settings
+from django.core.cache import cache
 import subprocess
 import tempfile
 from pathlib import Path
@@ -256,6 +257,10 @@ class DeviceAuthorizationRequest(models.Model):
             roles=[],
             max_daily_transactions=self.max_daily_transactions
         )
+
+        # Clear any stale lockout/attempt counters for this device after approval.
+        cache.delete(f"device_lockout_{self.device_fingerprint}")
+        cache.delete(f"device_attempts_{self.device_fingerprint}")
     
     def reject(self, reviewer, notes=''):
         """Reject the device authorization request"""
