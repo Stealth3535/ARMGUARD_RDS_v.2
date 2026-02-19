@@ -44,6 +44,9 @@ jobs:
 
       - name: Django system checks
         working-directory: armguard
+        env:
+          DJANGO_SECRET_KEY: ci-temporary-secret-key-for-checks
+          DJANGO_ALLOWED_HOSTS: 127.0.0.1,localhost,testserver
         run: |
           python manage.py check
 
