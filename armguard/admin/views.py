@@ -697,6 +697,18 @@ def request_device_authorization(request):
         device_cookie = middleware.generate_device_id_cookie()
         should_set_device_cookie = True
 
+    def attach_device_cookie(response):
+        if should_set_device_cookie:
+            response.set_cookie(
+                middleware.device_id_cookie_name,
+                device_cookie,
+                max_age=60 * 60 * 24 * 365 * 2,
+                secure=not settings.DEBUG,
+                httponly=True,
+                samesite='Lax',
+            )
+        return response
+
     # Use cookie-backed fingerprint to avoid collisions across multiple PCs on same network/browser profile.
     fingerprint_data = middleware._build_fingerprint_data(request, device_id=device_cookie)
     device_fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()[:32]
@@ -704,7 +716,7 @@ def request_device_authorization(request):
     user_agent = request.META.get('HTTP_USER_AGENT', '')
     
     if request.method == 'POST' and not request.user.is_authenticated:
-        return redirect(f"/login/?next=/admin/device/request-authorization/")
+        return attach_device_cookie(redirect(f"/login/?next=/admin/device/request-authorization/"))
 
     stale_approved_request = None
     rotated_approved_request = None
@@ -811,7 +823,7 @@ def request_device_authorization(request):
                         and not existing_request.issued_certificate_downloaded_at
                     )
                     if not requires_cert_download:
-                        return redirect(redirect_target)
+                        return attach_device_cookie(redirect(redirect_target))
             else:
                 try:
                     archived_suffix = timezone.now().strftime('%Y%m%d%H%M%S')
@@ -840,7 +852,7 @@ def request_device_authorization(request):
                         request,
                         'Previous approval became inactive; a new pending request was created automatically.'
                     )
-                    return redirect('armguard_admin:request_device_authorization')
+                    return attach_device_cookie(redirect('armguard_admin:request_device_authorization'))
                 except DatabaseError:
                     logger.exception("Database error while auto-converting stale approved request to pending")
                     stale_approved_request = existing_request
@@ -935,13 +947,13 @@ def request_device_authorization(request):
                     request,
                     'Could not submit request because device authorization database is not ready. Please contact administrator.'
                 )
-                return redirect('armguard_admin:request_device_authorization')
+                return attach_device_cookie(redirect('armguard_admin:request_device_authorization'))
             
             if csr_pem:
                 messages.success(request, 'Device authorization request with CSR submitted successfully. Certificate will be issued automatically upon approval.')
             else:
                 messages.success(request, 'Device authorization request submitted successfully. You can upload CSR for automated certificate issuance.')
-            return redirect('armguard_admin:dashboard')
+            return attach_device_cookie(redirect('armguard_admin:dashboard'))
     
     context = {
         'device_fingerprint': device_fingerprint[:16] + '...',
@@ -954,16 +966,7 @@ def request_device_authorization(request):
         messages.success(request, 'Existing approved device profile was relinked for this browser session.')
 
     response = render(request, 'admin/request_device_auth.html', context)
-    if should_set_device_cookie:
-        response.set_cookie(
-            middleware.device_id_cookie_name,
-            device_cookie,
-            max_age=60 * 60 * 24 * 365 * 2,
-            secure=not settings.DEBUG,
-            httponly=True,
-            samesite='Lax',
-        )
-    return response
+    return attach_device_cookie(response)
 
 
 @login_required
