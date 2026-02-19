@@ -84,18 +84,14 @@
         </div>
     </div>
 
-    <!-- View Selector -->
-    <div class="view-selector">
-        <label for="viewSelector">🔍 View QR Codes For:</label>
-        <select id="viewSelector" onchange="location.href=this.value;">
+    <!-- View Selector + Search Bar Row -->
+    <div style="display: flex; align-items: center; gap: 1rem; background: white; padding: 1rem 1.5rem; border-radius: 8px; box-shadow: var(--card-shadow); margin-bottom: 2rem;">
+        <label for="viewSelector" style="font-weight: 600; color: var(--text-color); white-space: nowrap; margin: 0;">🔍 View QR Codes For:</label>
+        <select id="viewSelector" onchange="location.href=this.value;" style="padding: 0.5rem 1rem; border: 2px solid var(--border-color); border-radius: 6px; font-size: 1rem; min-width: 200px; cursor: pointer;">
             <option value="{% url 'qr_manager:personnel_qr_codes' %}">Personnel QR Codes</option>
             <option value="{% url 'qr_manager:item_qr_codes' %}" selected>Item QR Codes</option>
         </select>
-    </div>
-
-    <!-- Search Bar -->
-    <div class="search-bar">
-        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by type or serial...">
+        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search by type or serial..." style="flex: 1; margin: 0;">
     </div>
 
     <!-- QR Codes Grid -->
