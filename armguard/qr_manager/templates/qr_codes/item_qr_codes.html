@@ -95,10 +95,10 @@
     </div>
 
     <!-- QR Codes Grid -->
-    <div class="grid grid-4" id="qrGrid">
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;" id="qrGrid">
         {% for item in items %}
-        <div class="card qr-card" data-search="{{ item.item_type|lower }} {{ item.serial|lower }}" style="padding: 0.6rem 0.8rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <div class="card qr-card" data-search="{{ item.item_type|lower }} {{ item.serial|lower }}" style="padding: 0.6rem 0.8rem; text-align: left;">
+            <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
                 {% if item.qr_code_obj and item.qr_code_obj.qr_image %}
                 <img src="{{ item.qr_code_obj.qr_image.url }}?v={{ item.qr_code_obj.updated_at|date:'U' }}" alt="QR" style="width: 64px; height: 64px; border-radius: 6px; flex-shrink: 0;">
                 {% else %}
