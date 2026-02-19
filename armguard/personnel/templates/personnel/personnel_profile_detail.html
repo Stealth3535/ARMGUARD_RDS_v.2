@@ -4,8 +4,7 @@
 {% block title %}{{ personnel.get_full_name }} - Personnel Detail{% endblock %}
 
 {% block content %}
-<div class="container">
-    <!-- Breadcrumb -->
+<!-- Breadcrumb -->
     <div style="margin-bottom: 1rem;">
         <a href="{% url 'dashboard' %}" style="color: var(--text-light);">Dashboard</a> / 
         <a href="{% url 'personnel:personnel_profile_list' %}" style="color: var(--text-light);">Personnel</a> / 
@@ -231,7 +230,6 @@
             </p>
         </div>
     </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}

@@ -358,9 +358,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <!-- Page Header -->
-    <div class="page-header">
+<!-- Page Header -->
+<div class="page-header">
         <h1><i class="fas fa-users"></i> Personnel Directory</h1>
         {% if user.is_superuser or 'Admin' in user.groups.all|join:',' %}
         <a href="{% url 'armguard_admin:registration' %}" class="btn-primary">
@@ -535,7 +534,6 @@
         </div>
     </div>
 
-</div>
 {% endblock %}
 
 {% block extra_js %}
