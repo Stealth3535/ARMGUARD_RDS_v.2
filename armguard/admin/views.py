@@ -745,10 +745,11 @@ def request_device_authorization(request):
                 getattr(request, 'user', None),
                 required_security='HIGH_SECURITY',
             )
+            auth_failure_reason = str(getattr(middleware, '_last_auth_reason', ''))
 
             if (
                 not is_currently_authorized
-                and str(getattr(middleware, '_last_auth_reason', '')).startswith('insufficient_security_level_')
+                and auth_failure_reason.startswith('insufficient_security_level_')
             ):
                 middleware.load_authorized_devices()
                 upgraded = middleware.upgrade_device_security_level(
@@ -767,6 +768,33 @@ def request_device_authorization(request):
                         getattr(request, 'user', None),
                         required_security='HIGH_SECURITY',
                     )
+                    auth_failure_reason = str(getattr(middleware, '_last_auth_reason', auth_failure_reason))
+
+            if not is_currently_authorized and auth_failure_reason in {'device_not_registered', 'device_deactivated', 'ip_mismatch'}:
+                middleware.load_authorized_devices()
+                middleware.authorize_device(
+                    device_fingerprint=device_fingerprint,
+                    device_name=existing_request.device_name or existing_request.hostname or 'Authorized Device',
+                    ip_address=ip_address,
+                    description=f"Recovered for {request.user.username}: {existing_request.reason}",
+                    can_transact=existing_request.can_transact,
+                    security_level='HIGH_SECURITY',
+                    roles=[],
+                    max_daily_transactions=existing_request.max_daily_transactions,
+                )
+
+                if existing_request.security_level != 'HIGH_SECURITY':
+                    existing_request.security_level = 'HIGH_SECURITY'
+                    existing_request.save(update_fields=['security_level'])
+
+                is_currently_authorized = middleware.is_device_authorized(
+                    device_fingerprint,
+                    ip_address,
+                    request.path,
+                    getattr(request, 'user', None),
+                    required_security='HIGH_SECURITY',
+                )
+                auth_failure_reason = str(getattr(middleware, '_last_auth_reason', auth_failure_reason))
 
             mtls_context = middleware._get_mtls_context(request)
             mtls_required_for_admin = middleware._mtls_required_for_security('HIGH_SECURITY')
@@ -785,9 +813,38 @@ def request_device_authorization(request):
                     if not requires_cert_download:
                         return redirect(redirect_target)
             else:
-                stale_approved_request = existing_request
-                existing_request = None
-                messages.warning(request, 'Previous approval is no longer active. Please submit a new authorization request.')
+                try:
+                    existing_request.status = 'pending'
+                    existing_request.reviewed_by = None
+                    existing_request.reviewed_at = None
+                    existing_request.review_notes = ''
+                    existing_request.requested_at = timezone.now()
+                    existing_request.ip_address = ip_address
+                    existing_request.user_agent = user_agent
+                    if request.user.is_authenticated:
+                        existing_request.requested_by = request.user
+                    existing_request.save(
+                        update_fields=[
+                            'status',
+                            'reviewed_by',
+                            'reviewed_at',
+                            'review_notes',
+                            'requested_at',
+                            'ip_address',
+                            'user_agent',
+                            'requested_by',
+                        ]
+                    )
+                    messages.warning(
+                        request,
+                        'Previous approval became inactive; a new pending request was created automatically.'
+                    )
+                    return redirect('armguard_admin:request_device_authorization')
+                except DatabaseError:
+                    logger.exception("Database error while auto-converting stale approved request to pending")
+                    stale_approved_request = existing_request
+                    existing_request = None
+                    messages.warning(request, 'Previous approval is no longer active. Please submit a new authorization request.')
 
     # Strict same-device relink for private/incognito/new browser session cases.
     # Conditions:
