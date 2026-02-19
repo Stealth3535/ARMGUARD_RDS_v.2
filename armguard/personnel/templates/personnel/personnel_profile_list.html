@@ -423,30 +423,14 @@
                             {% if person.picture %}
                             <img src="{{ person.picture.url }}" alt="{{ person.get_full_name }}" class="personnel-picture">
                             {% else %}
-                            <div style="width: 50px; height: 50px; background: #f3f4f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #6b7280; font-size: 0.8rem;">
-                                <i class="fas fa-user"></i>
-                            </div>
+                            <div style="width: 50px; height: 50px; background: #f3f4f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #6b7280; font-size: 0.75rem; font-weight: 600;">N/A</div>
                             {% endif %}
                         </td>
                         <td>
                             <strong>{{ person.get_full_name }}</strong>
-                            <br><small style="color: #666;">ID: {{ person.id }}</small>
                         </td>
                         <td>
-                            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                {% if person.classification == 'OFFICER' %}
-                                <i class="fas fa-star" style="color: #f59e0b;"></i>
-                                {% elif person.classification == 'SUPERUSER' %}
-                                <i class="fas fa-crown" style="color: #dc2626;"></i>
-                                {% else %}
-                                <i class="fas fa-chevron-up" style="color: #10b981;"></i>
-                                {% endif %}
-                                {% if person.classification == 'SUPERUSER' %}
-                                    SUPERUSER
-                                {% else %}
-                                    {{ person.rank }}
-                                {% endif %}
-                            </div>
+                            {% if person.classification == 'SUPERUSER' %}SUPERUSER{% else %}{{ person.rank }}{% endif %}
                         </td>
                         <td>
                             <strong>{{ person.get_serial_display }}</strong>
@@ -461,9 +445,9 @@
                         <td>{{ person.group }}</td>
                         <td>
                             {% if person.status == 'Active' or person.status == 'ACTIVE' %}
-                            <span class="badge badge-active">✅ Active</span>
+                            <span class="badge badge-active">Active</span>
                             {% else %}
-                            <span class="badge badge-inactive">❌ {{ person.status }}</span>
+                            <span class="badge badge-inactive">{{ person.status }}</span>
                             {% endif %}
                         </td>
                         <td>{{ person.tel|default:"-" }}</td>
