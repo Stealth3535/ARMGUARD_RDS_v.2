@@ -683,14 +683,14 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
         logger.info(f"Device {action}: {device_name} ({device_fingerprint[:8]}...) - Security: {security_level}")
         return True
     
-    def revoke_device(self, device_fingerprint, reason="Manual revocation", ip_address=None):
+    def revoke_device(self, device_fingerprint, reason="Manual revocation", ip_address=None, allow_legacy_ip_match=False):
         """Revoke device authorization with audit trail"""
         revoked_any = False
 
         for device in self.authorized_devices.get('devices', []):
             fingerprint_match = device.get('fingerprint') == device_fingerprint
             legacy_ip_match = bool(
-                ip_address and not device.get('fingerprint') and device.get('ip') == ip_address
+                allow_legacy_ip_match and ip_address and not device.get('fingerprint') and device.get('ip') == ip_address
             )
 
             if fingerprint_match or legacy_ip_match:
