@@ -691,12 +691,12 @@
             <table id="inventory-table">
                 <thead>
                     <tr>
-                        <th><select id="filter-item-id" class="table-filter"><option value="">Item ID</option></select></th>
-                        <th><select id="filter-type" class="table-filter"><option value="">Type</option></select></th>
-                        <th><select id="filter-serial" class="table-filter"><option value="">Serial Number</option></select></th>
-                        <th><select id="filter-status" class="table-filter"><option value="">Status</option></select></th>
-                        <th><select id="filter-condition" class="table-filter"><option value="">Condition</option></select></th>
-                        <th><select id="filter-registration" class="table-filter"><option value="">Registration Date</option></select></th>
+                        <th class="sortable">Item ID</th>
+                        <th class="sortable">Type</th>
+                        <th class="sortable">Serial Number</th>
+                        <th class="sortable">Status</th>
+                        <th class="sortable">Condition</th>
+                        <th class="sortable">Registration Date</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -778,50 +778,6 @@
         </div>
     </div>
 
-<script>
-// Populate dropdowns with unique values from table
-document.addEventListener('DOMContentLoaded', function() {
-    const table = document.getElementById('inventory-table');
-    if (!table) return;
-    const rows = Array.from(table.querySelectorAll('tbody tr'));
-    const getCol = (idx) => rows.map(r => r.children[idx]?.innerText.trim()).filter(Boolean);
-    function unique(arr) { return Array.from(new Set(arr)); }
-
-    // Map: col index to filter id
-    const filters = [
-        {id: 'filter-item-id', col: 0},
-        {id: 'filter-type', col: 1},
-        {id: 'filter-serial', col: 2},
-        {id: 'filter-status', col: 3},
-        {id: 'filter-condition', col: 4},
-        {id: 'filter-registration', col: 5},
-    ];
-    filters.forEach(f => {
-        const select = document.getElementById(f.id);
-        if (!select) return;
-        unique(getCol(f.col)).forEach(val => {
-            if (val) {
-                const opt = document.createElement('option');
-                opt.value = val;
-                opt.textContent = val;
-                select.appendChild(opt);
-            }
-        });
-        select.addEventListener('change', filterTable);
-    });
-
-    function filterTable() {
-        rows.forEach(row => {
-            let show = true;
-            filters.forEach(f => {
-                const val = document.getElementById(f.id).value;
-                if (val && row.children[f.col]?.innerText.trim() !== val) show = false;
-            });
-            row.style.display = show ? '' : 'none';
-        });
-    }
-});
-</script>
 {% endblock %}
 
 {% block extra_js %}
