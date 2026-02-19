@@ -48,11 +48,11 @@ class AdminDesignSystemTests(TestCase):
         response = self.client.get(reverse('armguard_admin:dashboard'))
         html = response.content.decode('utf-8')
         
-        # Check for stat card components
-        self.assertIn('stat-card-primary', html)
-        self.assertIn('stat-card-success', html)
-        self.assertIn('stat-card-warning', html)
-        self.assertIn('stat-card-danger', html)
+        # Check for stat card components with correct class names
+        self.assertIn('stat-card primary', html)
+        self.assertIn('stat-card success', html)
+        self.assertIn('stat-card warning', html)
+        self.assertIn('stat-card danger', html)
         
         # Check for stat labels
         self.assertIn('Users', html)
@@ -298,7 +298,7 @@ class AdminIntegrationTests(TestCase):
         html = response.content.decode('utf-8')
         
         # Check that stats show numbers
-        self.assertIn('stat-value', html, "Should display stat values")
+        self.assertIn('stat-card-value', html, "Should display stat values")
         
     def test_filter_functionality_with_data(self):
         """Test that filters work with actual data"""

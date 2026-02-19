@@ -57,32 +57,40 @@
 
 <!-- Stats Grid -->
 <div class="grid grid-cols-4 gap-4 mb-6">
-    <div class="stat-card stat-card-primary">
-        <div class="stat-icon"><i class="fas fa-users"></i></div>
-        <div class="stat-label">Users</div>
-        <div class="stat-value">{{ users_count }}</div>
-        <div class="stat-meta">{{ active_users_count }} active user{{ active_users_count|pluralize }}</div>
+    <div class="stat-card primary">
+        <div class="stat-card-icon"><i class="fas fa-users"></i></div>
+        <div class="stat-card-content">
+            <span class="stat-card-label">Users</span>
+            <span class="stat-card-value">{{ users_count }}</span>
+            <span class="stat-card-description">{{ active_users_count }} active user{{ active_users_count|pluralize }}</span>
+        </div>
     </div>
     
-    <div class="stat-card stat-card-success">
-        <div class="stat-icon"><i class="fas fa-id-card"></i></div>
-        <div class="stat-label">Personnel</div>
-        <div class="stat-value">{{ personnel_count }}</div>
-        <div class="stat-meta">{{ enlisted_count }} enlisted, {{ officer_count }} officer{{ officer_count|pluralize }}</div>
+    <div class="stat-card success">
+        <div class="stat-card-icon"><i class="fas fa-id-card"></i></div>
+        <div class="stat-card-content">
+            <span class="stat-card-label">Personnel</span>
+            <span class="stat-card-value">{{ personnel_count }}</span>
+            <span class="stat-card-description">{{ enlisted_count }} enlisted, {{ officer_count }} officer{{ officer_count|pluralize }}</span>
+        </div>
     </div>
     
-    <div class="stat-card stat-card-warning">
-        <div class="stat-icon"><i class="fas fa-user-shield"></i></div>
-        <div class="stat-label">Administrators</div>
-        <div class="stat-value">{{ administrators_count }}</div>
-        <div class="stat-meta">{{ superusers_count }} superuser{{ superusers_count|pluralize }}, {{ admins_count }} admin{{ admins_count|pluralize }}</div>
+    <div class="stat-card warning">
+        <div class="stat-card-icon"><i class="fas fa-user-shield"></i></div>
+        <div class="stat-card-content">
+            <span class="stat-card-label">Administrators</span>
+            <span class="stat-card-value">{{ administrators_count }}</span>
+            <span class="stat-card-description">{{ superusers_count }} superuser{{ superusers_count|pluralize }}, {{ admins_count }} admin{{ admins_count|pluralize }}</span>
+        </div>
     </div>
     
-    <div class="stat-card stat-card-danger">
-        <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
-        <div class="stat-label">Armorers</div>
-        <div class="stat-value">{{ armorers_count }}</div>
-        <div class="stat-meta">Active armorer accounts</div>
+    <div class="stat-card danger">
+        <div class="stat-card-icon"><i class="fas fa-shield-alt"></i></div>
+        <div class="stat-card-content">
+            <span class="stat-card-label">Armorers</span>
+            <span class="stat-card-value">{{ armorers_count }}</span>
+            <span class="stat-card-description">Active armorer accounts</span>
+        </div>
     </div>
 </div>
 

@@ -302,7 +302,7 @@ AssertionError: False is not true : Should use stat-card component
 
 | Failure | Cause | Fix |
 |---------|-------|-----|
-| "Should use stat-card component" | Old custom stat card classes | Use `.stat-card` with modifiers `.stat-card-primary`, `.stat-card-success` |
+| "Should use stat-card component" | Old custom stat card classes | Use `.stat-card` with modifiers like `.stat-card.primary`, `.stat-card.success` (separate classes) |
 | "Should use card component" | Missing card wrapper | Wrap content in `<div class="card">` |
 | "Should use btn component" | Old button classes | Replace with `.btn .btn-primary`, `.btn .btn-success`, etc. |
 | "Should use form-input" | Old input styling | Add `.form-input` class to `<input>` elements |
