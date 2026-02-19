@@ -715,6 +715,51 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
             self.save_authorized_devices()
             return True
         return False
+
+    def rotate_device_fingerprint(self, old_fingerprint, new_fingerprint, ip_address=None, reason="Fingerprint rotation"):
+        """Rotate an approved device fingerprint while preserving device policy configuration."""
+        if not old_fingerprint or not new_fingerprint or old_fingerprint == new_fingerprint:
+            return False
+
+        devices = self.authorized_devices.get('devices', [])
+        old_device = None
+        new_device = None
+
+        for device in devices:
+            fingerprint = device.get('fingerprint')
+            if fingerprint == old_fingerprint:
+                old_device = device
+            if fingerprint == new_fingerprint:
+                new_device = device
+
+        if old_device is None:
+            return False
+
+        # If the new fingerprint already exists, only reuse it when it points to same IP (if provided).
+        if new_device is not None and ip_address and new_device.get('ip') != ip_address:
+            return False
+
+        old_device['fingerprint'] = new_fingerprint
+        old_device['rotated_from_fingerprint'] = old_fingerprint
+        old_device['rotated_at'] = timezone.now().isoformat()
+        old_device['rotation_reason'] = reason
+        if ip_address:
+            old_device['ip'] = ip_address
+
+        cache.delete(f"device_lockout_{old_fingerprint}")
+        cache.delete(f"device_attempts_{old_fingerprint}")
+        cache.delete(f"device_lockout_{new_fingerprint}")
+        cache.delete(f"device_attempts_{new_fingerprint}")
+
+        self.authorized_devices['last_updated'] = timezone.now().isoformat()
+        self.save_authorized_devices()
+        logger.info(
+            "Device fingerprint rotated: %s... -> %s... (%s)",
+            old_fingerprint[:8],
+            new_fingerprint[:8],
+            reason,
+        )
+        return True
     
     def get_device_stats(self):
         """Get device statistics for monitoring"""

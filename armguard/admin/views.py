@@ -697,6 +697,7 @@ def request_device_authorization(request):
         return redirect(f"/login/?next=/admin/device/request-authorization/")
 
     stale_approved_request = None
+    rotated_approved_request = None
 
     # Check if request already exists
     try:
@@ -752,6 +753,48 @@ def request_device_authorization(request):
                 stale_approved_request = existing_request
                 existing_request = None
                 messages.warning(request, 'Previous approval is no longer active. Please submit a new authorization request.')
+
+    # Strict same-device relink for private/incognito/new browser session cases.
+    # Conditions:
+    # - authenticated user
+    # - current cookie-based fingerprint has no request row
+    # - exactly one approved request by same user with same IP and exact User-Agent
+    if (
+        request.user.is_authenticated
+        and existing_request is None
+    ):
+        relink_candidates = DeviceAuthorizationRequest.objects.filter(
+            status='approved',
+            requested_by=request.user,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        ).exclude(device_fingerprint=device_fingerprint).order_by('-requested_at')
+
+        if relink_candidates.count() == 1:
+            candidate = relink_candidates.first()
+            fingerprint_taken = DeviceAuthorizationRequest.objects.filter(
+                device_fingerprint=device_fingerprint
+            ).exclude(id=candidate.id).exists()
+
+            if not fingerprint_taken:
+                old_fingerprint = candidate.device_fingerprint
+                try:
+                    middleware.load_authorized_devices()
+                    rotated = middleware.rotate_device_fingerprint(
+                        old_fingerprint=old_fingerprint,
+                        new_fingerprint=device_fingerprint,
+                        ip_address=ip_address,
+                        reason='Automatic relink after browser session reset',
+                    )
+
+                    if rotated:
+                        candidate.device_fingerprint = device_fingerprint
+                        candidate.requested_at = timezone.now()
+                        candidate.save(update_fields=['device_fingerprint', 'requested_at'])
+                        existing_request = candidate
+                        rotated_approved_request = candidate
+                except DatabaseError:
+                    logger.exception("Database error while relinking device authorization request")
     
     if request.method == 'POST':
         reason = request.POST.get('reason', '')
@@ -813,6 +856,10 @@ def request_device_authorization(request):
         'existing_request': existing_request,
         'is_authenticated': request.user.is_authenticated,
     }
+
+    if rotated_approved_request:
+        messages.success(request, 'Existing approved device profile was relinked for this browser session.')
+
     response = render(request, 'admin/request_device_auth.html', context)
     if should_set_device_cookie:
         response.set_cookie(
