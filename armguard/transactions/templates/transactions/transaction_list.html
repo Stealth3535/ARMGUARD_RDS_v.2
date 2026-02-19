@@ -25,28 +25,16 @@
 
     .tx-dashboard-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 0.75rem;
-        margin-top: 0.75rem;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
         width: 100%;
-    }
-
-    @media (max-width: 1200px) {
-        .tx-dashboard-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-    }
-
-    @media (max-width: 768px) {
-        .tx-dashboard-grid {
-            grid-template-columns: 1fr;
-        }
     }
 
     .tx-stat-card {
         background: #fff;
-        border-radius: 10px;
-        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        padding: 0.95rem 1rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         border-top: 4px solid #cbd5e1;
     }
@@ -60,7 +48,7 @@
     .tx-stat-title {
         font-size: 0.82rem;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.05em;
         color: #6b7280;
         font-weight: 700;
         margin-bottom: 0;
@@ -75,16 +63,22 @@
     }
 
     .tx-stat-value {
-        font-size: 1.85rem;
+        font-size: 2rem;
         line-height: 1;
         font-weight: 800;
-        color: #111827;
+        color: var(--stat-color, #111827);
         margin-bottom: 0;
     }
 
+    .tx-stat-card.available { --stat-color: #10b981; }
+    .tx-stat-card.issued { --stat-color: #f59e0b; }
+    .tx-stat-card.total { --stat-color: #667eea; }
+    .tx-stat-card.defcon { --stat-color: #dc2626; }
+    .tx-stat-card.normal { --stat-color: #2563eb; }
+
     .tx-stat-note {
-        font-size: 0.85rem;
-        color: #047857;
+        font-size: 0.88rem;
+        color: #059669;
         margin-bottom: 0.25rem;
     }
 
@@ -280,8 +274,8 @@
     }
 
     .container.defcon-lock .tx-stat-card {
-        padding: 0.85rem 1rem;
-        border-radius: 10px;
+        padding: 0.95rem 1rem;
+        border-radius: 12px;
     }
 
     .container.defcon-lock .tx-stat-title {

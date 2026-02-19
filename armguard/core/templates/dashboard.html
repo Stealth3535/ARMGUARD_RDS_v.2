@@ -3,86 +3,7 @@
 
 {% block title %}Dashboard - ArmGuard{% endblock %}
 
-{% block content %}
-<div class="dashboard-container">
-    <h1>Dashboard</h1>
-    
-    <div class="stats-grid">
-        <!-- Personnel Stats -->
-        <div class="stat-card personnel">
-            <div class="stat-head">
-                <div class="stat-title">Personnel</div>
-                <div class="stat-number">{{ total_personnel }}</div>
-            </div>
-            <div class="stat-details">
-                <p>Active: {{ active_personnel }}</p>
-                <p>Officers: {{ officers }}</p>
-                <p>Enlisted: {{ enlisted }}</p>
-            </div>
-        </div>
-        
-        <!-- Inventory Stats -->
-        <div class="stat-card inventory">
-            <div class="stat-head">
-                <div class="stat-title">Inventory</div>
-                <div class="stat-number">{{ total_items }}</div>
-            </div>
-            <div class="stat-details">
-                <p>Available: {{ available_items }}</p>
-                <p>Issued: {{ issued_items }}</p>
-                <p>Maintenance: {{ maintenance_items }}</p>
-            </div>
-        </div>
-        
-        <!-- Transactions Stats -->
-        <div class="stat-card transactions">
-            <div class="stat-head">
-                <div class="stat-title">Transactions This Week</div>
-                <div class="stat-number">{{ transactions_this_week }}</div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Recent Transactions -->
-    <div class="recent-section">
-        <h2>Recent Transactions</h2>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Date/Time</th>
-                    <th>Personnel</th>
-                    <th>Item</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for transaction in recent_transactions %}
-                <tr>
-                    <td>{{ transaction.date_time|date:"d/m/y H:i:s" }}</td>
-                    <td>{{ transaction.personnel.get_full_name }}</td>
-                    <td>{{ transaction.item }}</td>
-                    <td>{{ transaction.action }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4">No transactions yet</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    
-    <!-- Items by Type -->
-    <div class="items-by-type">
-        <h2>Inventory by Type</h2>
-        <ul>
-            {% for item in items_by_type %}
-            <li>{{ item.item_type }}: {{ item.count }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-</div>
-
+{% block extra_css %}
 <style>
 .dashboard-container {
     padding: 20px;
@@ -166,4 +87,86 @@
     color: #1f2937;
 }
 </style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h1>Dashboard</h1>
+    
+    <div class="stats-grid">
+        <!-- Personnel Stats -->
+        <div class="stat-card personnel">
+            <div class="stat-head">
+                <div class="stat-title">Personnel</div>
+                <div class="stat-number">{{ total_personnel }}</div>
+            </div>
+            <div class="stat-details">
+                <p>Active: {{ active_personnel }}</p>
+                <p>Officers: {{ officers }}</p>
+                <p>Enlisted: {{ enlisted }}</p>
+            </div>
+        </div>
+        
+        <!-- Inventory Stats -->
+        <div class="stat-card inventory">
+            <div class="stat-head">
+                <div class="stat-title">Inventory</div>
+                <div class="stat-number">{{ total_items }}</div>
+            </div>
+            <div class="stat-details">
+                <p>Available: {{ available_items }}</p>
+                <p>Issued: {{ issued_items }}</p>
+                <p>Maintenance: {{ maintenance_items }}</p>
+            </div>
+        </div>
+        
+        <!-- Transactions Stats -->
+        <div class="stat-card transactions">
+            <div class="stat-head">
+                <div class="stat-title">Transactions This Week</div>
+                <div class="stat-number">{{ transactions_this_week }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Transactions -->
+    <div class="recent-section">
+        <h2>Recent Transactions</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date/Time</th>
+                    <th>Personnel</th>
+                    <th>Item</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in recent_transactions %}
+                <tr>
+                    <td>{{ transaction.date_time|date:"d/m/y H:i:s" }}</td>
+                    <td>{{ transaction.personnel.get_full_name }}</td>
+                    <td>{{ transaction.item }}</td>
+                    <td>{{ transaction.action }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4">No transactions yet</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Items by Type -->
+    <div class="items-by-type">
+        <h2>Inventory by Type</h2>
+        <ul>
+            {% for item in items_by_type %}
+            <li>{{ item.item_type }}: {{ item.count }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
 {% endblock %}
