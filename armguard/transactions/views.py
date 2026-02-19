@@ -14,6 +14,7 @@ from inventory.models import Item
 from personnel.models import Personnel
 from qr_manager.models import QRCodeImage
 from django.utils import timezone
+from datetime import timedelta
 from core.network_decorators import lan_required, read_only_on_wan, network_aware_permission_required
 from admin.permissions import check_restricted_admin
 from core.notifications import (
@@ -47,7 +48,20 @@ class TransactionListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         try:
             queryset = super().get_queryset()
-            return queryset.select_related('personnel', 'item').order_by('-date_time')
+            queryset = queryset.select_related('personnel', 'item').order_by('-date_time')
+
+            history_range = (self.request.GET.get('history') or 'week').strip().lower()
+            history_ranges = {
+                'day': 1,
+                'week': 7,
+                'month': 30,
+            }
+
+            if history_range in history_ranges:
+                since = timezone.now() - timedelta(days=history_ranges[history_range])
+                queryset = queryset.filter(date_time__gte=since)
+
+            return queryset
         except DatabaseError:
             logger.exception("Database error in TransactionListView.get_queryset")
             # Return empty queryset on error
@@ -99,6 +113,9 @@ class TransactionListView(LoginRequiredMixin, ListView):
                 'total_transactions': Transaction.objects.count(),
             }
 
+            selected_history = (self.request.GET.get('history') or 'week').strip().lower()
+            context['selected_history'] = selected_history if selected_history in {'day', 'week', 'month'} else 'week'
+
             return context
         except DatabaseError:
             logger.exception("Database error in TransactionListView.get_context_data")
@@ -124,6 +141,7 @@ class TransactionListView(LoginRequiredMixin, ListView):
                     'normal_returned': 0,
                     'total_transactions': 0,
                 },
+                'selected_history': 'week',
             }
             return context
 

@@ -110,6 +110,39 @@
         align-items: center;
         line-height: 1.2;
     }
+
+    .tx-summary-actions {
+        margin-top: 0.75rem;
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .tx-summary-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+        text-decoration: none;
+        border: 1px solid transparent;
+    }
+
+    .tx-summary-btn.defcon {
+        color: #b91c1c;
+        background: #fee2e2;
+        border-color: #fecaca;
+    }
+
+    .tx-summary-btn.normal {
+        color: #1e40af;
+        background: #dbeafe;
+        border-color: #bfdbfe;
+    }
     
     .view-selector {
         background: white;
@@ -376,6 +409,47 @@
     .issued-items-section, .transaction-history {
         margin-top: 40px;
     }
+
+    .history-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.75rem;
+    }
+
+    .history-header h2 {
+        margin: 0;
+    }
+
+    .history-pills {
+        display: inline-flex;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+    }
+
+    .history-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 0.3rem 0.75rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border: 1px solid #d1d5db;
+        color: #4b5563;
+        background: #ffffff;
+        text-decoration: none;
+    }
+
+    .history-pill.active {
+        background: #111827;
+        border-color: #111827;
+        color: #ffffff;
+    }
     
     .badge-issued {
         background: #dc3545;
@@ -499,6 +573,14 @@
                     <div></div>
                     <div>Released: <strong id="normalReleasedCount">{{ transaction_mode_counts.normal_released }}</strong></div>
                     <div>Returned: <strong id="normalReturnedCount">{{ transaction_mode_counts.normal_returned }}</strong></div>
+                </div>
+                <div class="tx-summary-actions">
+                    <a href="{% url 'print_handler:print_transactions' %}?mode=defcon&range={{ selected_history }}" class="tx-summary-btn defcon" target="_blank" rel="noopener">
+                        <i class="fas fa-print"></i> DEFCON Summary
+                    </a>
+                    <a href="{% url 'print_handler:print_transactions' %}?mode=normal&range={{ selected_history }}" class="tx-summary-btn normal" target="_blank" rel="noopener">
+                        <i class="fas fa-print"></i> NORMAL Summary
+                    </a>
                 </div>
             </div>
         </div>
@@ -653,7 +735,7 @@
                         <td>{{ transaction.date_time|date:"d/m/y H:i:s" }}</td>
                         <td>
                             {{ transaction.personnel.get_full_name }}<br>
-                            <small class="text-muted">{{ transaction.personnel.rank }}</small>
+                            <small class="text-muted">{{ transaction.personnel.rank }} | Serial: {{ transaction.personnel.serial|default:"N/A" }}</small>
                         </td>
                         <td>{{ transaction.item.item_type }}</td>
                         <td>{{ transaction.item.serial }}</td>
@@ -671,7 +753,14 @@
 
     <!-- Transaction History -->
     <div class="transaction-history">
-        <h2>Recent Transaction History</h2>
+        <div class="history-header">
+            <h2>Recent Transaction History</h2>
+            <div class="history-pills">
+                <a href="?history=day" class="history-pill {% if selected_history == 'day' %}active{% endif %}">Day</a>
+                <a href="?history=week" class="history-pill {% if selected_history == 'week' %}active{% endif %}">Week</a>
+                <a href="?history=month" class="history-pill {% if selected_history == 'month' %}active{% endif %}">Month</a>
+            </div>
+        </div>
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>

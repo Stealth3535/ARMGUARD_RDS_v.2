@@ -11,6 +11,8 @@ from personnel.models import Personnel
 from inventory.models import Item
 from .print_config import QR_SIZE_MM, CARDS_PER_ROW, CARD_WIDTH_MM, CARD_HEIGHT_MM, FONT_SIZE_ID, FONT_SIZE_NAME, FONT_SIZE_BADGE
 from .pdf_filler.form_filler import TransactionFormFiller
+from django.utils import timezone
+from datetime import timedelta
 
 
 def is_admin_or_armorer(user):
@@ -131,6 +133,8 @@ def print_transactions(request):
     """Print transaction history report"""
     personnel_id = request.GET.get('personnel_id')
     item_id = request.GET.get('item_id')
+    mode = (request.GET.get('mode') or '').strip().lower()
+    range_filter = (request.GET.get('range') or '').strip().lower()
     
     transactions = Transaction.objects.select_related('personnel', 'item').order_by('-date_time')
     
@@ -148,11 +152,33 @@ def print_transactions(request):
             transactions = transactions.filter(item=item)
         except Item.DoesNotExist:
             messages.error(request, 'Item not found')
+
+    if mode in {Transaction.MODE_DEFCON, Transaction.MODE_NORMAL}:
+        transactions = transactions.filter(transaction_mode=mode)
+
+    range_days = {
+        'day': 1,
+        'week': 7,
+        'month': 30,
+    }
+    if range_filter in range_days:
+        since = timezone.now() - timedelta(days=range_days[range_filter])
+        transactions = transactions.filter(date_time__gte=since)
+
+    summary_counts = {
+        'defcon_released': transactions.filter(transaction_mode=Transaction.MODE_DEFCON, action=Transaction.ACTION_TAKE).count(),
+        'defcon_returned': transactions.filter(transaction_mode=Transaction.MODE_DEFCON, action=Transaction.ACTION_RETURN).count(),
+        'normal_released': transactions.filter(transaction_mode=Transaction.MODE_NORMAL, action=Transaction.ACTION_TAKE).count(),
+        'normal_returned': transactions.filter(transaction_mode=Transaction.MODE_NORMAL, action=Transaction.ACTION_RETURN).count(),
+    }
     
     context = {
         'transactions': transactions,
         'personnel_id': personnel_id,
         'item_id': item_id,
+        'selected_mode': mode,
+        'selected_range': range_filter,
+        'summary_counts': summary_counts,
     }
     return render(request, 'print_handler/print_transactions.html', context)
 

@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.contrib.auth.models import User, Group
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Exists, OuterRef
 from django.conf import settings
 from django.db import transaction, DatabaseError
 from django.http import JsonResponse, HttpResponse
@@ -25,6 +25,7 @@ import base64
 import logging
 import hashlib
 from pathlib import Path
+from datetime import timedelta
 
 from .forms import (
     UniversalForm, ItemRegistrationForm, SystemSettingsForm
@@ -72,10 +73,39 @@ def dashboard(request):
     # OPTIMIZED: Use cached statistics to reduce database queries
     stats = DashboardCache.get_stats()
     
+    history_range = (request.GET.get('history') or 'week').strip().lower()
+    history_days = {
+        'day': 1,
+        'week': 7,
+        'month': 30,
+    }
+
     # Recent transactions (not cached as they change frequently)
-    recent_transactions = Transaction.objects.select_related(
+    recent_transactions_qs = Transaction.objects.select_related(
         'personnel', 'item'
-    ).order_by('-date_time')[:10]
+    ).order_by('-date_time')
+
+    if history_range in history_days:
+        since = timezone.now() - timedelta(days=history_days[history_range])
+        recent_transactions_qs = recent_transactions_qs.filter(date_time__gte=since)
+    else:
+        history_range = 'week'
+
+    recent_transactions = recent_transactions_qs[:20]
+
+    # Active issued assignments (latest take with no later return for same item)
+    issued_assignments = Transaction.objects.filter(
+        action=Transaction.ACTION_TAKE,
+        item__status=Item.STATUS_ISSUED,
+    ).exclude(
+        Exists(
+            Transaction.objects.filter(
+                item=OuterRef('item'),
+                action=Transaction.ACTION_RETURN,
+                date_time__gt=OuterRef('date_time'),
+            )
+        )
+    ).select_related('personnel', 'item').order_by('-date_time')[:20]
     
     context = {
         'enable_realtime': True,
@@ -93,7 +123,9 @@ def dashboard(request):
         'armorers_count': stats['armorers_count'],
         'unlinked_personnel': stats['unlinked_personnel'],
         'recent_transactions': recent_transactions,
+        'issued_assignments': issued_assignments,
         'items_by_type': stats['items_by_type'],
+        'selected_history': history_range,
     }
     
     return render(request, 'admin/dashboard.html', context)

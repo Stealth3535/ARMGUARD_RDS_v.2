@@ -14,6 +14,25 @@
             <h2>Transaction History Report</h2>
             <p>Generated: {{ "now"|date:"d/m/Y H:i" }}</p>
             <p>Total Transactions: {{ transactions.count }}</p>
+            {% if selected_mode %}
+            <p>Mode Filter: {{ selected_mode|upper }}</p>
+            {% endif %}
+            {% if selected_range %}
+            <p>History Range: {{ selected_range|title }}</p>
+            {% endif %}
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <h3>DEFCON</h3>
+                <p>Released: <strong>{{ summary_counts.defcon_released }}</strong></p>
+                <p>Returned: <strong>{{ summary_counts.defcon_returned }}</strong></p>
+            </div>
+            <div class="summary-card">
+                <h3>NORMAL</h3>
+                <p>Released: <strong>{{ summary_counts.normal_released }}</strong></p>
+                <p>Returned: <strong>{{ summary_counts.normal_returned }}</strong></p>
+            </div>
         </div>
 
         <table class="transactions-table">
@@ -21,10 +40,11 @@
                 <tr>
                     <th>ID</th>
                     <th>Date/Time</th>
+                    <th>Mode</th>
                     <th>Action</th>
                     <th>Personnel</th>
                     <th>Item Serial</th>
-                    <th>Remarks</th>
+                    <th>Notes</th>
                 </tr>
             </thead>
             <tbody>
@@ -32,6 +52,7 @@
                 <tr>
                     <td>{{ transaction.id }}</td>
                     <td>{{ transaction.date_time|date:"d/m/Y H:i:s" }}</td>
+                    <td>{{ transaction.get_transaction_mode_display }}</td>
                     <td>
                         <span class="action-badge {% if transaction.action == 'Take' %}action-take{% else %}action-return{% endif %}">
                             {{ transaction.action }}
@@ -39,8 +60,8 @@
                     </td>
                     <td>
                         {% if transaction.personnel %}
-                            {{ transaction.personnel.full_name }}<br>
-                            <small>{{ transaction.personnel.personnel_id }}</small>
+                            {{ transaction.personnel.get_full_name }}<br>
+                            <small>{{ transaction.personnel.rank }} | {{ transaction.personnel.serial|default:"N/A" }}</small>
                         {% else %}
                             N/A
                         {% endif %}
@@ -53,11 +74,11 @@
                             N/A
                         {% endif %}
                     </td>
-                    <td>{{ transaction.remarks|default:"—" }}</td>
+                    <td>{{ transaction.notes|default:"—" }}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center">No transactions found.</td>
+                    <td colspan="7" class="text-center">No transactions found.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -87,6 +108,29 @@
         border-collapse: collapse;
         background: white;
         font-size: 12px;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .summary-card {
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 10px;
+        background: #fafafa;
+    }
+
+    .summary-card h3 {
+        margin: 0 0 6px;
+        font-size: 14px;
+    }
+
+    .summary-card p {
+        margin: 3px 0;
     }
     
     .transactions-table thead {

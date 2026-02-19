@@ -185,6 +185,75 @@
         border-radius: 10px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+
+    .recent-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }
+
+    .history-pills {
+        display: inline-flex;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+    }
+
+    .history-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 0.3rem 0.75rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border: 1px solid #d1d5db;
+        color: #4b5563;
+        background: #ffffff;
+        text-decoration: none;
+    }
+
+    .history-pill.active {
+        background: #111827;
+        border-color: #111827;
+        color: #ffffff;
+    }
+
+    .summary-actions {
+        display: inline-flex;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+    }
+
+    .summary-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        border-radius: 999px;
+        padding: 0.32rem 0.7rem;
+        text-decoration: none;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border: 1px solid transparent;
+    }
+
+    .summary-btn.defcon {
+        background: #fee2e2;
+        border-color: #fecaca;
+        color: #b91c1c;
+    }
+
+    .summary-btn.normal {
+        background: #dbeafe;
+        border-color: #bfdbfe;
+        color: #1d4ed8;
+    }
     
     .recent-transactions h2 {
         margin-top: 0;
@@ -225,6 +294,42 @@
     .type-return {
         background: #dcfce7;
         color: #14532d;
+    }
+
+    .type-take {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .issued-list {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-top: 1.5rem;
+    }
+
+    .issued-list h2 {
+        margin-top: 0;
+        color: #333;
+    }
+
+    .issued-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .issued-table th,
+    .issued-table td {
+        padding: 0.65rem;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+    }
+
+    .issued-table th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: #6b7280;
     }
     
     .alert-unlinked {
@@ -342,23 +447,40 @@
 <!-- Recent Activity -->
 <div class="recent-transactions">
     <h2><i class="fas fa-clock"></i> Recent Activity</h2>
+    <div class="recent-controls">
+        <div class="history-pills">
+            <a href="?history=day" class="history-pill {% if selected_history == 'day' %}active{% endif %}">Day</a>
+            <a href="?history=week" class="history-pill {% if selected_history == 'week' %}active{% endif %}">Week</a>
+            <a href="?history=month" class="history-pill {% if selected_history == 'month' %}active{% endif %}">Month</a>
+        </div>
+        <div class="summary-actions">
+            <a href="{% url 'print_handler:print_transactions' %}?mode=defcon&range={{ selected_history }}" class="summary-btn defcon" target="_blank" rel="noopener">
+                <i class="fas fa-print"></i> DEFCON Summary
+            </a>
+            <a href="{% url 'print_handler:print_transactions' %}?mode=normal&range={{ selected_history }}" class="summary-btn normal" target="_blank" rel="noopener">
+                <i class="fas fa-print"></i> NORMAL Summary
+            </a>
+        </div>
+    </div>
     {% if recent_transactions %}
         <ul class="transaction-list">
             {% for transaction in recent_transactions %}
             <li class="transaction-item">
                 <div>
-                    <strong>{{ transaction.personnel.get_full_name }}</strong> - {{ transaction.item.description }}
+                    <strong>{{ transaction.personnel.get_full_name }}</strong>
+                    ({{ transaction.personnel.rank }} | {{ transaction.personnel.serial|default:"N/A" }})
+                    - {{ transaction.item.item_type }} {{ transaction.item.serial }}
                     <br>
                     <small class="text-muted">{{ transaction.date_time|date:"M d, Y H:i" }}</small>
                 </div>
-                <span class="transaction-type type-{{ transaction.transaction_type|lower }}">
-                    {{ transaction.transaction_type }}
+                <span class="transaction-type type-{{ transaction.action|lower }}">
+                    {{ transaction.action }} · {{ transaction.get_transaction_mode_display }}
                 </span>
             </li>
             {% endfor %}
         </ul>
         <div class="text-center mt-3">
-            <a href="#" class="text-muted">View all transactions →</a>
+            <a href="{% url 'transactions:list' %}" class="text-muted">View all transactions →</a>
         </div>
     {% else %}
         <div class="text-center text-muted py-4">
@@ -366,6 +488,38 @@
             <p>No recent transactions.</p>
         </div>
     {% endif %}
+</div>
+
+<div class="issued-list">
+    <h2><i class="fas fa-shield-alt"></i> List of Issued Firearms</h2>
+    <div class="table-responsive">
+        <table class="issued-table">
+            <thead>
+                <tr>
+                    <th>Firearm Serial</th>
+                    <th>Type</th>
+                    <th>Personnel</th>
+                    <th>Personnel Serial</th>
+                    <th>Issued Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assignment in issued_assignments %}
+                <tr>
+                    <td><strong>{{ assignment.item.serial }}</strong></td>
+                    <td>{{ assignment.item.item_type }}</td>
+                    <td>{{ assignment.personnel.get_full_name }}</td>
+                    <td>{{ assignment.personnel.serial|default:"N/A" }}</td>
+                    <td>{{ assignment.date_time|date:"M d, Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-muted">No firearms currently issued.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}
 
