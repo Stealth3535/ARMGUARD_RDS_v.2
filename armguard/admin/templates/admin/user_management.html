@@ -1012,9 +1012,7 @@ function showAuditHistory(element) {
                 <tr>
                     <td>
                         <strong>{{ person.get_full_name }}</strong>
-                        {% if person.email %}
-                        <br><small style="color: #666;">{{ person.email }}</small>
-                        {% endif %}
+                        <br><small style="color: #666;">{{ person.id }}</small>
                     </td>
                     <td>
                         {% if person.rank %}
@@ -1061,6 +1059,9 @@ function showAuditHistory(element) {
                             {{ person.tel }}
                             {% else %}
                             <span style="color: #999;">—</span>
+                            {% endif %}
+                            {% if person.email %}
+                            <br>{{ person.email }}
                             {% endif %}
                         </small>
                     </td>
