@@ -38,9 +38,10 @@ class UserRegistrationForm(UserCreationForm):
         user.last_name = self.cleaned_data['last_name']
         if commit:
             user.save()
-            # Handle profile picture upload
+            # Handle profile picture upload with get_or_create
             if self.cleaned_data.get('profile_picture'):
-                profile = user.userprofile
+                from users.models import UserProfile
+                profile, created = UserProfile.objects.get_or_create(user=user)
                 profile.profile_picture = self.cleaned_data['profile_picture']
                 profile.save()
         return user
