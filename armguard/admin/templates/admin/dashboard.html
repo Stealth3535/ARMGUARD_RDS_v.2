@@ -57,37 +57,33 @@
 <!-- Stats Grid -->
 <div class="grid grid-cols-4 gap-4 mb-6">
     <div class="stat-card primary">
-        <div class="stat-card-icon"><i class="fas fa-users"></i></div>
+        <div class="stat-card-icon" style="font-size: 1.8rem; font-weight: 700; color: inherit; background: none; display: flex; align-items: center; justify-content: center;">{{ total_users }}</div>
         <div class="stat-card-content">
             <span class="stat-card-label">Users</span>
-            <span class="stat-card-value">{{ total_users }}</span>
             <span class="stat-card-description">{{ active_users }} active user{{ active_users|pluralize }}</span>
         </div>
     </div>
     
     <div class="stat-card success">
-        <div class="stat-card-icon"><i class="fas fa-id-card"></i></div>
+        <div class="stat-card-icon" style="font-size: 1.8rem; font-weight: 700; color: inherit; background: none; display: flex; align-items: center; justify-content: center;">{{ total_personnel }}</div>
         <div class="stat-card-content">
             <span class="stat-card-label">Personnel</span>
-            <span class="stat-card-value">{{ total_personnel }}</span>
             <span class="stat-card-description">{{ enlisted_count }} enlisted, {{ officers_count }} officer{{ officers_count|pluralize }}</span>
         </div>
     </div>
     
     <div class="stat-card warning">
-        <div class="stat-card-icon"><i class="fas fa-user-shield"></i></div>
+        <div class="stat-card-icon" style="font-size: 1.8rem; font-weight: 700; color: inherit; background: none; display: flex; align-items: center; justify-content: center;">{{ administrators_count }}</div>
         <div class="stat-card-content">
             <span class="stat-card-label">Administrators</span>
-            <span class="stat-card-value">{{ administrators_count }}</span>
             <span class="stat-card-description">{{ superusers_count }} superuser{{ superusers_count|pluralize }}, {{ admins_count }} admin{{ admins_count|pluralize }}</span>
         </div>
     </div>
     
     <div class="stat-card danger">
-        <div class="stat-card-icon"><i class="fas fa-shield-alt"></i></div>
+        <div class="stat-card-icon" style="font-size: 1.8rem; font-weight: 700; color: inherit; background: none; display: flex; align-items: center; justify-content: center;">{{ armorers_count }}</div>
         <div class="stat-card-content">
             <span class="stat-card-label">Armorers</span>
-            <span class="stat-card-value">{{ armorers_count }}</span>
             <span class="stat-card-description">Active armorer accounts</span>
         </div>
     </div>
