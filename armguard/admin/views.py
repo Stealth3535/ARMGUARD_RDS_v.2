@@ -22,6 +22,7 @@ import qrcode
 from io import BytesIO
 import base64
 import logging
+import hashlib
 from pathlib import Path
 
 from .forms import (
@@ -291,7 +292,7 @@ def user_management(request):
     # Personnel search and sorting
     personnel_search = request.GET.get('personnel_search', '').strip()
     personnel_search_by = request.GET.get('personnel_search_by', 'name')
-    personnel_qs = Personnel.objects.filter(user__isnull=True)
+    personnel_qs = Personnel.objects.all()
     if personnel_search:
         if personnel_search_by == 'name':
             personnel_qs = personnel_qs.filter(
@@ -680,7 +681,16 @@ def request_device_authorization(request):
     from .models import DeviceAuthorizationRequest
     
     middleware = DeviceAuthorizationMiddleware(lambda req: None)
-    device_fingerprint = middleware.get_device_fingerprint(request)
+    device_cookie = middleware.get_device_id_cookie(request)
+    should_set_device_cookie = False
+    if not device_cookie:
+        device_cookie = middleware.generate_device_id_cookie()
+        should_set_device_cookie = True
+
+    # Use cookie-backed fingerprint to avoid collisions across multiple PCs on same network/browser profile.
+    fingerprint_data = middleware._build_fingerprint_data(request, device_id=device_cookie)
+    device_fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()[:32]
+    legacy_device_fingerprint = middleware.get_legacy_device_fingerprint(request)
     ip_address = middleware.get_client_ip(request)
     user_agent = request.META.get('HTTP_USER_AGENT', '')
     
@@ -692,8 +702,8 @@ def request_device_authorization(request):
     # Check if request already exists
     try:
         existing_request = DeviceAuthorizationRequest.objects.filter(
-            device_fingerprint=device_fingerprint
-        ).first()
+            device_fingerprint__in=[device_fingerprint, legacy_device_fingerprint]
+        ).order_by('-requested_at').first()
     except DatabaseError:
         logger.exception("Database error while loading device authorization requests")
         messages.error(
@@ -804,7 +814,17 @@ def request_device_authorization(request):
         'existing_request': existing_request,
         'is_authenticated': request.user.is_authenticated,
     }
-    return render(request, 'admin/request_device_auth.html', context)
+    response = render(request, 'admin/request_device_auth.html', context)
+    if should_set_device_cookie:
+        response.set_cookie(
+            middleware.device_id_cookie_name,
+            device_cookie,
+            max_age=60 * 60 * 24 * 365 * 2,
+            secure=not settings.DEBUG,
+            httponly=True,
+            samesite='Lax',
+        )
+    return response
 
 
 @login_required

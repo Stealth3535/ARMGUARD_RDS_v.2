@@ -14,6 +14,7 @@ from django.core.cache import cache
 from django.utils import timezone
 import logging
 import hashlib
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,31 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
     def __init__(self, get_response):
         super().__init__(get_response)
         self.authorized_devices_file = Path(settings.BASE_DIR) / 'authorized_devices.json'
+        self.device_id_cookie_name = 'armguard_device_id'
         self._last_auth_reason = 'not_evaluated'
         self.load_authorized_devices()
+
+    def get_device_id_cookie(self, request):
+        raw_value = (request.COOKIES.get(self.device_id_cookie_name, '') or '').strip()
+        if not raw_value:
+            return ''
+
+        # Keep cookie format strict and predictable.
+        if len(raw_value) > 64:
+            return ''
+        if not all(ch.isalnum() or ch in {'-', '_'} for ch in raw_value):
+            return ''
+        return raw_value
+
+    def generate_device_id_cookie(self):
+        return uuid.uuid4().hex
+
+    def _build_fingerprint_data(self, request, device_id=''):
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        accept_language = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
+        accept_encoding = request.META.get('HTTP_ACCEPT_ENCODING', '')
+        remote_addr = self.get_client_ip(request)
+        return f"{user_agent}|{accept_language}|{accept_encoding}|{remote_addr}|{device_id}"
 
     def _persist_access_log(self, request, user, device_fingerprint, ip_address, security_level, is_authorized, reason, response_status):
         """Persist device access decisions for forensic analysis."""
@@ -154,17 +178,16 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
         Generate device fingerprint from request headers
         Combines multiple headers for unique identification
         """
-        user_agent = request.META.get('HTTP_USER_AGENT', '')
-        accept_language = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
-        accept_encoding = request.META.get('HTTP_ACCEPT_ENCODING', '')
-        remote_addr = self.get_client_ip(request)
-        
-        # Create fingerprint from combined headers
-        fingerprint_data = f"{user_agent}|{accept_language}|{accept_encoding}|{remote_addr}"
-        
+        device_id = self.get_device_id_cookie(request)
+        fingerprint_data = self._build_fingerprint_data(request, device_id=device_id)
         fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()[:32]
-        
+
         return fingerprint
+
+    def get_legacy_device_fingerprint(self, request):
+        """Legacy fingerprint format kept for backward compatibility with old approvals."""
+        fingerprint_data = self._build_fingerprint_data(request, device_id='')
+        return hashlib.sha256(fingerprint_data.encode()).hexdigest()[:32]
     
     def get_client_ip(self, request):
         """Get client IP address from request"""
@@ -489,6 +512,7 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
         
         # Get device information
         device_fingerprint = self.get_device_fingerprint(request)
+        legacy_fingerprint = self.get_legacy_device_fingerprint(request)
         ip_address = self.get_client_ip(request)
         mtls_context = self._get_mtls_context(request)
         request.mtls_context = mtls_context
@@ -529,7 +553,11 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
         
         # Check authorization with enhanced security
         user = getattr(request, 'user', None)
-        if not self.is_device_authorized(device_fingerprint, ip_address, request.path, user, path_security):
+        is_authorized = self.is_device_authorized(device_fingerprint, ip_address, request.path, user, path_security)
+        if not is_authorized and legacy_fingerprint != device_fingerprint:
+            is_authorized = self.is_device_authorized(legacy_fingerprint, ip_address, request.path, user, path_security)
+
+        if not is_authorized:
             # Log detailed unauthorized attempt
             logger.warning(
                 f"Unauthorized device access attempt: "
