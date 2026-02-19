@@ -258,9 +258,50 @@
     
     .quick-filters {
         display: flex;
-        gap: 0.5rem;
+        gap: 1rem;
         flex-wrap: wrap;
         margin-top: 1rem;
+        align-items: flex-end;
+    }
+
+    .filter-dropdown-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .filter-dropdown-label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .filter-dropdown {
+        padding: 0.45rem 2rem 0.45rem 0.75rem;
+        background: #f9fafb;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        color: #374151;
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.6rem center;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        min-width: 140px;
+    }
+
+    .filter-dropdown:hover {
+        border-color: #9ca3af;
+    }
+
+    .filter-dropdown:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
     }
 
     .quick-filter-group {
@@ -651,30 +692,36 @@
         
         <!-- Quick Filters -->
         <div class="quick-filters">
-            <div class="quick-filter-group">
-                <span class="quick-filter-title">Type</span>
-                <span class="filter-chip active" data-group="type" data-value="all">All Types</span>
-                <span class="filter-chip" data-group="type" data-value="M14">M14</span>
-                <span class="filter-chip" data-group="type" data-value="M16">M16</span>
-                <span class="filter-chip" data-group="type" data-value="M4">M4 Carbine</span>
-                <span class="filter-chip" data-group="type" data-value="GLOCK">Glock Pistol</span>
-                <span class="filter-chip" data-group="type" data-value="45">.45 Pistol</span>
+            <div class="filter-dropdown-group">
+                <label class="filter-dropdown-label">Type</label>
+                <select id="filter-type" class="filter-dropdown" data-group="type">
+                    <option value="all">All Types</option>
+                    <option value="M14">M14</option>
+                    <option value="M16">M16</option>
+                    <option value="M4">M4 Carbine</option>
+                    <option value="GLOCK">Glock Pistol</option>
+                    <option value="45">.45 Pistol</option>
+                </select>
             </div>
-            <div class="quick-filter-group">
-                <span class="quick-filter-title">Status</span>
-                <span class="filter-chip active" data-group="status" data-value="all">All Status</span>
-                <span class="filter-chip" data-group="status" data-value="Available">Available</span>
-                <span class="filter-chip" data-group="status" data-value="Issued">Issued</span>
-                <span class="filter-chip" data-group="status" data-value="Maintenance">Maintenance</span>
-                <span class="filter-chip" data-group="status" data-value="Retired">Retired</span>
+            <div class="filter-dropdown-group">
+                <label class="filter-dropdown-label">Status</label>
+                <select id="filter-status" class="filter-dropdown" data-group="status">
+                    <option value="all">All Status</option>
+                    <option value="Available">Available</option>
+                    <option value="Issued">Issued</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Retired">Retired</option>
+                </select>
             </div>
-            <div class="quick-filter-group">
-                <span class="quick-filter-title">Condition</span>
-                <span class="filter-chip active" data-group="condition" data-value="all">All Conditions</span>
-                <span class="filter-chip" data-group="condition" data-value="Good">Good</span>
-                <span class="filter-chip" data-group="condition" data-value="Fair">Fair</span>
-                <span class="filter-chip" data-group="condition" data-value="Poor">Poor</span>
-                <span class="filter-chip" data-group="condition" data-value="Damaged">Damaged</span>
+            <div class="filter-dropdown-group">
+                <label class="filter-dropdown-label">Condition</label>
+                <select id="filter-condition" class="filter-dropdown" data-group="condition">
+                    <option value="all">All Conditions</option>
+                    <option value="Good">Good</option>
+                    <option value="Fair">Fair</option>
+                    <option value="Poor">Poor</option>
+                    <option value="Damaged">Damaged</option>
+                </select>
             </div>
         </div>
     </div>
@@ -796,24 +843,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Search functionality
     const searchInput = document.getElementById('item-search');
-    const filterChips = document.querySelectorAll('.filter-chip');
     const activeFilters = {
         type: 'all',
         status: 'all',
         condition: 'all'
     };
-
-    function syncPillsFromActiveFilters() {
-        filterChips.forEach(chip => {
-            chip.classList.remove('active');
-            const group = chip.dataset.group;
-            const value = chip.dataset.value;
-
-            if (group && activeFilters[group] === value) {
-                chip.classList.add('active');
-            }
-        });
-    }
 
     function applyAllFilters() {
         const rows = document.querySelectorAll('#inventory-table tbody tr');
@@ -852,23 +886,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300));
     }
 
-    // Quick filter chips
-    filterChips.forEach(chip => {
-        chip.addEventListener('click', function() {
+    // Dropdown filters
+    document.querySelectorAll('.filter-dropdown').forEach(select => {
+        select.addEventListener('change', function() {
             const group = this.dataset.group;
-            const value = this.dataset.value;
-
-            if (group && value) {
+            const value = this.value;
+            if (group) {
                 activeFilters[group] = value;
             }
-
-            syncPillsFromActiveFilters();
             applyAllFilters();
         });
     });
-    
+
     // Initial statistics update
-    syncPillsFromActiveFilters();
     applyAllFilters();
 });
 
