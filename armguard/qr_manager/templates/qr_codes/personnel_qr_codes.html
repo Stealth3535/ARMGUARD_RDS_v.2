@@ -72,8 +72,8 @@
             <h1 class="page-title">QR Codes</h1>
             <p class="page-subtitle">{{ personnel_list|length }} QR Codes</p>
         </div>
-        <div class="print-options">
-            <label for="printSelector">🖨️ Print Options:</label>
+        <div class="print-options-row" style="display: flex; align-items: center; gap: 1rem;">
+            <label for="printSelector" style="margin-bottom: 0;">🖨️ Print Options:</label>
             <select id="printSelector" class="print-select">
                 <option value="">-- Select Print Option --</option>
                 <option value="{% url 'print_handler:print_qr_codes' %}">Print All QR Codes (Personnel & Items)</option>
