@@ -63,6 +63,14 @@
         letter-spacing: 0.04em;
         color: #6b7280;
         font-weight: 700;
+        margin-bottom: 0;
+    }
+
+    .tx-stat-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
         margin-bottom: 0.2rem;
     }
 
@@ -71,7 +79,7 @@
         line-height: 1;
         font-weight: 800;
         color: #111827;
-        margin-bottom: 0.2rem;
+        margin-bottom: 0;
     }
 
     .tx-stat-note {
@@ -430,8 +438,10 @@
         <span id="totalTransactionsCount" style="display:none;">{{ transaction_mode_counts.total_transactions }}</span>
         <div class="tx-dashboard-grid">
             <div class="tx-stat-card available">
-                <div class="tx-stat-title">Available Items</div>
-                <div class="tx-stat-value" id="availableItemsCount">{{ inventory_counts.available }}</div>
+                <div class="tx-stat-head">
+                    <div class="tx-stat-title">Available Items</div>
+                    <div class="tx-stat-value" id="availableItemsCount">{{ inventory_counts.available }}</div>
+                </div>
                 <div class="tx-stat-note">Ready for deployment</div>
                 <div class="tx-stat-breakdown">
                     <div>M14: <strong id="availableTypeM14">{{ inventory_counts.by_status_type.Available.M14 }}</strong></div>
@@ -443,8 +453,10 @@
             </div>
 
             <div class="tx-stat-card issued">
-                <div class="tx-stat-title">Currently Issued</div>
-                <div class="tx-stat-value" id="issuedItemsCount">{{ inventory_counts.issued }}</div>
+                <div class="tx-stat-head">
+                    <div class="tx-stat-title">Currently Issued</div>
+                    <div class="tx-stat-value" id="issuedItemsCount">{{ inventory_counts.issued }}</div>
+                </div>
                 <div class="tx-stat-note">In field operations</div>
                 <div class="tx-stat-breakdown">
                     <div>M14: <strong id="issuedTypeM14">{{ inventory_counts.by_status_type.Issued.M14 }}</strong></div>
@@ -456,8 +468,10 @@
             </div>
 
             <div class="tx-stat-card total">
-                <div class="tx-stat-title">Total Inventory</div>
-                <div class="tx-stat-value" id="totalInventoryCount">{{ inventory_counts.total }}</div>
+                <div class="tx-stat-head">
+                    <div class="tx-stat-title">Total Inventory</div>
+                    <div class="tx-stat-value" id="totalInventoryCount">{{ inventory_counts.total }}</div>
+                </div>
                 <div class="tx-stat-note">Complete arsenal</div>
                 <div class="tx-stat-breakdown">
                     <div>M14: <strong>{{ inventory_counts.by_status_type.Total.M14 }}</strong></div>

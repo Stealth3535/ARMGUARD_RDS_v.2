@@ -9,9 +9,11 @@
     
     <div class="stats-grid">
         <!-- Personnel Stats -->
-        <div class="stat-card">
-            <h3>Personnel</h3>
-            <div class="stat-number">{{ total_personnel }}</div>
+        <div class="stat-card personnel">
+            <div class="stat-head">
+                <div class="stat-title">Personnel</div>
+                <div class="stat-number">{{ total_personnel }}</div>
+            </div>
             <div class="stat-details">
                 <p>Active: {{ active_personnel }}</p>
                 <p>Officers: {{ officers }}</p>
@@ -20,9 +22,11 @@
         </div>
         
         <!-- Inventory Stats -->
-        <div class="stat-card">
-            <h3>Inventory</h3>
-            <div class="stat-number">{{ total_items }}</div>
+        <div class="stat-card inventory">
+            <div class="stat-head">
+                <div class="stat-title">Inventory</div>
+                <div class="stat-number">{{ total_items }}</div>
+            </div>
             <div class="stat-details">
                 <p>Available: {{ available_items }}</p>
                 <p>Issued: {{ issued_items }}</p>
@@ -31,9 +35,11 @@
         </div>
         
         <!-- Transactions Stats -->
-        <div class="stat-card">
-            <h3>Transactions This Week</h3>
-            <div class="stat-number">{{ transactions_this_week }}</div>
+        <div class="stat-card transactions">
+            <div class="stat-head">
+                <div class="stat-title">Transactions This Week</div>
+                <div class="stat-number">{{ transactions_this_week }}</div>
+            </div>
         </div>
     </div>
     
@@ -84,32 +90,54 @@
 
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin: 20px 0;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0 1.5rem;
 }
 
 .stat-card {
     background: white;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    padding: 0.95rem 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-top: 4px solid var(--card-color, #cbd5e1);
 }
 
-.stat-card h3 {
-    margin-bottom: 10px;
-    color: #333;
+.stat-card.personnel { --card-color: #10b981; }
+.stat-card.inventory { --card-color: #f59e0b; }
+.stat-card.transactions { --card-color: #667eea; }
+
+.stat-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.3rem;
+}
+
+.stat-title {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    color: #6b7280;
 }
 
 .stat-number {
-    font-size: 2.5rem;
-    font-weight: bold;
-    color: #007bff;
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--card-color, #111827);
 }
 
 .stat-details {
-    margin-top: 10px;
-    font-size: 0.9rem;
+    margin-top: 0;
+    font-size: 0.88rem;
+    color: #374151;
+}
+
+.stat-details p {
+    margin: 0 0 0.12rem 0;
 }
 
 .recent-section, .items-by-type {
