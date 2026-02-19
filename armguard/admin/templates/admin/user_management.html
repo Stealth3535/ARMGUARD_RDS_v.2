@@ -1003,7 +1003,6 @@ function showAuditHistory(element) {
                     <th class="sortable">Status</th>
                     <th class="sortable">Contact</th>
                     <th class="sortable">Version</th>
-                    <th>User Account</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -1069,13 +1068,6 @@ function showAuditHistory(element) {
                         <span class="badge" style="background: #f3f4f6; color: #666;">v{{ person.version }}</span>
                         {% if person.modified_by %}
                         <br><small style="color: #666;" title="Last modified by {{ person.modified_by.username }}">{{ person.modified_by.username }}</small>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if person.user %}
-                        <span class="badge badge-linked">{{ person.user.username }}</span>
-                        {% else %}
-                        <span style="color: #999;">—</span>
                         {% endif %}
                     </td>
                     <td>
