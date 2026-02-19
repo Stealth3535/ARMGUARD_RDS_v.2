@@ -2,6 +2,8 @@
 
 {% block title %}Transactions - ArmGuard{% endblock %}
 
+{% block global_messages %}{% endblock %}
+
 {% block extra_css %}
 <style>
     .page-header {
@@ -881,6 +883,12 @@ function fillScannedField(parsedScan) {
         personnelInput.value = parsedScan.value;
         personnelInput.dispatchEvent(new Event('blur'));
         showNotification(`Scanned personnel ID: ${parsedScan.value}`, 'info');
+
+        // Immediate tab behavior right after scan capture.
+        setTimeout(() => {
+            itemInput.focus();
+            itemInput.select();
+        }, 80);
         return;
     }
 
@@ -1066,6 +1074,16 @@ personnelInput.addEventListener('blur', async function() {
         const response = await fetch(`/api/personnel/${personnelId}/`);
         if (response.ok) {
             const data = await response.json();
+
+            if (data.has_issued_firearm) {
+                personnelValidated = false;
+                personnelInfo.className = 'info-text error';
+                personnelInfo.textContent = '✗ Personnel already has an issued firearm';
+                personnelInfo.style.display = 'block';
+                showNotification('Personnel already has and issued firearm', 'error');
+                return;
+            }
+
             personnelValidated = true;
             personnelInfo.className = 'info-text success';
             personnelInfo.textContent = `✓ ${data.firstname} ${data.middle_initial ? data.middle_initial + '.' : ''} ${data.surname} - ${data.rank}`;
@@ -1073,6 +1091,10 @@ personnelInput.addEventListener('blur', async function() {
             
             // Show automatic notification for successful personnel scan
             showNotification(`Personnel scanned: ${data.firstname} ${data.surname} - ${data.rank}`, 'success');
+
+            // Move directly to Item ID input after successful personnel validation
+            itemInput.focus();
+            itemInput.select();
         } else {
             personnelValidated = false;
             personnelInfo.className = 'info-text error';

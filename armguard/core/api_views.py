@@ -6,6 +6,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Exists, OuterRef
 from personnel.models import Personnel
 from inventory.models import Item
 from transactions.models import Transaction
@@ -40,6 +41,32 @@ def get_personnel(request, personnel_id):
     result = parse_qr_code(personnel_id)
     
     if result['success'] and result['type'] == 'personnel':
+        resolved_personnel_id = result['data'].get('id')
+
+        active_items_query = Transaction.objects.filter(
+            personnel_id=resolved_personnel_id,
+            action=Transaction.ACTION_TAKE
+        ).exclude(
+            Exists(
+                Transaction.objects.filter(
+                    personnel_id=resolved_personnel_id,
+                    item=OuterRef('item'),
+                    action=Transaction.ACTION_RETURN,
+                    date_time__gt=OuterRef('date_time')
+                )
+            )
+        )
+
+        has_issued_firearm = active_items_query.exists()
+        result['data']['has_issued_firearm'] = has_issued_firearm
+
+        if has_issued_firearm:
+            active_item_tx = active_items_query.select_related('item').first()
+            if active_item_tx and active_item_tx.item:
+                result['data']['issued_item_id'] = active_item_tx.item.id
+                result['data']['issued_item_serial'] = active_item_tx.item.serial
+                result['data']['issued_item_type'] = active_item_tx.item.item_type
+
         return JsonResponse(result['data'])
     elif result['success'] and result['type'] != 'personnel':
         return JsonResponse({'error': f'QR code is for {result["type"]}, not personnel'}, status=400)
