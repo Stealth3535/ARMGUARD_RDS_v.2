@@ -88,8 +88,8 @@ body {
     position: sticky;
     top: 0;
     z-index: var(--z-sticky);
-    height: 68px;
-    min-height: 68px;
+    height: 75px;
+    min-height: 75px;
     display: flex;
     align-items: flex-end;
 }
@@ -100,8 +100,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    height: 68px;
-    min-height: 68px;
+    height: 75px;
+    min-height: 75px;
     padding: 0 var(--space-6);
 }
 
@@ -125,7 +125,7 @@ body {
     display: flex;
     align-items: flex-end;
     gap: var(--space-4);
-    height: 68px;
+    height: 75px;
 }
 
 .navbar-welcome {
@@ -137,7 +137,7 @@ body {
     white-space: nowrap;
     display: flex;
     align-items: flex-end;
-    height: 68px;
+    height: 75px;
     margin-bottom: 0;
 }
 
