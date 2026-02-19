@@ -760,6 +760,34 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
             reason,
         )
         return True
+
+    def upgrade_device_security_level(self, device_fingerprint, security_level='HIGH_SECURITY'):
+        """Upgrade security level for an existing authorized device by fingerprint."""
+        if not device_fingerprint:
+            return False
+
+        updated = False
+        for device in self.authorized_devices.get('devices', []):
+            if device.get('fingerprint') == device_fingerprint:
+                current_level = device.get('security_level', 'STANDARD')
+                if self._security_rank(current_level) < self._security_rank(security_level):
+                    device['security_level'] = security_level
+                    device['updated_at'] = timezone.now().isoformat()
+                    updated = True
+                break
+
+        if updated:
+            cache.delete(f"device_lockout_{device_fingerprint}")
+            cache.delete(f"device_attempts_{device_fingerprint}")
+            self.authorized_devices['last_updated'] = timezone.now().isoformat()
+            self.save_authorized_devices()
+            logger.info(
+                "Upgraded device security level: %s... -> %s",
+                device_fingerprint[:8],
+                security_level,
+            )
+
+        return updated
     
     def get_device_stats(self):
         """Get device statistics for monitoring"""

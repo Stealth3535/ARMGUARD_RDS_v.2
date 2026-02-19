@@ -746,6 +746,28 @@ def request_device_authorization(request):
                 required_security='HIGH_SECURITY',
             )
 
+            if (
+                not is_currently_authorized
+                and str(getattr(middleware, '_last_auth_reason', '')).startswith('insufficient_security_level_')
+            ):
+                middleware.load_authorized_devices()
+                upgraded = middleware.upgrade_device_security_level(
+                    device_fingerprint=device_fingerprint,
+                    security_level='HIGH_SECURITY',
+                )
+                if upgraded:
+                    if existing_request.security_level != 'HIGH_SECURITY':
+                        existing_request.security_level = 'HIGH_SECURITY'
+                        existing_request.save(update_fields=['security_level'])
+
+                    is_currently_authorized = middleware.is_device_authorized(
+                        device_fingerprint,
+                        ip_address,
+                        request.path,
+                        getattr(request, 'user', None),
+                        required_security='HIGH_SECURITY',
+                    )
+
             mtls_context = middleware._get_mtls_context(request)
             mtls_required_for_admin = middleware._mtls_required_for_security('HIGH_SECURITY')
             mtls_verified = mtls_context.get('verified', False)
