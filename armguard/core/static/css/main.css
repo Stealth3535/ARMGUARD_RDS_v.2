@@ -115,6 +115,63 @@ body {
     font-size: var(--text-2xl);
 }
 
+.navbar-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.navbar-welcome {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    border-left: 1px solid rgba(255, 255, 255, 0.25);
+    padding-left: var(--space-4);
+    white-space: nowrap;
+}
+
+.navbar-welcome strong {
+    color: var(--white);
+    font-weight: var(--font-semibold);
+}
+
+.navbar-role-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--white);
+    font-size: 0.7rem;
+    font-weight: var(--font-bold);
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.navbar-logout-item {
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    margin-left: var(--space-2);
+}
+
+.navbar-logout-btn {
+    display: flex !important;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-5) !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    text-decoration: none;
+    font-weight: var(--font-medium);
+    font-size: var(--text-sm);
+    transition: background-color var(--transition-base);
+    border-bottom: 3px solid transparent !important;
+}
+
+.navbar-logout-btn:hover {
+    background-color: rgba(220, 38, 38, 0.25) !important;
+    border-bottom-color: #ef4444 !important;
+    color: var(--white) !important;
+}
+
 .navbar-menu {
     display: flex;
     list-style: none;

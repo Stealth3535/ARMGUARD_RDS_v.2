@@ -1,10 +1,16 @@
 {% load static %}
+{% load user_tags %}
 <nav class="navbar">
     <div class="navbar-container">
-        <a href="{% url 'dashboard' %}" class="navbar-brand">
-            <span class="navbar-logo">🛡️</span>
-            <span class="navbar-title">ArmGuard</span>
-        </a>
+        <div class="navbar-left">
+            <a href="{% url 'dashboard' %}" class="navbar-brand">
+                <span class="navbar-logo">🛡️</span>
+                <span class="navbar-title">ArmGuard</span>
+            </a>
+            <div class="navbar-welcome">
+                Welcome, <strong>{{ user.username }}</strong> | Role: <span class="navbar-role-badge">{{ user|get_user_role }}</span>
+            </div>
+        </div>
         <ul class="navbar-menu">
             <li><a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' and 'admin' not in request.path %}active{% endif %}">Dashboard</a></li>
             <li><a href="{% url 'personnel:personnel_profile_list' %}" class="{% if request.path|slice:':11' == '/personnel/' %}active{% endif %}">Personnel</a></li>
@@ -14,6 +20,11 @@
             {% if user.is_staff %}
             <li><a href="{% url 'armguard_admin:dashboard' %}" class="{% if request.path|slice:':7' == '/admin/' %}active{% endif %}">Admin</a></li>
             {% endif %}
+            <li class="navbar-logout-item">
+                <a href="{% url 'logout' %}" class="navbar-logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </li>
         </ul>
     </div>
 </nav>
