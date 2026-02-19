@@ -90,23 +90,32 @@ body {
     z-index: var(--z-sticky);
     height: 75px;
     min-height: 75px;
-    display: flex;
-    align-items: flex-end;
 }
 
 .navbar-container {
     max-width: var(--container-max-width);
     margin: 0 auto;
     display: flex;
+    flex-direction: row;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
     height: 75px;
-    min-height: 75px;
     padding: 0 var(--space-6);
+    width: 100%;
+}
+
+/* Left side: logo + welcome text on the SAME row */
+.navbar-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
 }
 
 .navbar-brand {
     display: flex;
+    flex-direction: row;
     align-items: center;
     gap: var(--space-3);
     padding: 0;
@@ -115,32 +124,25 @@ body {
     font-weight: var(--font-bold);
     font-size: var(--text-xl);
     letter-spacing: var(--tracking-tight);
+    flex-shrink: 0;
 }
 
 .navbar-logo {
     font-size: var(--text-2xl);
 }
 
-.navbar-left {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: var(--space-4);
-    height: 75px;
-}
-
 .navbar-welcome {
     color: rgba(255, 255, 255, 0.85);
     font-size: var(--text-sm);
     font-weight: var(--font-medium);
-    border-left: 1px solid rgba(255, 255, 255, 0.25);
+    border-left: 1px solid rgba(255, 255, 255, 0.35);
     padding-left: var(--space-4);
+    margin-left: var(--space-4);
     white-space: nowrap;
     display: flex;
+    flex-direction: row;
     align-items: center;
-    margin-bottom: 0;
-    margin-left: var(--space-4);
-    height: auto;
+    flex-shrink: 0;
 }
 
 .navbar-welcome strong {
@@ -187,23 +189,34 @@ body {
 
 .navbar-menu {
     display: flex;
+    flex-direction: row;
+    align-items: center;
     list-style: none;
     gap: 0;
     margin: 0;
     padding: 0;
+    height: 75px;
+}
+
+.navbar-menu li {
+    display: flex;
+    align-items: center;
+    height: 75px;
 }
 
 .navbar-menu li a {
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-5) var(--space-5);
+    height: 75px;
+    padding: 0 var(--space-5);
     color: var(--white);
     text-decoration: none;
     font-weight: var(--font-medium);
     font-size: var(--text-sm);
     transition: background-color var(--transition-base);
     border-bottom: 3px solid transparent;
+    box-sizing: border-box;
 }
 
 .navbar-menu li a:hover {
