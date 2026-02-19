@@ -282,11 +282,12 @@ class AdminIntegrationTests(TestCase):
         
         # Create test personnel
         self.personnel = Personnel.objects.create(
-            first_name='John',
-            last_name='Doe',
+            firstname='John',
+            surname='Doe',
             rank='CPT',
             serial='12345678',
-            classification='Officer'
+            tel='+639123456789',
+            classification='OFFICER'
         )
         
     def test_dashboard_with_data(self):

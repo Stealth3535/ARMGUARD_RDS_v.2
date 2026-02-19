@@ -28,11 +28,12 @@ class TransactionsDesignSystemTests(TestCase):
         
         # Create test personnel and items
         self.personnel = Personnel.objects.create(
-            first_name='Test',
-            last_name='User',
+            firstname='Test',
+            surname='User',
             rank='CPT',
             serial='12345678',
-            classification='Officer'
+            tel='+639123456789',
+            classification='OFFICER'
         )
         
         self.item = Item.objects.create(
@@ -176,11 +177,12 @@ class TransactionFilterTests(TestCase):
         self.client.force_login(self.user)
         
         self.personnel = Personnel.objects.create(
-            first_name='Filter',
-            last_name='Test',
+            firstname='Filter',
+            surname='Test',
             rank='CPT',
             serial='11111111',
-            classification='Officer'
+            tel='+639111111111',
+            classification='OFFICER'
         )
         
         self.item = Item.objects.create(
@@ -240,10 +242,12 @@ class TransactionComponentTests(TestCase):
     def test_stat_card_variants(self):
         """Test stat card color variants"""
         personnel = Personnel.objects.create(
-            first_name='Comp',
-            last_name='Test',
+            firstname='Comp',
+            surname='Test',
             rank='AM',
-            classification='Enlisted'
+            serial='22222222',
+            tel='+639222222222',
+            classification='ENLISTED PERSONNEL'
         )
         
         item = Item.objects.create(
@@ -268,10 +272,12 @@ class TransactionComponentTests(TestCase):
     def test_badge_color_coding(self):
         """Test badge color coding for different modes"""
         personnel = Personnel.objects.create(
-            first_name='Badge',
-            last_name='Test',
+            firstname='Badge',
+            surname='Test',
             rank='CPT',
-            classification='Officer'
+            serial='33333333',
+            tel='+639333333333',
+            classification='OFFICER'
         )
         
         item = Item.objects.create(
@@ -343,10 +349,12 @@ class TransactionIntegrationTests(TestCase):
         self.client.force_login(self.user)
         
         self.personnel = Personnel.objects.create(
-            first_name='Integration',
-            last_name='Test',
+            firstname='Integration',
+            surname='Test',
             rank='MAJ',
-            classification='Officer'
+            serial='44444444',
+            tel='+639444444444',
+            classification='OFFICER'
         )
         
         # Create multiple transactions

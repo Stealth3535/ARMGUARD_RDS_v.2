@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from inventory.models import Item
 from personnel.models import Personnel
+import gzip
 
 User = get_user_model()
 

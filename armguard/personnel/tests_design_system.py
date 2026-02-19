@@ -28,18 +28,20 @@ class PersonnelDesignSystemTests(TestCase):
         
         # Create test personnel
         self.personnel1 = Personnel.objects.create(
-            first_name='John',
-            last_name='Doe',
+            firstname='John',
+            surname='Doe',
             rank='CPT',
             serial='12345678',
-            classification='Officer'
+            tel='+639123456789',
+            classification='OFFICER'
         )
         self.personnel2 = Personnel.objects.create(
-            first_name='Jane',
-            last_name='Smith',
+            firstname='Jane',
+            surname='Smith',
             rank='AM',
             serial='87654321',
-            classification='Enlisted'
+            tel='+639987654321',
+            classification='ENLISTED PERSONNEL'
         )
         
     def test_personnel_list_design_system(self):
@@ -156,11 +158,12 @@ class PersonnelProfileDetailTests(TestCase):
         self.client.force_login(self.user)
         
         self.personnel = Personnel.objects.create(
-            first_name='Mike',
-            last_name='Johnson',
+            firstname='Mike',
+            surname='Johnson',
             rank='1LT',
             serial='11223344',
-            classification='Officer'
+            tel='+639112233445',
+            classification='OFFICER'
         )
         
         self.item = Item.objects.create(
@@ -227,16 +230,20 @@ class PersonnelComponentTests(TestCase):
     def test_stat_card_components(self):
         """Test stat card variants"""
         Personnel.objects.create(
-            first_name='Test',
-            last_name='Officer',
+            firstname='Test',
+            surname='Officer',
             rank='MAJ',
-            classification='Officer'
+            serial='00001111',
+            tel='+639000011112',
+            classification='OFFICER'
         )
         Personnel.objects.create(
-            first_name='Test',
-            last_name='Enlisted',
+            firstname='Test',
+            surname='Enlisted',
             rank='AM',
-            classification='Enlisted'
+            serial='00002222',
+            tel='+639000022223',
+            classification='ENLISTED PERSONNEL'
         )
         
         response = self.client.get(reverse('personnel:personnel_profile_list'))
@@ -297,11 +304,12 @@ class PersonnelIntegrationTests(TestCase):
         # Create multiple personnel
         for i in range(10):
             Personnel.objects.create(
-                first_name=f'Person{i}',
-                last_name=f'Test{i}',
+                firstname=f'Person{i}',
+                surname=f'Test{i}',
                 rank='CPT' if i % 2 == 0 else 'AM',
                 serial=f'{i:08d}',
-                classification='Officer' if i % 2 == 0 else 'Enlisted'
+                tel=f'+63912345{i:04d}',
+                classification='OFFICER' if i % 2 == 0 else 'ENLISTED PERSONNEL'
             )
             
     def test_personnel_list_with_multiple_entries(self):

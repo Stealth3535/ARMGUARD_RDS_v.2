@@ -6,8 +6,16 @@ Tests for login, authentication, and user-related views
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+import gzip
 
 User = get_user_model()
+
+
+def decode_response(response):
+    """Helper to decode response content, handling gzip if needed"""
+    if response.get('Content-Encoding') == 'gzip':
+        return gzip.decompress(response.content).decode('utf-8')
+    return response.content.decode('utf-8', errors='replace')
 
 
 class UsersDesignSystemTests(TestCase):
@@ -27,7 +35,11 @@ class UsersDesignSystemTests(TestCase):
         response = self.client.get(reverse('login'))
         self.assertEqual(response.status_code, 200)
         
-        html = response.content.decode('utf-8')
+        # Handle gzip encoding
+        if response.get('Content-Encoding') == 'gzip':
+            html = gzip.decompress(response.content).decode('utf-8')
+        else:
+            html = response.content.decode('utf-8', errors='replace')
         
         # Check for design system components
         self.assertIn('card', html, "Should use card component")
@@ -37,7 +49,10 @@ class UsersDesignSystemTests(TestCase):
     def test_login_form_components(self):
         """Test login form uses design system classes"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        if response.get('Content-Encoding') == 'gzip':
+            html = gzip.decompress(response.content).decode('utf-8')
+        else:
+            html = response.content.decode('utf-8', errors='replace')
         
         # Check for form classes
         self.assertIn('form-input', html, "Should use form-input class")
@@ -46,7 +61,7 @@ class UsersDesignSystemTests(TestCase):
     def test_login_button_styling(self):
         """Test login button uses design system"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Check for button classes
         self.assertIn('btn-primary', html, "Should use btn-primary class")
@@ -54,7 +69,7 @@ class UsersDesignSystemTests(TestCase):
     def test_login_card_layout(self):
         """Test login page uses card layout"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Check for card component
         self.assertIn('card', html, "Should use card layout")
@@ -62,7 +77,7 @@ class UsersDesignSystemTests(TestCase):
     def test_login_color_system(self):
         """Test login page uses design system colors"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Check for color classes
         color_classes = ['text-neutral-', 'text-primary', 'bg-white']
@@ -72,7 +87,7 @@ class UsersDesignSystemTests(TestCase):
     def test_login_spacing(self):
         """Test login page uses spacing system"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Check for spacing utilities
         spacing_patterns = ['mb-', 'mt-', 'p-', 'gap-']
@@ -97,7 +112,7 @@ class UsersFormTests(TestCase):
     def test_login_form_structure(self):
         """Test login form structure"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Check for form elements
         self.assertIn('<form', html, "Should have form element")
@@ -107,7 +122,7 @@ class UsersFormTests(TestCase):
     def test_form_input_styling(self):
         """Test form inputs use design system classes"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Check for form-input class
         self.assertIn('form-input', html, "Inputs should use form-input class")
@@ -120,7 +135,7 @@ class UsersFormTests(TestCase):
             'password': 'wrong'
         })
         
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Should show validation message
         if 'alert' in html:
@@ -136,7 +151,7 @@ class UsersAccessibilityTests(TestCase):
     def test_login_semantic_html(self):
         """Test login page uses semantic HTML"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Check for semantic elements
         self.assertIn('<form', html, "Should use form element")
@@ -145,7 +160,7 @@ class UsersAccessibilityTests(TestCase):
     def test_login_form_labels(self):
         """Test form labels are present"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Check for labels
         self.assertIn('label', html, "Should have form labels")
@@ -153,7 +168,7 @@ class UsersAccessibilityTests(TestCase):
     def test_login_input_accessibility(self):
         """Test inputs have proper accessibility attributes"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Inputs should be associated with labels
         self.assertIn('<input', html, "Should have input elements")
@@ -173,7 +188,7 @@ class UsersComponentTests(TestCase):
             'password': 'credentials'
         })
         
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Check if error is displayed with alert component
         # Note: This depends on implementation
@@ -182,7 +197,7 @@ class UsersComponentTests(TestCase):
     def test_button_hover_states(self):
         """Test button classes include hover states"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Buttons should exist
         self.assertIn('btn', html, "Should have button classes")
@@ -242,7 +257,7 @@ class UsersResponsiveTests(TestCase):
     def test_login_responsive_layout(self):
         """Test login page is responsive"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Check for responsive classes
         # Login should be mobile-friendly
@@ -251,7 +266,7 @@ class UsersResponsiveTests(TestCase):
     def test_mobile_viewport(self):
         """Test viewport meta tag"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Should have viewport meta
         self.assertIn('viewport', html, "Should have viewport meta tag")
@@ -266,7 +281,7 @@ class UserPasswordTests(TestCase):
     def test_password_input_styling(self):
         """Test password input uses design system"""
         response = self.client.get(reverse('login'))
-        html = response.content.decode('utf-8')
+        html = decode_response(response)
         
         # Password field should exist with proper styling
         self.assertIn('type="password"', html)
