@@ -12,6 +12,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from inventory.models import Item
 from personnel.models import Personnel
 from transactions.models import Transaction
@@ -681,6 +682,15 @@ def request_device_authorization(request):
     from .models import DeviceAuthorizationRequest
     
     middleware = DeviceAuthorizationMiddleware(lambda req: None)
+    requested_next = request.GET.get('next', '')
+    redirect_target = '/admin/'
+    if requested_next and url_has_allowed_host_and_scheme(
+        url=requested_next,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        redirect_target = requested_next
+
     device_cookie = middleware.get_device_id_cookie(request)
     should_set_device_cookie = False
     if not device_cookie:
@@ -746,9 +756,12 @@ def request_device_authorization(request):
                     # Avoid redirect/message loops when /admin/ is still blocked by mTLS.
                     pass
                 else:
-                    # Device is approved and can access protected pages.
-                    # Keep this view stable; user can navigate using dashboard/admin links.
-                    pass
+                    requires_cert_download = bool(
+                        existing_request.issued_certificate_pem
+                        and not existing_request.issued_certificate_downloaded_at
+                    )
+                    if not requires_cert_download:
+                        return redirect(redirect_target)
             else:
                 stale_approved_request = existing_request
                 existing_request = None
