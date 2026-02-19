@@ -773,39 +773,33 @@ function showAuditHistory(element) {
 
 {% block content %}
 <div class="page-header">
-    <h1>👥 User Management</h1>
+    <h1>User Management</h1>
     <a href="{% url 'armguard_admin:create_user' %}" class="btn-primary">+ Create New User</a>
 </div>
 
 <!-- Statistics Dashboard -->
 <div class="stats-container">
     <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left-color: #667eea;">
-        <div class="stat-icon">👥</div>
         <div class="stat-value" id="total-users-count">{{ user_count }}</div>
         <div class="stat-label">Total Users</div>
     </div>
     <div class="stat-card superuser">
-        <div class="stat-icon">🔐</div>
         <div class="stat-value" id="superuser-count">{{ superuser_count }}</div>
         <div class="stat-label">Superusers</div>
     </div>
     <div class="stat-card admin">
-        <div class="stat-icon">👔</div>
         <div class="stat-value" id="admin-count">{{ admin_count }}</div>
         <div class="stat-label">Administrators</div>
     </div>
     <div class="stat-card armorer">
-        <div class="stat-icon">🪖</div>
         <div class="stat-value" id="armorer-count">{{ armorer_count }}</div>
         <div class="stat-label">Armorers</div>
     </div>
     <div class="stat-card active">
-        <div class="stat-icon">✅</div>
         <div class="stat-value" id="active-count">{{ active_count }}</div>
         <div class="stat-label">Active Users</div>
     </div>
     <div class="stat-card personnel">
-        <div class="stat-icon">👤</div>
         <div class="stat-value" id="personnel-count">{{ personnel.count }}</div>
         <div class="stat-label">Personnel Records</div>
     </div>
@@ -814,7 +808,7 @@ function showAuditHistory(element) {
 <!-- Admin Users Section (All Users with Accounts) -->
 <div class="section-divider">
     <div class="section-header">
-        <h2>🔑 User Accounts</h2>
+        <h2>User Accounts</h2>
         <span style="color: #666; font-size: 0.9rem;">All users with login accounts (Superusers, Administrators, Armorers, and Personnel)</span>
     </div>
     
@@ -846,10 +840,10 @@ function showAuditHistory(element) {
         
         <!-- Quick Filters -->
         <div class="filter-chips">
-            <span class="filter-chip" data-filter="superuser">🔐 Superusers</span>
-            <span class="filter-chip" data-filter="admin">👔 Admins</span>
-            <span class="filter-chip" data-filter="armorer">🪖Armorers</span>
-            <span class="filter-chip" data-filter="personnel">👤 Personnel</span>
+            <span class="filter-chip" data-filter="superuser">Superusers</span>
+            <span class="filter-chip" data-filter="admin">Admins</span>
+            <span class="filter-chip" data-filter="armorer">Armorers</span>
+            <span class="filter-chip" data-filter="personnel">Personnel</span>
         </div>
     </div>
 
@@ -947,7 +941,7 @@ function showAuditHistory(element) {
 <!-- Personnel Management Section -->
 <div class="section-divider">
     <div class="section-header">
-        <h2>👤 Personnel Records</h2>
+        <h2>Personnel Records</h2>
     </div>
 
     <!-- Personnel Search and Filter Bar -->
