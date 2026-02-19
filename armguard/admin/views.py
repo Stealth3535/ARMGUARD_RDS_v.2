@@ -814,27 +814,28 @@ def request_device_authorization(request):
                         return redirect(redirect_target)
             else:
                 try:
-                    existing_request.status = 'pending'
-                    existing_request.reviewed_by = None
-                    existing_request.reviewed_at = None
-                    existing_request.review_notes = ''
-                    existing_request.requested_at = timezone.now()
-                    existing_request.ip_address = ip_address
-                    existing_request.user_agent = user_agent
-                    if request.user.is_authenticated:
-                        existing_request.requested_by = request.user
-                    existing_request.save(
-                        update_fields=[
-                            'status',
-                            'reviewed_by',
-                            'reviewed_at',
-                            'review_notes',
-                            'requested_at',
-                            'ip_address',
-                            'user_agent',
-                            'requested_by',
-                        ]
+                    archived_suffix = timezone.now().strftime('%Y%m%d%H%M%S')
+                    archived_fingerprint = f"archived-{archived_suffix}-{existing_request.device_fingerprint[:32]}"
+                    archived_fingerprint = archived_fingerprint[:64]
+
+                    existing_request.device_fingerprint = archived_fingerprint
+                    existing_request.review_notes = (
+                        (existing_request.review_notes or '').strip() +
+                        f"\n[Auto-archived {timezone.now().isoformat()}] Superseded by re-request due to inactive approval."
+                    ).strip()
+                    existing_request.save(update_fields=['device_fingerprint', 'review_notes'])
+
+                    DeviceAuthorizationRequest.objects.create(
+                        device_fingerprint=device_fingerprint,
+                        ip_address=ip_address,
+                        user_agent=user_agent,
+                        hostname=existing_request.hostname or existing_request.device_name,
+                        requested_by=request.user,
+                        reason=existing_request.reason or 'Re-request due to inactive prior approval',
+                        device_name=existing_request.device_name,
+                        csr_pem='',
                     )
+
                     messages.warning(
                         request,
                         'Previous approval became inactive; a new pending request was created automatically.'
