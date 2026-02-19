@@ -865,8 +865,11 @@ def approve_device_request(request, request_id):
     
     if request.method == 'POST':
         device_name = request.POST.get('device_name', auth_request.device_name)
-        security_level = request.POST.get('security_level', 'STANDARD')
+        security_level = request.POST.get('security_level', 'HIGH_SECURITY')
         notes = request.POST.get('notes', '')
+
+        if security_level not in {'STANDARD', 'RESTRICTED', 'HIGH_SECURITY', 'HIGH', 'MILITARY'}:
+            security_level = 'HIGH_SECURITY'
 
         try:
             auth_request.approve(request.user, device_name, security_level, notes)
@@ -887,6 +890,7 @@ def approve_device_request(request, request_id):
     
     context = {
         'auth_request': auth_request,
+        'default_security_level': auth_request.security_level or 'HIGH_SECURITY',
     }
     return render(request, 'admin/approve_device_request.html', context)
 

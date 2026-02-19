@@ -27,9 +27,9 @@
         <div style="margin-bottom: 1rem;">
             <label for="security_level" style="display:block; font-weight:600; margin-bottom:0.35rem;">Security Level</label>
             <select id="security_level" name="security_level" style="width:100%; padding:0.7rem; border:1px solid #d1d5db; border-radius:8px;">
-                <option value="STANDARD">STANDARD</option>
-                <option value="RESTRICTED">RESTRICTED</option>
-                <option value="HIGH_SECURITY">HIGH_SECURITY</option>
+                <option value="STANDARD" {% if default_security_level == 'STANDARD' %}selected{% endif %}>STANDARD</option>
+                <option value="RESTRICTED" {% if default_security_level == 'RESTRICTED' %}selected{% endif %}>RESTRICTED</option>
+                <option value="HIGH_SECURITY" {% if default_security_level == 'HIGH_SECURITY' or not default_security_level %}selected{% endif %}>HIGH_SECURITY</option>
             </select>
         </div>
 
