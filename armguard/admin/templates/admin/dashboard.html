@@ -60,8 +60,8 @@
         <div class="stat-card-icon"><i class="fas fa-users"></i></div>
         <div class="stat-card-content">
             <span class="stat-card-label">Users</span>
-            <span class="stat-card-value">{{ users_count }}</span>
-            <span class="stat-card-description">{{ active_users_count }} active user{{ active_users_count|pluralize }}</span>
+            <span class="stat-card-value">{{ total_users }}</span>
+            <span class="stat-card-description">{{ active_users }} active user{{ active_users|pluralize }}</span>
         </div>
     </div>
     
@@ -69,8 +69,8 @@
         <div class="stat-card-icon"><i class="fas fa-id-card"></i></div>
         <div class="stat-card-content">
             <span class="stat-card-label">Personnel</span>
-            <span class="stat-card-value">{{ personnel_count }}</span>
-            <span class="stat-card-description">{{ enlisted_count }} enlisted, {{ officer_count }} officer{{ officer_count|pluralize }}</span>
+            <span class="stat-card-value">{{ total_personnel }}</span>
+            <span class="stat-card-description">{{ enlisted_count }} enlisted, {{ officers_count }} officer{{ officers_count|pluralize }}</span>
         </div>
     </div>
     
