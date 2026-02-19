@@ -63,37 +63,65 @@ class DashboardCache:
         from inventory.models import Item
         from transactions.models import Transaction
         from django.contrib.auth.models import User
-        
+        from django.utils import timezone
+        from datetime import timedelta
+
+        personnel_agg = Personnel.objects.aggregate(
+            total_personnel=Count('id'),
+            active_personnel=Count('id', filter=Q(status='Active')),
+            officers_count=Count('id', filter=Q(classification='OFFICER')),
+            enlisted_count=Count('id', filter=Q(classification='ENLISTED PERSONNEL')),
+            unlinked_personnel=Count('id', filter=Q(user__isnull=True)),
+        )
+
+        item_agg = Item.objects.aggregate(
+            total_items=Count('id'),
+            available_items=Count('id', filter=Q(status='Available')),
+            issued_items=Count('id', filter=Q(status='Issued')),
+            maintenance_items=Count('id', filter=Q(status='Maintenance')),
+        )
+
+        transaction_agg = Transaction.objects.aggregate(
+            total_transactions=Count('id'),
+            recent_transactions_count=Count('id', filter=Q(date_time__gte=timezone.now() - timedelta(days=7))),
+        )
+
+        user_agg = User.objects.aggregate(
+            total_users=Count('id', distinct=True),
+            active_users=Count('id', filter=Q(is_active=True), distinct=True),
+            superusers_count=Count('id', filter=Q(is_superuser=True), distinct=True),
+            admins_count=Count('id', filter=Q(groups__name='Admin'), distinct=True),
+            armorers_count=Count('id', filter=Q(groups__name='Armorer'), distinct=True),
+        )
+
         stats = {
             # Personnel statistics
-            'total_personnel': Personnel.objects.count(),
-            'active_personnel': Personnel.objects.filter(status='Active').count(),
-            'officers_count': Personnel.objects.filter(classification='OFFICER').count(),
-            'enlisted_count': Personnel.objects.filter(classification='ENLISTED PERSONNEL').count(),
-            'unlinked_personnel': Personnel.objects.filter(user__isnull=True).count(),
+            'total_personnel': personnel_agg['total_personnel'],
+            'active_personnel': personnel_agg['active_personnel'],
+            'officers_count': personnel_agg['officers_count'],
+            'enlisted_count': personnel_agg['enlisted_count'],
+            'unlinked_personnel': personnel_agg['unlinked_personnel'],
             
             # Item statistics
-            'total_items': Item.objects.count(),
-            'available_items': Item.objects.filter(status='Available').count(),
-            'issued_items': Item.objects.filter(status='Issued').count(),
-            'maintenance_items': Item.objects.filter(status='Maintenance').count(),
+            'total_items': item_agg['total_items'],
+            'available_items': item_agg['available_items'],
+            'issued_items': item_agg['issued_items'],
+            'maintenance_items': item_agg['maintenance_items'],
             
             # Items by type
             'items_by_type': list(Item.objects.values('item_type').annotate(count=Count('id'))),
             
             # Transaction statistics
-            'total_transactions': Transaction.objects.count(),
-            'recent_transactions_count': Transaction.objects.filter(
-                date_time__gte=timezone.now() - timedelta(days=7)
-            ).count() if 'timezone' in dir() else 0,
+            'total_transactions': transaction_agg['total_transactions'],
+            'recent_transactions_count': transaction_agg['recent_transactions_count'],
             
             # User statistics
-            'total_users': User.objects.count(),
-            'active_users': User.objects.filter(is_active=True).count(),
-            'administrators_count': User.objects.filter(
-                Q(groups__name='Admin') | Q(is_superuser=True)
-            ).distinct().count(),
-            'armorers_count': User.objects.filter(groups__name='Armorer').count(),
+            'total_users': user_agg['total_users'],
+            'active_users': user_agg['active_users'],
+            'administrators_count': (user_agg['admins_count'] or 0) + (user_agg['superusers_count'] or 0),
+            'superusers_count': user_agg['superusers_count'],
+            'admins_count': user_agg['admins_count'],
+            'armorers_count': user_agg['armorers_count'],
         }
         
         return stats

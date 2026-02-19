@@ -5,65 +5,94 @@
 
 {% block extra_css %}
 <style>
+    :root {
+        --panel-bg: #ffffff;
+        --panel-border: #d1d5db;
+        --panel-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+    }
+
     .admin-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
+        background: var(--panel-bg);
+        color: var(--text-main);
+        padding: 1.15rem 1.25rem;
         border-radius: 10px;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 1.25rem;
+        box-shadow: var(--panel-shadow);
+        border: 1px solid var(--panel-border);
+        border-top: 4px solid #667eea;
     }
     
     .admin-header h1 {
         margin: 0;
-        font-size: 2rem;
+        font-size: 1.7rem;
     }
     
     .admin-header p {
-        margin: 0.5rem 0 0 0;
-        opacity: 0.9;
+        margin: 0.35rem 0 0 0;
+        color: var(--text-muted);
     }
     
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0.85rem;
+        margin-bottom: 1.25rem;
     }
     
     .stat-card {
-        background: white;
-        padding: 1.5rem;
+        background: var(--panel-bg);
+        padding: 0.95rem 1rem;
         border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        border-left: 4px solid #667eea;
-        transition: transform 0.3s ease;
+        box-shadow: var(--panel-shadow);
+        border: 1px solid var(--panel-border);
+        border-top: 4px solid var(--card-color, #667eea);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
     }
+
+    .stat-card:nth-child(1) { --card-color: #667eea; }
+    .stat-card:nth-child(2) { --card-color: #10b981; }
+    .stat-card:nth-child(3) { --card-color: #f59e0b; }
+    .stat-card:nth-child(4) { --card-color: #ef4444; }
     
     .stat-card:hover {
         transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     }
     
     .stat-card h3 {
         margin: 0;
-        color: #666;
-        font-size: 0.9rem;
+        color: var(--text-muted);
+        font-size: 0.8rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+        max-width: calc(100% - 40px);
     }
     
     .stat-card .number {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #333;
-        margin: 0.5rem 0;
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--card-color, #333);
+        margin: 0.3rem 0 0.25rem;
+        line-height: 1;
     }
     
     .stat-card .icon {
-        font-size: 1.5rem;
-        color: #667eea;
-        float: right;
-        margin-top: -2rem;
+        font-size: 1.1rem;
+        color: var(--card-color, #667eea);
+        position: absolute;
+        top: 0.75rem;
+        right: 0.85rem;
+    }
+
+    .stat-card small {
+        display: block;
+        color: #475569;
+        line-height: 1.3;
+        font-size: 0.8rem;
     }
     
     .universal-registration-highlight {
@@ -100,44 +129,49 @@
     }
     
     .quick-actions {
-        background: white;
-        padding: 1.5rem;
+        background: var(--panel-bg);
+        padding: 1rem 1.1rem;
         border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 2rem;
+        box-shadow: var(--panel-shadow);
+        border: 1px solid var(--panel-border);
+        margin-bottom: 1.25rem;
     }
     
     .quick-actions h2 {
-        margin-top: 0;
-        color: #333;
+        margin: 0;
+        color: var(--text-main);
+        font-size: 1.15rem;
     }
     
     .action-buttons {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1rem;
-        margin-top: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 0.65rem;
+        margin-top: 0.8rem;
     }
     
     .action-btn {
-        padding: 1rem 1.5rem;
-        background: #667eea;
-        color: white;
-        border-radius: 8px;
+        padding: 0.72rem 0.85rem;
+        background: #f8fafc;
+        color: #334155;
+        border-radius: 9px;
+        border: 1px solid #cbd5e1;
         text-decoration: none;
-        transition: all 0.3s;
+        transition: all 0.2s;
         display: flex;
         align-items: center;
-        justify-content: center;
-        text-align: center;
-        font-weight: 500;
+        justify-content: flex-start;
+        text-align: left;
+        font-weight: 600;
+        min-height: 44px;
     }
     
     .action-btn:hover {
-        background: #5568d3;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        color: white;
+        background: #eef2ff;
+        border-color: #a5b4fc;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(30, 64, 175, 0.12);
+        color: #1e3a8a;
         text-decoration: none;
     }
     
@@ -146,44 +180,59 @@
     }
     
     .action-btn.primary {
-        background: #007bff;
+        background: #dbeafe;
+        border-color: #bfdbfe;
+        color: #1d4ed8;
     }
     
     .action-btn.primary:hover {
-        background: #0056b3;
+        background: #bfdbfe;
+        border-color: #93c5fd;
+        color: #1e40af;
     }
     
     .action-btn.success {
-        background: #28a745;
+        background: #dcfce7;
+        border-color: #bbf7d0;
+        color: #166534;
     }
     
     .action-btn.success:hover {
-        background: #1e7e34;
+        background: #bbf7d0;
+        border-color: #86efac;
+        color: #14532d;
     }
     
     .action-btn.warning {
-        background: #ffc107;
-        color: #000;
+        background: #fef3c7;
+        border-color: #fde68a;
+        color: #92400e;
     }
     
     .action-btn.warning:hover {
-        background: #e0a800;
-        color: #000;
+        background: #fde68a;
+        border-color: #fcd34d;
+        color: #78350f;
     }
     
     .action-btn.danger {
-        background: #dc3545;
+        background: #fee2e2;
+        border-color: #fecaca;
+        color: #b91c1c;
     }
     
     .action-btn.danger:hover {
-        background: #c82333;
+        background: #fecaca;
+        border-color: #fca5a5;
+        color: #991b1b;
     }
     
     .recent-transactions {
-        background: white;
-        padding: 1.5rem;
+        background: var(--panel-bg);
+        padding: 1rem 1.1rem;
         border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: var(--panel-shadow);
+        border: 1px solid var(--panel-border);
     }
 
     .recent-controls {
@@ -211,15 +260,15 @@
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        border: 1px solid #d1d5db;
-        color: #4b5563;
-        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #475569;
+        background: #f8fafc;
         text-decoration: none;
     }
 
     .history-pill.active {
-        background: #111827;
-        border-color: #111827;
+        background: #667eea;
+        border-color: #667eea;
         color: #ffffff;
     }
 
@@ -241,6 +290,7 @@
         text-transform: uppercase;
         letter-spacing: 0.04em;
         border: 1px solid transparent;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
     }
 
     .summary-btn.defcon {
@@ -256,8 +306,9 @@
     }
     
     .recent-transactions h2 {
-        margin-top: 0;
-        color: #333;
+        margin: 0;
+        color: var(--text-main);
+        font-size: 1.15rem;
     }
     
     .transaction-list {
@@ -267,11 +318,17 @@
     }
     
     .transaction-item {
-        padding: 1rem;
-        border-bottom: 1px solid #eee;
+        padding: 0.8rem 0.7rem;
+        border-bottom: 1px solid #e5e7eb;
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start;
+        gap: 0.7rem;
+    }
+
+    .transaction-item:hover {
+        background: #f8fafc;
+        border-radius: 8px;
     }
     
     .transaction-item:last-child {
@@ -280,10 +337,11 @@
     
     .transaction-type {
         display: inline-block;
-        padding: 0.25rem 0.75rem;
+        padding: 0.26rem 0.65rem;
         border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
+        font-size: 0.72rem;
+        font-weight: 700;
+        white-space: nowrap;
     }
     
     .type-issue {
@@ -302,16 +360,18 @@
     }
 
     .issued-list {
-        background: white;
-        padding: 1.5rem;
+        background: var(--panel-bg);
+        padding: 1rem 1.1rem;
         border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-top: 1.5rem;
+        box-shadow: var(--panel-shadow);
+        border: 1px solid var(--panel-border);
+        margin-top: 1.1rem;
     }
 
     .issued-list h2 {
-        margin-top: 0;
-        color: #333;
+        margin: 0 0 0.7rem 0;
+        color: var(--text-main);
+        font-size: 1.15rem;
     }
 
     .issued-table {
@@ -321,15 +381,39 @@
 
     .issued-table th,
     .issued-table td {
-        padding: 0.65rem;
+        padding: 0.58rem;
         border-bottom: 1px solid #e5e7eb;
         text-align: left;
     }
 
     .issued-table th {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         text-transform: uppercase;
-        color: #6b7280;
+        color: var(--text-muted);
+        letter-spacing: 0.04em;
+        background: #f8fafc;
+    }
+
+    .issued-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    @media (max-width: 768px) {
+        .admin-header,
+        .quick-actions,
+        .recent-transactions,
+        .issued-list {
+            padding: 0.9rem;
+        }
+
+        .transaction-item {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .transaction-type {
+            align-self: flex-start;
+        }
     }
     
     .alert-unlinked {
@@ -398,14 +482,14 @@
     <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
     <div class="action-buttons">
         <!-- Admin Only: Register User/Personnel -->
-        {% if can_edit and user.is_superuser or user.groups.all.0.name == 'Admin' %}
+        {% if can_edit and user.is_superuser or is_admin_group %}
         <a href="{% url 'armguard_admin:registration' %}" class="action-btn success">
             <i class="fas fa-user-plus"></i> Register User/Personnel
         </a>
         <a href="{% url 'armguard_admin:user_management' %}" class="action-btn primary">
             <i class="fas fa-users-cog"></i> Manage Users
         </a>
-        {% elif user.groups.all.0.name == 'Admin' %}
+        {% elif is_admin_group %}
         <!-- Restricted admin - show view-only version -->
         <a href="{% url 'armguard_admin:user_management' %}" class="action-btn primary">
             <i class="fas fa-users"></i> View Users (Read Only)
@@ -418,14 +502,14 @@
         </a>
         
         <!-- Admin and Armorer: Add Items -->
-        {% if can_edit and user.is_superuser or user.groups.all.0.name == 'Admin' or user.groups.all.0.name == 'Armorer' %}
+        {% if can_edit and user.is_superuser or is_admin_group or is_armorer_group %}
         <a href="{% url 'armguard_admin:register_item' %}" class="action-btn">
             <i class="fas fa-plus-square"></i> Add Item
         </a>
         {% endif %}
         
         <!-- Admin Only: System Settings -->
-        {% if can_edit and user.is_superuser or user.groups.all.0.name == 'Admin' %}
+        {% if can_edit and user.is_superuser or is_admin_group %}
         <a href="{% url 'armguard_admin:system_settings' %}" class="action-btn">
             <i class="fas fa-cog"></i> System Settings
         </a>

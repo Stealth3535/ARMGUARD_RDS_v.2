@@ -107,6 +107,10 @@ def dashboard(request):
         )
     ).select_related('personnel', 'item').order_by('-date_time')[:20]
     
+    user_group_names = set(request.user.groups.values_list('name', flat=True))
+    is_admin_group = 'Admin' in user_group_names
+    is_armorer_group = 'Armorer' in user_group_names
+
     context = {
         'enable_realtime': True,
         'total_items': stats['total_items'],
@@ -120,12 +124,16 @@ def dashboard(request):
         'total_users': stats['total_users'],
         'active_users': stats['active_users'],
         'administrators_count': stats['administrators_count'],
+        'superusers_count': stats.get('superusers_count', 0),
+        'admins_count': stats.get('admins_count', 0),
         'armorers_count': stats['armorers_count'],
         'unlinked_personnel': stats['unlinked_personnel'],
         'recent_transactions': recent_transactions,
         'issued_assignments': issued_assignments,
         'items_by_type': stats['items_by_type'],
         'selected_history': history_range,
+        'is_admin_group': is_admin_group,
+        'is_armorer_group': is_armorer_group,
     }
     
     return render(request, 'admin/dashboard.html', context)
@@ -269,20 +277,15 @@ def registration_success(request):
 @user_passes_test(is_admin_user)
 def user_management(request):
     """User management interface"""
-    # OPTIMIZED: Use Prefetch to avoid N+1 queries for personnel
-    from django.db.models import Prefetch
-    
     # Get ALL users with accounts for User Management section
-    # Prefetch personnel to avoid N+1 queries
-    admin_users = User.objects.select_related('userprofile').prefetch_related(
-        'groups',
-        Prefetch('personnel', queryset=Personnel.objects.all())
+    # Prefetch groups and join one-to-one personnel to avoid N+1 queries
+    admin_users = User.objects.select_related('userprofile', 'personnel').prefetch_related(
+        'groups'
     ).distinct().order_by('-date_joined')
     
     # Get only personnel users (non-admin, non-staff) for Personnel Management section
-    personnel_users = User.objects.select_related('userprofile').prefetch_related(
-        'groups',
-        Prefetch('personnel', queryset=Personnel.objects.all())
+    personnel_users = User.objects.select_related('userprofile', 'personnel').prefetch_related(
+        'groups'
     ).filter(
         is_staff=False,
         is_superuser=False
@@ -325,7 +328,7 @@ def user_management(request):
     # Personnel search and sorting
     personnel_search = request.GET.get('personnel_search', '').strip()
     personnel_search_by = request.GET.get('personnel_search_by', 'name')
-    personnel_qs = Personnel.objects.all()
+    personnel_qs = Personnel.objects.select_related('user', 'modified_by', 'created_by').all()
     if personnel_search:
         if personnel_search_by == 'name':
             personnel_qs = personnel_qs.filter(
