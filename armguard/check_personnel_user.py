@@ -7,8 +7,14 @@ django.setup()
 
 from personnel.models import Personnel
 
-# Get personnel ID from command line or use default
-personnel_id = sys.argv[1] if len(sys.argv) > 1 else 'PE-994857110226'
+# Require personnel ID from command line
+if len(sys.argv) < 2:
+    print('Error: Personnel ID is required')
+    print('Usage: python check_personnel_user.py <PERSONNEL_ID>')
+    print('Example: python check_personnel_user.py PE-994857110226')
+    sys.exit(1)
+
+personnel_id = sys.argv[1]
 
 try:
     p = Personnel.objects.get(id=personnel_id)
@@ -20,5 +26,5 @@ try:
         print('User: None')
 except Personnel.DoesNotExist:
     print(f'Error: Personnel with ID {personnel_id} does not exist')
-    print(f'Usage: python check_personnel_user.py [PERSONNEL_ID]')
+    print('Please verify the personnel ID and try again.')
     sys.exit(1)

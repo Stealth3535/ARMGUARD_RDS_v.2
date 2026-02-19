@@ -4,6 +4,7 @@ User Forms
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from users.models import UserProfile
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -40,7 +41,6 @@ class UserRegistrationForm(UserCreationForm):
             user.save()
             # Handle profile picture upload with get_or_create
             if self.cleaned_data.get('profile_picture'):
-                from users.models import UserProfile
                 profile, created = UserProfile.objects.get_or_create(user=user)
                 profile.profile_picture = self.cleaned_data['profile_picture']
                 profile.save()
