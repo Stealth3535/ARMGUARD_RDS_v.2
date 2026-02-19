@@ -1,0 +1,387 @@
+/**
+ * ARMGUARD Design System - Utilities
+ * Version: 1.0
+ * Typography, colors, and helper utilities
+ */
+
+/* ============================================================================
+   TYPOGRAPHY UTILITIES
+   ============================================================================ */
+
+/* Font Sizes */
+.text-xs { font-size: var(--text-xs); }
+.text-sm { font-size: var(--text-sm); }
+.text-base { font-size: var(--text-base); }
+.text-lg { font-size: var(--text-lg); }
+.text-xl { font-size: var(--text-xl); }
+.text-2xl { font-size: var(--text-2xl); }
+.text-3xl { font-size: var(--text-3xl); }
+.text-4xl { font-size: var(--text-4xl); }
+
+/* Font Weights */
+.font-normal { font-weight: var(--font-normal); }
+.font-medium { font-weight: var(--font-medium); }
+.font-semibold { font-weight: var(--font-semibold); }
+.font-bold { font-weight: var(--font-bold); }
+.font-extrabold { font-weight: var(--font-extrabold); }
+
+/* Font Style */
+.italic { font-style: italic; }
+.not-italic { font-style: normal; }
+
+/* Line Heights */
+.leading-none { line-height: var(--leading-none); }
+.leading-tight { line-height: var(--leading-tight); }
+.leading-snug { line-height: var(--leading-snug); }
+.leading-normal { line-height: var(--leading-normal); }
+.leading-relaxed { line-height: var(--leading-relaxed); }
+.leading-loose { line-height: var(--leading-loose); }
+
+/* Letter Spacing */
+.tracking-tighter { letter-spacing: var(--tracking-tighter); }
+.tracking-tight { letter-spacing: var(--tracking-tight); }
+.tracking-normal { letter-spacing: var(--tracking-normal); }
+.tracking-wide { letter-spacing: var(--tracking-wide); }
+.tracking-wider { letter-spacing: var(--tracking-wider); }
+.tracking-widest { letter-spacing: var(--tracking-widest); }
+
+/* Text Alignment */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-justify { text-align: justify; }
+
+/* Text Transform */
+.uppercase { text-transform: uppercase; }
+.lowercase { text-transform: lowercase; }
+.capitalize { text-transform: capitalize; }
+.normal-case { text-transform: none; }
+
+/* Text Decoration */
+.underline { text-decoration: underline; }
+.line-through { text-decoration: line-through; }
+.no-underline { text-decoration: none; }
+
+/* Text Overflow */
+.truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.text-ellipsis { text-overflow: ellipsis; }
+.text-clip { text-overflow: clip; }
+
+/* White Space */
+.whitespace-normal { white-space: normal; }
+.whitespace-nowrap { white-space: nowrap; }
+.whitespace-pre { white-space: pre; }
+.whitespace-pre-line { white-space: pre-line; }
+.whitespace-pre-wrap { white-space: pre-wrap; }
+
+/* Word Break */
+.break-normal { word-break: normal; overflow-wrap: normal; }
+.break-words { overflow-wrap: break-word; }
+.break-all { word-break: break-all; }
+
+/* ============================================================================
+   COLOR UTILITIES
+   ============================================================================ */
+
+/* Text Colors */
+.text-primary { color: var(--armguard-primary); }
+.text-success { color: var(--success-600); }
+.text-warning { color: var(--warning-700); }
+.text-danger { color: var(--danger-700); }
+.text-info { color: var(--info-600); }
+
+.text-white { color: var(--white); }
+.text-black { color: var(--black); }
+
+.text-neutral-900 { color: var(--neutral-900); }
+.text-neutral-700 { color: var(--neutral-700); }
+.text-neutral-600 { color: var(--neutral-600); }
+.text-neutral-500 { color: var(--neutral-500); }
+.text-neutral-400 { color: var(--neutral-400); }
+.text-neutral-300 { color: var(--neutral-300); }
+
+/* Background Colors */
+.bg-primary { background-color: var(--armguard-primary); }
+.bg-success { background-color: var(--success-500); }
+.bg-warning { background-color: var(--warning-500); }
+.bg-danger { background-color: var(--danger-500); }
+.bg-info { background-color: var(--info-500); }
+
+.bg-white { background-color: var(--white); }
+.bg-neutral-50 { background-color: var(--neutral-50); }
+.bg-neutral-100 { background-color: var(--neutral-100); }
+.bg-neutral-200 { background-color: var(--neutral-200); }
+.bg-neutral-900 { background-color: var(--neutral-900); }
+
+.bg-transparent { background-color: transparent; }
+
+/* Border Colors */
+.border-primary { border-color: var(--armguard-primary); }
+.border-success { border-color: var(--success-500); }
+.border-warning { border-color: var(--warning-500); }
+.border-danger { border-color: var(--danger-500); }
+.border-info { border-color: var(--info-500); }
+
+.border-neutral-200 { border-color: var(--neutral-200); }
+.border-neutral-300 { border-color: var(--neutral-300); }
+.border-transparent { border-color: transparent; }
+
+/* ============================================================================
+   BORDER UTILITIES
+   ============================================================================ */
+
+.border { border-width: var(--border); }
+.border-0 { border-width: 0; }
+.border-2 { border-width: var(--border-2); }
+.border-4 { border-width: var(--border-4); }
+
+.border-t { border-top-width: var(--border); }
+.border-r { border-right-width: var(--border); }
+.border-b { border-bottom-width: var(--border); }
+.border-l { border-left-width: var(--border); }
+
+.border-solid { border-style: solid; }
+.border-dashed { border-style: dashed; }
+.border-dotted { border-style: dotted; }
+.border-none { border-style: none; }
+
+/* Border Radius */
+.rounded-none { border-radius: var(--radius-none); }
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded { border-radius: var(--radius-md); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+.rounded-full { border-radius: var(--radius-full); }
+
+.rounded-t-lg { border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg); }
+.rounded-b-lg { border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg); }
+
+/* ============================================================================
+   SHADOW UTILITIES
+   ============================================================================ */
+
+.shadow-none { box-shadow: none; }
+.shadow-xs { box-shadow: var(--shadow-xs); }
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow { box-shadow: var(--shadow-md); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }
+.shadow-2xl { box-shadow: var(--shadow-2xl); }
+
+.shadow-primary { box-shadow: var(--shadow-primary); }
+.shadow-success { box-shadow: var(--shadow-success); }
+.shadow-warning { box-shadow: var(--shadow-warning); }
+.shadow-danger { box-shadow: var(--shadow-danger); }
+
+/* ============================================================================
+   OPACITY UTILITIES
+   ============================================================================ */
+
+.opacity-0 { opacity: 0; }
+.opacity-25 { opacity: 0.25; }
+.opacity-50 { opacity: 0.5; }
+.opacity-75 { opacity: 0.75; }
+.opacity-100 { opacity: 1; }
+
+/* ============================================================================
+   CURSOR UTILITIES
+   ============================================================================ */
+
+.cursor-auto { cursor: auto; }
+.cursor-default { cursor: default; }
+.cursor-pointer { cursor: pointer; }
+.cursor-wait { cursor: wait; }
+.cursor-text { cursor: text; }
+.cursor-move { cursor: move; }
+.cursor-not-allowed { cursor: not-allowed; }
+
+/* ============================================================================
+   USER SELECT
+   ============================================================================ */
+
+.select-none { user-select: none; }
+.select-text { user-select: text; }
+.select-all { user-select: all; }
+.select-auto { user-select: auto; }
+
+/* ============================================================================
+   POINTER EVENTS
+   ============================================================================ */
+
+.pointer-events-none { pointer-events: none; }
+.pointer-events-auto { pointer-events: auto; }
+
+/* ============================================================================
+   TRANSITION UTILITIES
+   ============================================================================ */
+
+.transition { transition: all var(--transition-base); }
+.transition-fast { transition: all var(--transition-fast); }
+.transition-slow { transition: all var(--transition-slow); }
+.transition-none { transition: none; }
+
+.transition-colors {
+    transition-property: color, background-color, border-color;
+    transition-timing-function: ease;
+    transition-duration: 150ms;
+}
+
+.transition-transform {
+    transition-property: transform;
+    transition-timing-function: ease;
+    transition-duration: 150ms;
+}
+
+/* ============================================================================
+   TRANSFORM UTILITIES
+   ============================================================================ */
+
+.transform { transform: translateX(var(--tw-translate-x, 0)) translateY(var(--tw-translate-y, 0)); }
+.transform-none { transform: none; }
+
+.scale-90 { transform: scale(0.9); }
+.scale-95 { transform: scale(0.95); }
+.scale-100 { transform: scale(1); }
+.scale-105 { transform: scale(1.05); }
+.scale-110 { transform: scale(1.1); }
+
+.rotate-0 { transform: rotate(0deg); }
+.rotate-45 { transform: rotate(45deg); }
+.rotate-90 { transform: rotate(90deg); }
+.rotate-180 { transform: rotate(180deg); }
+
+/* ============================================================================
+   INTERACTIVE STATES
+   ============================================================================ */
+
+.hover\:shadow-lg:hover { box-shadow: var(--shadow-lg); }
+.hover\:scale-105:hover { transform: scale(1.05); }
+.hover\:scale-110:hover { transform: scale(1.1); }
+.hover\:translate-y-1:hover { transform: translateY(-0.25rem); }
+.hover\:translate-y-2:hover { transform: translateY(-0.5rem); }
+
+.active\:scale-95:active { transform: scale(0.95); }
+
+.focus\:outline-none:focus { outline: none; }
+
+/* ============================================================================
+   MISC UTILITIES
+   ============================================================================ */
+
+.list-none { list-style: none; }
+.list-disc { list-style-type: disc; }
+.list-decimal { list-style-type: decimal; }
+
+.resize-none { resize: none; }
+.resize-both { resize: both; }
+.resize-horizontal { resize: horizontal; }
+.resize-vertical { resize: vertical; }
+
+/* Print utilities */
+@media print {
+    .no-print,
+    .no-print * {
+        display: none !important;
+    }
+    
+    .print-only {
+        display: block !important;
+    }
+}
+
+/* ============================================================================
+   SEMANTIC HELPERS
+   ============================================================================ */
+
+.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.clickable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.scrollable {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.hoverable:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    transition: all var(--transition-base);
+}
+
+/* ============================================================================
+   STATUS CLASSES (for compatibility)
+   ============================================================================ */
+
+.status-available {
+    color: var(--success-700);
+}
+
+.status-issued {
+    color: var(--warning-700);
+}
+
+.status-maintenance {
+    color: var(--danger-700);
+}
+
+.status-pending {
+    color: var(--info-700);
+}
+
+/* Background variants */
+.bg-available {
+    background-color: var(--success-100);
+    color: var(--success-700);
+}
+
+.bg-issued {
+    background-color: var(--warning-100);
+    color: var(--warning-700);
+}
+
+.bg-maintenance {
+    background-color: var(--danger-100);
+    color: var(--danger-700);
+}
+
+.bg-pending {
+    background-color: var(--info-100);
+    color: var(--info-700);
+}
+
+/* ============================================================================
+   RESPONSIVE UTILITIES
+   ============================================================================ */
+
+/* Mobile First Responsive Text */
+@media (max-width: 767px) {
+    .mobile\:text-sm { font-size: var(--text-sm); }
+    .mobile\:text-base { font-size: var(--text-base); }
+    .mobile\:hidden { display: none; }
+}
+
+@media (min-width: 768px) {
+    .tablet\:block { display: block; }
+    .tablet\:flex { display: flex; }
+    .tablet\:hidden { display: none; }
+}
+
+@media (min-width: 1024px) {
+    .desktop\:block { display: block; }
+    .desktop\:flex { display: flex; }
+    .desktop\:hidden { display: none; }
+}

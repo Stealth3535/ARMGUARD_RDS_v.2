@@ -14,11 +14,13 @@
 <body>
     {% if user.is_authenticated %}
     <!-- Header Actions Bar -->
-    <div class="header-actions no-print">
-        <div class="welcome-text">
-            Welcome, {{ user.username }} | Role: {{ user|get_user_role }}
+    <div class="header-actions no-print bg-white border-b">
+        <div class="container flex justify-between align-center py-3">
+            <div class="welcome-text text-sm text-neutral-600">
+                Welcome, <span class="font-semibold text-neutral-900">{{ user.username }}</span> | Role: <span class="badge badge-primary">{{ user|get_user_role }}</span>
+            </div>
+            <a href="{% url 'logout' %}" class="btn btn-secondary btn-sm">Logout</a>
         </div>
-        <a href="{% url 'logout' %}" class="btn-logout">Logout</a>
     </div>
 
     <div class="no-print">
@@ -29,9 +31,9 @@
     {% block global_messages %}
     <!-- Messages -->
     {% if messages %}
-    <div class="container">
+    <div class="container mt-6">
         {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">
+        <div class="alert alert-{{ message.tags }} mb-4" role="alert">
             {{ message }}
         </div>
         {% endfor %}

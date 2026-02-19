@@ -4,608 +4,332 @@
 {% block title %}Admin Dashboard - ArmGuard{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
-    :root {
-        --panel-bg: #ffffff;
-        --panel-border: #d1d5db;
-        --panel-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
-        --text-main: #0f172a;
-        --text-muted: #64748b;
-    }
-
-    .admin-header {
-        background: var(--panel-bg);
-        color: var(--text-main);
-        padding: 1.15rem 1.25rem;
-        border-radius: 10px;
-        margin-bottom: 1.25rem;
-        box-shadow: var(--panel-shadow);
-        border: 1px solid var(--panel-border);
-        border-top: 4px solid #667eea;
-    }
-    
-    .admin-header h1 {
-        margin: 0;
-        font-size: 1.7rem;
-    }
-    
-    .admin-header p {
-        margin: 0.35rem 0 0 0;
-        color: var(--text-muted);
-    }
-    
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 0.85rem;
-        margin-bottom: 1.25rem;
-    }
-    
-    .stat-card {
-        background: var(--panel-bg);
-        padding: 0.95rem 1rem;
-        border-radius: 10px;
-        box-shadow: var(--panel-shadow);
-        border: 1px solid var(--panel-border);
-        border-top: 4px solid var(--card-color, #667eea);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        position: relative;
-    }
-
-    .stat-card:nth-child(1) { --card-color: #667eea; }
-    .stat-card:nth-child(2) { --card-color: #10b981; }
-    .stat-card:nth-child(3) { --card-color: #f59e0b; }
-    .stat-card:nth-child(4) { --card-color: #ef4444; }
-    
-    .stat-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    }
-    
-    .stat-card h3 {
-        margin: 0;
-        color: var(--text-muted);
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-weight: 700;
-        max-width: calc(100% - 40px);
-    }
-    
-    .stat-card .number {
-        font-size: 2rem;
-        font-weight: 800;
-        color: var(--card-color, #333);
-        margin: 0.3rem 0 0.25rem;
-        line-height: 1;
-    }
-    
-    .stat-card .icon {
-        font-size: 1.1rem;
-        color: var(--card-color, #667eea);
-        position: absolute;
-        top: 0.75rem;
-        right: 0.85rem;
-    }
-
-    .stat-card small {
-        display: block;
-        color: #475569;
-        line-height: 1.3;
-        font-size: 0.8rem;
-    }
-    
-    .universal-registration-highlight {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        color: white;
-        padding: 1.5rem;
-        border-radius: 10px;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    /* Minimal custom styles - most styling comes from design system */
+    .no-results {
         text-align: center;
+        color: var(--neutral-500);
+        padding: var(--space-8);
+        display: none;
     }
     
-    .universal-registration-highlight h2 {
-        margin: 0 0 1rem 0;
-        font-size: 1.5rem;
-    }
-    
-    .universal-registration-highlight .btn {
-        background: white;
-        color: #28a745;
-        border: none;
-        padding: 0.75rem 2rem;
-        font-weight: bold;
-        border-radius: 25px;
-        text-decoration: none;
-        display: inline-block;
-        transition: all 0.3s;
-    }
-    
-    .universal-registration-highlight .btn:hover {
-        background: #f8f9fa;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    
-    .quick-actions {
-        background: var(--panel-bg);
-        padding: 1rem 1.1rem;
-        border-radius: 10px;
-        box-shadow: var(--panel-shadow);
-        border: 1px solid var(--panel-border);
-        margin-bottom: 1.25rem;
-    }
-    
-    .quick-actions h2 {
-        margin: 0;
-        color: var(--text-main);
-        font-size: 1.15rem;
-    }
-    
-    .action-buttons {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-        gap: 0.65rem;
-        margin-top: 0.8rem;
-    }
-    
-    .action-btn {
-        padding: 0.72rem 0.85rem;
-        background: #f8fafc;
-        color: #334155;
-        border-radius: 9px;
-        border: 1px solid #cbd5e1;
-        text-decoration: none;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        text-align: left;
-        font-weight: 600;
-        min-height: 44px;
-    }
-    
-    .action-btn:hover {
-        background: #eef2ff;
-        border-color: #a5b4fc;
-        transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(30, 64, 175, 0.12);
-        color: #1e3a8a;
-        text-decoration: none;
-    }
-    
-    .action-btn i {
-        margin-right: 0.5rem;
-    }
-    
-    .action-btn.primary {
-        background: #dbeafe;
-        border-color: #bfdbfe;
-        color: #1d4ed8;
-    }
-    
-    .action-btn.primary:hover {
-        background: #bfdbfe;
-        border-color: #93c5fd;
-        color: #1e40af;
-    }
-    
-    .action-btn.success {
-        background: #dcfce7;
-        border-color: #bbf7d0;
-        color: #166534;
-    }
-    
-    .action-btn.success:hover {
-        background: #bbf7d0;
-        border-color: #86efac;
-        color: #14532d;
-    }
-    
-    .action-btn.warning {
-        background: #fef3c7;
-        border-color: #fde68a;
-        color: #92400e;
-    }
-    
-    .action-btn.warning:hover {
-        background: #fde68a;
-        border-color: #fcd34d;
-        color: #78350f;
-    }
-    
-    .action-btn.danger {
-        background: #fee2e2;
-        border-color: #fecaca;
-        color: #b91c1c;
-    }
-    
-    .action-btn.danger:hover {
-        background: #fecaca;
-        border-color: #fca5a5;
-        color: #991b1b;
-    }
-    
-    .recent-transactions {
-        background: var(--panel-bg);
-        padding: 1rem 1.1rem;
-        border-radius: 10px;
-        box-shadow: var(--panel-shadow);
-        border: 1px solid var(--panel-border);
-    }
-
-    .recent-controls {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-        margin-bottom: 1rem;
-    }
-
-    .history-pills {
-        display: inline-flex;
-        gap: 0.35rem;
-        flex-wrap: wrap;
-    }
-
-    .history-pill {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 999px;
-        padding: 0.3rem 0.75rem;
-        font-size: 0.78rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        border: 1px solid #cbd5e1;
-        color: #475569;
-        background: #f8fafc;
-        text-decoration: none;
-    }
-
-    .history-pill.active {
-        background: #667eea;
-        border-color: #667eea;
-        color: #ffffff;
-    }
-
-    .summary-actions {
-        display: inline-flex;
-        gap: 0.4rem;
-        flex-wrap: wrap;
-    }
-
-    .summary-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
-        border-radius: 999px;
-        padding: 0.32rem 0.7rem;
-        text-decoration: none;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        border: 1px solid transparent;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
-    }
-
-    .summary-btn.defcon {
-        background: #fee2e2;
-        border-color: #fecaca;
-        color: #b91c1c;
-    }
-
-    .summary-btn.normal {
-        background: #dbeafe;
-        border-color: #bfdbfe;
-        color: #1d4ed8;
-    }
-    
-    .recent-transactions h2 {
-        margin: 0;
-        color: var(--text-main);
-        font-size: 1.15rem;
-    }
-    
-    .transaction-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
+    .no-results.visible {
+        display: block;
     }
     
     .transaction-item {
-        padding: 0.8rem 0.7rem;
-        border-bottom: 1px solid #e5e7eb;
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        gap: 0.7rem;
+        align-items: center;
+        gap: var(--space-4);
+        padding: var(--space-4);
+        border-bottom: var(--border) solid var(--neutral-200);
+        transition: background var(--transition-fast);
     }
-
+    
     .transaction-item:hover {
-        background: #f8fafc;
-        border-radius: 8px;
+        background: var(--neutral-50);
+        border-radius: var(--radius-md);
     }
     
     .transaction-item:last-child {
         border-bottom: none;
     }
     
-    .transaction-type {
-        display: inline-block;
-        padding: 0.26rem 0.65rem;
-        border-radius: 20px;
-        font-size: 0.72rem;
-        font-weight: 700;
-        white-space: nowrap;
-    }
-    
-    .type-issue {
-        background: #fef3c7;
-        color: #92400e;
-    }
-    
-    .type-return {
-        background: #dcfce7;
-        color: #14532d;
-    }
-
-    .type-take {
-        background: #fef3c7;
-        color: #92400e;
-    }
-
-    .issued-list {
-        background: var(--panel-bg);
-        padding: 1rem 1.1rem;
-        border-radius: 10px;
-        box-shadow: var(--panel-shadow);
-        border: 1px solid var(--panel-border);
-        margin-top: 1.1rem;
-    }
-
-    .issued-list h2 {
-        margin: 0 0 0.7rem 0;
-        color: var(--text-main);
-        font-size: 1.15rem;
-    }
-
-    .issued-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .issued-table th,
-    .issued-table td {
-        padding: 0.58rem;
-        border-bottom: 1px solid #e5e7eb;
-        text-align: left;
-    }
-
-    .issued-table th {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        color: var(--text-muted);
-        letter-spacing: 0.04em;
-        background: #f8fafc;
-    }
-
-    .issued-table tbody tr:hover {
-        background: #f8fafc;
-    }
-
     @media (max-width: 768px) {
-        .admin-header,
-        .quick-actions,
-        .recent-transactions,
-        .issued-list {
-            padding: 0.9rem;
-        }
-
         .transaction-item {
             flex-direction: column;
             align-items: flex-start;
         }
-
-        .transaction-type {
-            align-self: flex-start;
-        }
-    }
-    
-    .alert-unlinked {
-        background: #fff3cd;
-        border: 1px solid #ffeaa7;
-        color: #856404;
-        padding: 1rem;
-        border-radius: 0.375rem;
-        margin-bottom: 1rem;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="admin-header">
-    <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
-    <p>Centralized administration and management system</p>
-</div>
-
-{% if is_restricted_admin %}
-<!-- Restricted Administrator Notice -->
-<div style="background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 1rem; margin-bottom: 2rem; border-radius: 8px; border-left: 4px solid #f39c12;">
-    <i class="fas fa-eye"></i> <strong>Restricted Administrator:</strong> 
-    You have view-only access. You cannot create, edit, or delete records. Contact a superuser to change your access level.
-</div>
-{% endif %}
-
-<!-- Statistics Grid -->
-<div class="stats-grid">
-    <div class="stat-card">
-        <h3>Total Users</h3>
-        <div class="number">{{ total_users }}</div>
-        <div class="icon"><i class="fas fa-users"></i></div>
-        <small>{{ active_users }} active users</small>
-    </div>
-    
-    <div class="stat-card">
-        <h3>Total Personnel</h3>
-        <div class="number">{{ total_personnel }}</div>
-        <div class="icon"><i class="fas fa-id-card"></i></div>
-        <small>Active: {{ active_personnel }}</small><br>
-        <small>Officers: {{ officers_count }}, Enlisted: {{ enlisted_count }}</small>
-        {% if unlinked_personnel > 0 %}
-            <br><small class="text-warning">{{ unlinked_personnel }} unlinked to users</small>
-        {% endif %}
-    </div>
-    
-    <div class="stat-card">
-        <h3>Administrators</h3>
-        <div class="number">{{ administrators_count }}</div>
-        <div class="icon"><i class="fas fa-user-shield"></i></div>
-        <small>{{ superusers_count }} superuser{{ superusers_count|pluralize }}, {{ admins_count }} admin{{ admins_count|pluralize }}</small>
-    </div>
-    
-    <div class="stat-card">
-        <h3>Armorers</h3>
-        <div class="number">{{ armorers_count }}</div>
-        <div class="icon"><i class="fas fa-shield-alt"></i></div>
-        <small>Active armorer accounts</small>
+<!-- Page Header -->
+<div class="card mb-6 border-l-4" style="border-left-color: var(--armguard-primary);">
+    <div class="p-6">
+        <h1 class="text-3xl font-bold text-neutral-900 m-0"><i class="fas fa-shield-alt text-primary"></i> Admin Dashboard</h1>
+        <p class="text-base text-neutral-600 mt-2 mb-0">Centralized administration and management system</p>
     </div>
 </div>
 
+<!-- Stats Grid -->
+<div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="stat-card stat-card-primary">
+        <div class="stat-icon"><i class="fas fa-users"></i></div>
+        <div class="stat-label">Users</div>
+        <div class="stat-value">{{ users_count }}</div>
+        <div class="stat-meta">{{ active_users_count }} active user{{ active_users_count|pluralize }}</div>
+    </div>
+    
+    <div class="stat-card stat-card-success">
+        <div class="stat-icon"><i class="fas fa-id-card"></i></div>
+        <div class="stat-label">Personnel</div>
+        <div class="stat-value">{{ personnel_count }}</div>
+        <div class="stat-meta">{{ enlisted_count }} enlisted, {{ officer_count }} officer{{ officer_count|pluralize }}</div>
+    </div>
+    
+    <div class="stat-card stat-card-warning">
+        <div class="stat-icon"><i class="fas fa-user-shield"></i></div>
+        <div class="stat-label">Administrators</div>
+        <div class="stat-value">{{ administrators_count }}</div>
+        <div class="stat-meta">{{ superusers_count }} superuser{{ superusers_count|pluralize }}, {{ admins_count }} admin{{ admins_count|pluralize }}</div>
+    </div>
+    
+    <div class="stat-card stat-card-danger">
+        <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
+        <div class="stat-label">Armorers</div>
+        <div class="stat-value">{{ armorers_count }}</div>
+        <div class="stat-meta">Active armorer accounts</div>
+    </div>
+</div>
 
 <!-- Quick Actions -->
-<div class="quick-actions">
-    <h2><i class="fas fa-bolt"></i> Quick Actions</h2>
-    <div class="action-buttons">
-        <!-- Admin Only: Register User/Personnel -->
-        {% if can_edit and user.is_superuser or is_admin_group %}
-        <a href="{% url 'armguard_admin:registration' %}" class="action-btn success">
-            <i class="fas fa-user-plus"></i> Register User/Personnel
-        </a>
-        <a href="{% url 'armguard_admin:user_management' %}" class="action-btn primary">
-            <i class="fas fa-users-cog"></i> Manage Users
-        </a>
-        {% elif is_admin_group %}
-        <!-- Restricted admin - show view-only version -->
-        <a href="{% url 'armguard_admin:user_management' %}" class="action-btn primary">
-            <i class="fas fa-users"></i> View Users (Read Only)
-        </a>
-        {% endif %}
-        
-        <!-- Personnel & Inventory -->
-        <a href="{% url 'personnel:personnel_profile_list' %}" class="action-btn">
-            <i class="fas fa-id-card"></i> View Personnel
-        </a>
-        
-        <!-- Admin and Armorer: Add Items -->
-        {% if can_edit and user.is_superuser or is_admin_group or is_armorer_group %}
-        <a href="{% url 'armguard_admin:register_item' %}" class="action-btn">
-            <i class="fas fa-plus-square"></i> Add Item
-        </a>
-        {% endif %}
-        
-        <!-- Admin Only: System Settings -->
-        {% if can_edit and user.is_superuser or is_admin_group %}
-        <a href="{% url 'armguard_admin:system_settings' %}" class="action-btn">
-            <i class="fas fa-cog"></i> System Settings
-        </a>
-        {% endif %}
-        
-        <!-- Advanced - Superuser Only -->
-        {% if user.is_superuser %}
-        <a href="{% url 'armguard_admin:audit_logs' %}" class="action-btn">
-            <i class="fas fa-list-alt"></i> Audit Logs
-        </a>
-        
-        <a href="/superadmin/" class="action-btn danger" target="_blank">
-            <i class="fas fa-tools"></i> Django Admin
-        </a>
-        {% endif %}
+<div class="card mb-6">
+    <div class="p-6">
+        <h2 class="text-xl font-bold text-neutral-900 mb-4 mt-0"><i class="fas fa-bolt text-warning-600"></i> Quick Actions</h2>
+        <div class="grid grid-cols-3 gap-3">
+            {% if can_edit and user.is_superuser or is_admin_group %}
+            <a href="{% url 'armguard_admin:registration' %}" class="btn btn-success btn-block">
+                <i class="fas fa-user-plus"></i> Register User/Personnel
+            </a>
+            <a href="{% url 'armguard_admin:user_management' %}" class="btn btn-primary btn-block">
+                <i class="fas fa-users-cog"></i> Manage Users
+            </a>
+            {% elif is_admin_group %}
+            <a href="{% url 'armguard_admin:user_management' %}" class="btn btn-primary btn-block">
+                <i class="fas fa-users"></i> View Users (Read Only)
+            </a>
+            {% endif %}
+            
+            <a href="{% url 'personnel:personnel_profile_list' %}" class="btn btn-secondary btn-block">
+                <i class="fas fa-id-card"></i> View Personnel
+            </a>
+            
+            {% if can_edit and user.is_superuser or is_admin_group or is_armorer_group %}
+            <a href="{% url 'armguard_admin:register_item' %}" class="btn btn-info btn-block">
+                <i class="fas fa-plus-square"></i> Add Item
+            </a>
+            {% endif %}
+            
+            {% if can_edit and user.is_superuser or is_admin_group %}
+            <a href="{% url 'armguard_admin:system_settings' %}" class="btn btn-secondary btn-block">
+                <i class="fas fa-cog"></i> System Settings
+            </a>
+            {% endif %}
+            
+            {% if user.is_superuser %}
+            <a href="{% url 'armguard_admin:audit_logs' %}" class="btn btn-secondary btn-block">
+                <i class="fas fa-list-alt"></i> Audit Logs
+            </a>
+            
+            <a href="/superadmin/" class="btn btn-danger btn-block" target="_blank">
+                <i class="fas fa-tools"></i> Django Admin
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Filter & Search Box -->
+<div class="card mb-6">
+    <div class="p-6">
+        <h2 class="text-xl font-bold text-neutral-900 mb-4 mt-0"><i class="fas fa-filter text-primary"></i> Filter & Search Transactions</h2>
+        <div class="grid grid-cols-3 gap-4">
+            <div>
+                <label class="form-label"><i class="fas fa-search"></i> Search Personnel or Item</label>
+                <input type="text" id="searchInput" class="form-input" placeholder="Search by name, serial, or item...">
+            </div>
+            
+            <div>
+                <label class="form-label"><i class="fas fa-calendar"></i> Time Range</label>
+                <div class="flex gap-2">
+                    <a href="?history=day" class="pill {% if selected_history == 'day' %}pill-primary{% else %}pill-secondary{% endif %}">Day</a>
+                    <a href="?history=week" class="pill {% if selected_history == 'week' %}pill-primary{% else %}pill-secondary{% endif %}">Week</a>
+                    <a href="?history=month" class="pill {% if selected_history == 'month' %}pill-primary{% else %}pill-secondary{% endif %}">Month</a>
+                </div>
+            </div>
+            
+            <div>
+                <label class="form-label"><i class="fas fa-sort"></i> Sort By</label>
+                <select id="sortSelect" class="form-input">
+                    <option value="date-desc">Newest First</option>
+                    <option value="date-asc">Oldest First</option>
+                    <option value="personnel">Personnel Name</option>
+                    <option value="action">Action Type</option>
+                </select>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- Recent Activity -->
-<div class="recent-transactions">
-    <h2><i class="fas fa-clock"></i> Recent Activity</h2>
-    <div class="recent-controls">
-        <div class="history-pills">
-            <a href="?history=day" class="history-pill {% if selected_history == 'day' %}active{% endif %}">Day</a>
-            <a href="?history=week" class="history-pill {% if selected_history == 'week' %}active{% endif %}">Week</a>
-            <a href="?history=month" class="history-pill {% if selected_history == 'month' %}active{% endif %}">Month</a>
+<div class="card mb-6">
+    <div class="p-6">
+        <div class="flex justify-between align-center mb-4">
+            <h2 class="text-xl font-bold text-neutral-900 mt-0 mb-0"><i class="fas fa-clock text-info-600"></i> Recent Activity</h2>
+            <div class="flex gap-2">
+                <a href="{% url 'print_handler:print_transactions' %}?mode=defcon&range={{ selected_history }}" class="btn btn-danger btn-sm" target="_blank" rel="noopener">
+                    <i class="fas fa-print"></i> DEFCON Summary
+                </a>
+                <a href="{% url 'print_handler:print_transactions' %}?mode=normal&range={{ selected_history }}" class="btn btn-primary btn-sm" target="_blank" rel="noopener">
+                    <i class="fas fa-print"></i> NORMAL Summary
+                </a>
+            </div>
         </div>
-        <div class="summary-actions">
-            <a href="{% url 'print_handler:print_transactions' %}?mode=defcon&range={{ selected_history }}" class="summary-btn defcon" target="_blank" rel="noopener">
-                <i class="fas fa-print"></i> DEFCON Summary
-            </a>
-            <a href="{% url 'print_handler:print_transactions' %}?mode=normal&range={{ selected_history }}" class="summary-btn normal" target="_blank" rel="noopener">
-                <i class="fas fa-print"></i> NORMAL Summary
-            </a>
-        </div>
-    </div>
-    {% if recent_transactions %}
-        <ul class="transaction-list">
+        
+        {% if recent_transactions %}
+        <div id="transactionList">
             {% for transaction in recent_transactions %}
-            <li class="transaction-item">
+            <div class="transaction-item"
+                data-personnel="{{ transaction.personnel.get_full_name|lower }}"
+                data-serial="{{ transaction.personnel.serial|default:'' }}"
+                data-item="{{ transaction.item.item_type|lower }} {{ transaction.item.serial|lower }}"
+                data-action="{{ transaction.action|lower }}"
+                data-date="{{ transaction.date_time|date:'Y-m-d H:i:s' }}">
                 <div>
-                    <strong>{{ transaction.personnel.get_full_name }}</strong>
-                    ({{ transaction.personnel.rank }} | {{ transaction.personnel.serial|default:"N/A" }})
-                    - {{ transaction.item.item_type }} {{ transaction.item.serial }}
-                    <br>
-                    <small class="text-muted">{{ transaction.date_time|date:"M d, Y H:i" }}</small>
+                    <div class="font-semibold text-neutral-900">{{ transaction.personnel.get_full_name }}</div>
+                    <div class="text-sm text-neutral-600">
+                        ({{ transaction.personnel.rank }} | {{ transaction.personnel.serial|default:"N/A" }})
+                        - {{ transaction.item.item_type }} {{ transaction.item.serial }}
+                    </div>
+                    <div class="text-xs text-neutral-500 mt-1">{{ transaction.date_time|date:"M d, Y H:i" }}</div>
                 </div>
-                <span class="transaction-type type-{{ transaction.action|lower }}">
-                    {{ transaction.action }} · {{ transaction.get_transaction_mode_display }}
-                </span>
-            </li>
+                <div>
+                    {% if transaction.action == "Take" %}
+                        <span class="badge badge-warning">{{ transaction.action }} · {{ transaction.get_transaction_mode_display }}</span>
+                    {% else %}
+                        <span class="badge badge-success">{{ transaction.action }} · {{ transaction.get_transaction_mode_display }}</span>
+                    {% endif %}
+                </div>
+            </div>
             {% endfor %}
-        </ul>
-        <div class="text-center mt-3">
-            <a href="{% url 'transactions:list' %}" class="text-muted">View all transactions →</a>
         </div>
-    {% else %}
-        <div class="text-center text-muted py-4">
+        
+        <div class="no-results" id="noResults">
+            <i class="fas fa-search fa-2x mb-2"></i>
+            <p>No transactions match your search.</p>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{% url 'transactions:list' %}" class="text-primary hover:underline">View all transactions →</a>
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-neutral-500">
             <i class="fas fa-inbox fa-2x mb-2"></i>
             <p>No recent transactions.</p>
         </div>
-    {% endif %}
+        {% endif %}
+    </div>
 </div>
 
-<div class="issued-list">
-    <h2><i class="fas fa-shield-alt"></i> List of Issued Firearms</h2>
-    <div class="table-responsive">
-        <table class="issued-table">
-            <thead>
-                <tr>
-                    <th>Firearm Serial</th>
-                    <th>Type</th>
-                    <th>Personnel</th>
-                    <th>Personnel Serial</th>
-                    <th>Issued Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for assignment in issued_assignments %}
-                <tr>
-                    <td><strong>{{ assignment.item.serial }}</strong></td>
-                    <td>{{ assignment.item.item_type }}</td>
-                    <td>{{ assignment.personnel.get_full_name }}</td>
-                    <td>{{ assignment.personnel.serial|default:"N/A" }}</td>
-                    <td>{{ assignment.date_time|date:"M d, Y H:i" }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" class="text-center text-muted">No firearms currently issued.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<!-- Issued Firearms Table -->
+<div class="card">
+    <div class="p-6">
+        <h2 class="text-xl font-bold text-neutral-900 mb-4 mt-0"><i class="fas fa-shield-alt text-danger-600"></i> List of Issued Firearms</h2>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Firearm Serial</th>
+                        <th>Type</th>
+                        <th>Personnel</th>
+                        <th>Personnel Serial</th>
+                        <th>Issued Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in issued_assignments %}
+                    <tr>
+                        <td class="font-semibold">{{ assignment.item.serial }}</td>
+                        <td>{{ assignment.item.item_type }}</td>
+                        <td>{{ assignment.personnel.get_full_name }}</td>
+                        <td>{{ assignment.personnel.serial|default:"N/A" }}</td>
+                        <td>{{ assignment.date_time|date:"M d, Y H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-neutral-500">No firearms currently issued.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}
 
- 
- 
+{% block extra_js %}
+<script>
+// Search and Sort Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
+    const transactionList = document.getElementById('transactionList');
+    const noResults = document.getElementById('noResults');
+    
+    if (!transactionList) return;
+    
+    const items = Array.from(transactionList.querySelectorAll('.transaction-item'));
+    
+    function filterAndSort() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        const sortBy = sortSelect.value;
+        
+        // Filter
+        let visibleItems = items.filter(item => {
+            if (!searchTerm) return true;
+            
+            const personnel = item.dataset.personnel || '';
+            const serial = item.dataset.serial || '';
+            const itemData = item.dataset.item || '';
+            
+            return personnel.includes(searchTerm) || 
+                   serial.includes(searchTerm) || 
+                   itemData.includes(searchTerm);
+        });
+        
+        // Sort
+        visibleItems.sort((a, b) => {
+            switch(sortBy) {
+                case 'date-desc':
+                    return new Date(b.dataset.date) - new Date(a.dataset.date);
+                case 'date-asc':
+                    return new Date(a.dataset.date) - new Date(b.dataset.date);
+                case 'personnel':
+                    return a.dataset.personnel.localeCompare(b.dataset.personnel);
+                case 'action':
+                    return a.dataset.action.localeCompare(b.dataset.action);
+                default:
+                    return 0;
+            }
+        });
+        
+        // Hide all items first
+        items.forEach(item => item.style.display = 'none');
+        
+        // Show filtered and sorted items
+        visibleItems.forEach(item => {
+            item.style.display = 'flex';
+            transactionList.appendChild(item);
+        });
+        
+        // Show/hide no results message
+        if (visibleItems.length === 0) {
+            noResults.classList.add('visible');
+        } else {
+            noResults.classList.remove('visible');
+        }
+    }
+    
+    // Event listeners
+    searchInput.addEventListener('input', filterAndSort);
+    sortSelect.addEventListener('change', filterAndSort);
+    
+    // Initial sort
+    filterAndSort();
+});
+</script>
+{% endblock %}
