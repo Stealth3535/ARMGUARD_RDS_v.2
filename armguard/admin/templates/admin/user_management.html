@@ -995,7 +995,6 @@ function showAuditHistory(element) {
         <table id="personnel-table">
             <thead>
                 <tr>
-                    <th class="sortable">Personnel ID</th>
                     <th class="sortable">Full Name</th>
                     <th class="sortable">Rank</th>
                     <th class="sortable">Serial</th>
@@ -1011,10 +1010,6 @@ function showAuditHistory(element) {
             <tbody>
                 {% for person in personnel %}
                 <tr>
-                    <td>
-                        <strong>{{ person.id }}</strong>
-                        <br><small style="color: #666;">{{ person.qr_code }}</small>
-                    </td>
                     <td>
                         <strong>{{ person.get_full_name }}</strong>
                         {% if person.email %}
