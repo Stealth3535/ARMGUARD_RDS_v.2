@@ -690,7 +690,6 @@ def request_device_authorization(request):
     # Use cookie-backed fingerprint to avoid collisions across multiple PCs on same network/browser profile.
     fingerprint_data = middleware._build_fingerprint_data(request, device_id=device_cookie)
     device_fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()[:32]
-    legacy_device_fingerprint = middleware.get_legacy_device_fingerprint(request)
     ip_address = middleware.get_client_ip(request)
     user_agent = request.META.get('HTTP_USER_AGENT', '')
     
@@ -702,7 +701,7 @@ def request_device_authorization(request):
     # Check if request already exists
     try:
         existing_request = DeviceAuthorizationRequest.objects.filter(
-            device_fingerprint__in=[device_fingerprint, legacy_device_fingerprint]
+            device_fingerprint=device_fingerprint
         ).order_by('-requested_at').first()
     except DatabaseError:
         logger.exception("Database error while loading device authorization requests")
