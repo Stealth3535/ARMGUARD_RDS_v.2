@@ -197,6 +197,7 @@ class AuthorizedDevice(models.Model):
     revalidation_required  = models.BooleanField(default=False)
 
     class Meta:
+        app_label           = 'core'
         ordering = ['-enrolled_at']
         indexes = [
             models.Index(fields=['user', 'status']),
@@ -371,6 +372,7 @@ class DeviceAuditEvent(models.Model):
     event_type = models.CharField(max_length=30, choices=EVENT_CHOICES, db_index=True)
     actor      = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='core_device_audit_events',
         help_text="User who triggered this event (null for automated events)."
     )
     notes      = models.TextField(blank=True)
@@ -381,6 +383,7 @@ class DeviceAuditEvent(models.Model):
     metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        app_label = 'core'
         ordering = ['-occurred_at']
         indexes  = [
             models.Index(fields=['device', '-occurred_at']),
@@ -447,6 +450,7 @@ class DeviceMFAChallenge(models.Model):
     verified_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        app_label = 'core'
         ordering = ['-created_at']
 
     def __str__(self):
@@ -505,7 +509,7 @@ class DeviceAccessLog(models.Model):
     )
     user              = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='device_access_logs'
+        related_name='core_device_access_logs'
     )
     path              = models.CharField(max_length=500)
     method            = models.CharField(max_length=10)
@@ -523,6 +527,7 @@ class DeviceAccessLog(models.Model):
     siem_metadata     = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        app_label = 'core'
         ordering = ['-checked_at']
         indexes  = [
             models.Index(fields=['-checked_at']),
@@ -574,6 +579,7 @@ class DeviceRiskEvent(models.Model):
     )
 
     class Meta:
+        app_label = 'core'
         ordering = ['-detected_at']
         indexes  = [
             models.Index(fields=['device', 'acknowledged', '-detected_at']),
