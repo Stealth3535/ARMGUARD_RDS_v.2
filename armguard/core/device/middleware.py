@@ -76,10 +76,10 @@ class DeviceAuthMiddleware(MiddlewareMixin):
     def process_response(self, request, response):
         """
         If a new device token was generated during this request,
-        set it as a cookie on the outbound response.
+        set it as a cookie on the outbound response so the client
+        carries it on all future requests.
         """
-        # The token + is_new flag are computed as part of authorize_request.
-        # We stored them on the decision via request.device_decision if needed.
-        # For new-token flows, the enrollment view handles the cookie set explicitly.
-        # This hook is kept for future use (e.g., token rotation on response).
+        decision = getattr(request, 'device_decision', None)
+        if decision and getattr(decision, '_new_token', None):
+            device_service.attach_token_cookie(response, decision._new_token)
         return response

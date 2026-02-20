@@ -64,6 +64,9 @@ class AuthDecision:
     risk_score:     int = 0
     log_entry:      Optional[DeviceAccessLog] = None
     alerts:         list = field(default_factory=list)
+    # When a brand-new token is issued, store it here so the middleware
+    # can set it as a cookie on the outbound response.
+    _new_token:     Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -108,12 +111,15 @@ class PathSecurityResolver:
         for ep in self._exempt:
             if p.startswith(ep):
                 return PathTier.EXEMPT
+        # Always check explicit lists first so configured tiers are respected
+        # even when protect_all is True.
         for hp in self._high_security:
             if p.startswith(hp):
                 return PathTier.HIGH_SECURITY
         for rp in self._restricted:
             if p.startswith(rp):
                 return PathTier.RESTRICTED
+        # Catch-all: if protect_all is set, unknown paths get HIGH_SECURITY
         if self._protect_all:
             return PathTier.HIGH_SECURITY
         return PathTier.EXEMPT
@@ -167,7 +173,8 @@ class DeviceIdentityService:
             and all(c in '0123456789abcdefABCDEF' for c in token)
         )
 
-    def build_user_agent_hash(self, request) -> str:
+    @staticmethod
+    def build_user_agent_hash(request) -> str:
         ua = request.META.get('HTTP_USER_AGENT', '')
         return hashlib.sha256(ua.encode()).hexdigest()[:16]
 
@@ -224,7 +231,7 @@ class DeviceRiskEvaluator:
     def _check_ua_change(self, device: AuthorizedDevice, request) -> list[str]:
         if not device.user_agent_hash:
             return []
-        current = DeviceIdentityService.build_user_agent_hash(DeviceIdentityService(), request)
+        current = DeviceIdentityService.build_user_agent_hash(request)
         if current != device.user_agent_hash:
             device.bump_risk(10, f'UA changed from {device.user_agent_hash} to {current}')
             DeviceRiskEvent.objects.create(
@@ -404,6 +411,7 @@ class DeviceService:
         token, is_new = self.identity.get_or_generate_token(request)
         ip = self.identity.get_client_ip(request)
         device = None if is_new else self.identity.resolve_device(token)
+        new_token = token if is_new else None
 
         # 4. Risk evaluation (only if device resolved)
         alerts = []
@@ -420,10 +428,20 @@ class DeviceService:
         if allowed and device:
             device.record_use(ip)
 
-        # 7. Record failed attempt
-        if not allowed and device and reason == 'device_locked_out':
-            pass  # already tracked
-        elif not allowed and device and 'ip_binding' not in reason:
+        # 7. Record failed attempt — only for genuine auth failures, not workflow/policy states
+        _WORKFLOW_DENY_REASONS = {
+            'device_pending_mfa', 'device_pending_approval', 'device_authorization_expired',
+            'device_revoked', 'device_suspended', 'device_not_active',
+            'outside_active_hours', 'revalidation_required',
+        }
+        if (
+            not allowed
+            and device
+            and reason != 'device_locked_out'
+            and reason not in _WORKFLOW_DENY_REASONS
+            and 'risk_score_too_high' not in reason
+            and 'insufficient_tier' not in reason
+        ):
             device.record_failed_attempt(ip)
 
         # 8. Persist access log
@@ -449,6 +467,7 @@ class DeviceService:
             risk_score=device.risk_score if device else 0,
             log_entry=log_entry,
             alerts=alerts,
+            _new_token=new_token,
         )
 
     # ------------------------------------------------------------------

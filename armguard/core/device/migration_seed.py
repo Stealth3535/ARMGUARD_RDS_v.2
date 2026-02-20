@@ -96,15 +96,24 @@ def seed_from_json(dry_run: bool = False):
             skipped += 1
             continue
 
-        # Generate a new stable device_token for each migrated entry
-        # The old fingerprint is stored in enrollment_reason for reference
+        # Generate a new stable device_token for each migrated entry.
+        # Derive deterministically from the legacy fingerprint so the seed
+        # is idempotent (re-running it won't create duplicates).
+        if fingerprint and len(fingerprint) == 64:
+            stable_token = fingerprint
+        elif fingerprint:
+            import hashlib
+            stable_token = hashlib.sha256(fingerprint.encode()).hexdigest()  # 64 hex chars
+        else:
+            import secrets as _sec
+            stable_token = _sec.token_hex(32)
+
         device, was_created = AuthorizedDevice.objects.get_or_create(
-            device_name=name,
-            ip_first_seen=ip,
+            device_token=stable_token,
             defaults={
                 'user': actor,
-                'device_token': fingerprint[:64] if fingerprint and len(fingerprint) == 64
-                               else __import__('secrets').token_hex(32),
+                'device_name': name,
+                'ip_first_seen': ip,
                 'ip_last_seen': ip,
                 'ip_binding': ip if entry.get('ip_binding_strict', False) else None,
                 'status': AuthorizedDevice.Status.ACTIVE if active else AuthorizedDevice.Status.REVOKED,
