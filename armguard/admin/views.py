@@ -749,7 +749,50 @@ def request_device_authorization(request):
     device_fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()[:32]
     ip_address = middleware.get_client_ip(request)
     user_agent = request.META.get('HTTP_USER_AGENT', '')
-    
+
+    # ------------------------------------------------------------------
+    # v2 helpers — find an active AuthorizedDevice for the current
+    # connection so we can attach the v2 armguard_device_token cookie
+    # alongside the legacy v1 cookie.  Without this, any redirect to a
+    # non-exempt path (e.g. /admin/) would be immediately blocked by the
+    # v2 DeviceAuthMiddleware, causing an infinite redirect loop.
+    # ------------------------------------------------------------------
+    def _get_v2_device():
+        """Return the active v2 AuthorizedDevice for this request, or None."""
+        from core.device.models import AuthorizedDevice as _V2Device
+        try:
+            # Prefer a v2 token already present in the request cookies.
+            existing_v2_token = request.COOKIES.get('armguard_device_token', '')
+            if existing_v2_token:
+                dev = _V2Device.objects.filter(
+                    device_token=existing_v2_token,
+                    status=_V2Device.Status.ACTIVE,
+                ).first()
+                if dev:
+                    return dev
+            # Fall back: find any active device registered from this IP.
+            return _V2Device.objects.filter(
+                ip_address=ip_address,
+                status=_V2Device.Status.ACTIVE,
+            ).order_by('-registered_at').first()
+        except Exception:
+            return None
+
+    def attach_all_cookies(response):
+        """Attach both the legacy v1 device cookie and the v2 token cookie (if available)."""
+        attach_device_cookie(response)
+        v2_dev = _get_v2_device()
+        if v2_dev:
+            response.set_cookie(
+                'armguard_device_token',
+                v2_dev.device_token,
+                max_age=60 * 60 * 24 * 365 * 2,
+                secure=not settings.DEBUG,
+                httponly=True,
+                samesite='Lax',
+            )
+        return response
+
     if request.method == 'POST' and not request.user.is_authenticated:
         return attach_device_cookie(redirect(f"/login/?next=/admin/device/request-authorization/"))
 
@@ -858,7 +901,17 @@ def request_device_authorization(request):
                         and not existing_request.issued_certificate_downloaded_at
                     )
                     if not requires_cert_download:
-                        return attach_device_cookie(redirect(redirect_target))
+                        # Guard against infinite redirect loop with v2 middleware:
+                        # only send the user to redirect_target if we can also
+                        # attach a valid v2 armguard_device_token cookie.  Without
+                        # it the v2 DeviceAuthMiddleware would immediately deny
+                        # /admin/ and bounce them back here endlessly.
+                        v2_dev_for_redirect = _get_v2_device()
+                        if v2_dev_for_redirect:
+                            return attach_all_cookies(redirect(redirect_target))
+                        # No v2 device found — fall through to template so the
+                        # user sees their approved status and can contact admin
+                        # to issue a v2 device token (or an admin can seed one).
             else:
                 try:
                     archived_suffix = timezone.now().strftime('%Y%m%d%H%M%S')
@@ -988,7 +1041,7 @@ def request_device_authorization(request):
                 messages.success(request, 'Device authorization request with CSR submitted successfully. Certificate will be issued automatically upon approval.')
             else:
                 messages.success(request, 'Device authorization request submitted successfully. You can upload CSR for automated certificate issuance.')
-            return attach_device_cookie(redirect('armguard_admin:dashboard'))
+            return attach_all_cookies(redirect('armguard_admin:dashboard'))
     
     context = {
         'device_fingerprint': device_fingerprint[:16] + '...',
@@ -1001,7 +1054,7 @@ def request_device_authorization(request):
         messages.success(request, 'Existing approved device profile was relinked for this browser session.')
 
     response = render(request, 'admin/request_device_auth.html', context)
-    return attach_device_cookie(response)
+    return attach_all_cookies(response)
 
 
 @login_required
