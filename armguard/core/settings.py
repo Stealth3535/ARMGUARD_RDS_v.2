@@ -209,7 +209,7 @@ MIDDLEWARE = [
     'core.middleware.StripSensitiveHeadersMiddleware',  # Remove sensitive headers
     
     # Device and Network Access Control
-    'core.middleware.DeviceAuthorizationMiddleware',  # Device-based authorization
+    'core.device.middleware.DeviceAuthMiddleware',  # Device-based authorization (v2)
     'core.network_middleware.NetworkBasedAccessMiddleware',  # LAN/WAN access control
     'vpn_integration.core_integration.vpn_middleware.VPNAwareNetworkMiddleware',  # VPN integration
     'core.network_middleware.UserRoleNetworkMiddleware',  # User role network restrictions

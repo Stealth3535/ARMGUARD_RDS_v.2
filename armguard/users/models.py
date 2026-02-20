@@ -43,6 +43,9 @@ class UserProfile(models.Model):
         validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'gif'])],
         help_text='Profile picture (JPG, PNG, or GIF format)'
     )
+    # TOTP secret for device enrollment MFA (base32 encoded, set by TOTPService)
+    totp_secret = models.CharField(max_length=64, blank=True, default='')
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
