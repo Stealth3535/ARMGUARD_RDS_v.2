@@ -14,8 +14,28 @@
                 <li><strong>Color:</strong> Black & White</li>
             </ul>
         </div>
-        <button onclick="window.print()" class="btn btn-primary">🖨️ Print</button>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+            <label for="paper-size" style="font-weight: bold;">Paper Size:</label>
+            <select id="paper-size" class="form-control" style="width: auto;">
+                <option value="A4">A4 (210 × 297 mm)</option>
+                <option value="legal">Legal (216 × 356 mm)</option>
+            </select>
+            <button onclick="printWithSize()" class="btn btn-primary">🖨️ Print</button>
+        </div>
     </div>
+
+<style id="page-size-style">
+    @page { size: A4 portrait; margin: 15mm; }
+</style>
+
+<script>
+function printWithSize() {
+    const size = document.getElementById('paper-size').value;
+    document.getElementById('page-size-style').textContent =
+        '@page { size: ' + size + ' portrait; margin: 15mm; }';
+    window.print();
+}
+</script>
 
     <div class="print-area">
         <h2>Personnel</h2>
