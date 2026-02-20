@@ -774,7 +774,7 @@ def request_device_authorization(request):
             return _V2Device.objects.filter(
                 ip_address=ip_address,
                 status=_V2Device.Status.ACTIVE,
-            ).order_by('-registered_at').first()
+            ).order_by('-enrolled_at').first()
         except Exception:
             return None
 
