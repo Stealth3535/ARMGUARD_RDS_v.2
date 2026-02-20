@@ -1176,7 +1176,6 @@ def view_device_request(request, request_id):
 def edit_approved_device_request(request, request_id):
     """Edit an approved device authorization request and re-sync authorized device config."""
     from .models import DeviceAuthorizationRequest
-    from core.middleware.device_authorization import DeviceAuthorizationMiddleware
 
     auth_request = get_object_or_404(DeviceAuthorizationRequest, id=request_id, status='approved')
 
@@ -1193,18 +1192,27 @@ def edit_approved_device_request(request, request_id):
             auth_request.review_notes = notes
             auth_request.save(update_fields=['device_name', 'security_level', 'review_notes'])
 
-            middleware = DeviceAuthorizationMiddleware(lambda req: None)
-            middleware.load_authorized_devices()
-            middleware.authorize_device(
-                device_fingerprint=auth_request.device_fingerprint,
-                device_name=auth_request.device_name,
-                ip_address=auth_request.ip_address,
-                description=f"Requested by {auth_request.requested_by.username}: {auth_request.reason}",
-                can_transact=auth_request.can_transact,
-                security_level=auth_request.security_level,
-                roles=[],
-                max_daily_transactions=auth_request.max_daily_transactions
-            )
+            # v2: sync changes to the matching AuthorizedDevice record.
+            from core.device.models import AuthorizedDevice as _V2Dev
+            _tier_map = {
+                'DEVELOPMENT': _V2Dev.SecurityTier.STANDARD,
+                'STANDARD':    _V2Dev.SecurityTier.STANDARD,
+                'HIGH':        _V2Dev.SecurityTier.HIGH_SECURITY,
+                'HIGH_SECURITY': _V2Dev.SecurityTier.HIGH_SECURITY,
+                'MILITARY':    _V2Dev.SecurityTier.MILITARY,
+            }
+            try:
+                v2_dev = _V2Dev.objects.filter(
+                    ip_last_seen=auth_request.ip_address,
+                ).order_by('-enrolled_at').first()
+                if v2_dev:
+                    v2_dev.device_name = auth_request.device_name
+                    v2_dev.security_tier = _tier_map.get(auth_request.security_level, _V2Dev.SecurityTier.STANDARD)
+                    v2_dev.can_transact = auth_request.can_transact
+                    v2_dev.max_daily_transactions = auth_request.max_daily_transactions
+                    v2_dev.save(update_fields=['device_name', 'security_tier', 'can_transact', 'max_daily_transactions'])
+            except Exception:
+                pass
 
             messages.success(request, f'Device request "{device_name}" updated successfully.')
             return redirect('armguard_admin:manage_device_requests')
@@ -1221,22 +1229,30 @@ def edit_approved_device_request(request, request_id):
 def delete_device_request(request, request_id):
     """Delete a device authorization request (and revoke from authorized devices if approved)."""
     from .models import DeviceAuthorizationRequest
-    from core.middleware.device_authorization import DeviceAuthorizationMiddleware
 
     auth_request = get_object_or_404(DeviceAuthorizationRequest, id=request_id)
     request_label = auth_request.device_name or auth_request.hostname or auth_request.device_fingerprint[:8]
-    device_fingerprint = auth_request.device_fingerprint
+    revoke_ip = auth_request.ip_address
     was_approved = auth_request.status == 'approved'
 
     auth_request.delete()
 
     if was_approved:
-        middleware = DeviceAuthorizationMiddleware(lambda req: None)
-        middleware.load_authorized_devices()
-        middleware.revoke_device(
-            device_fingerprint,
-            reason='Deleted by admin from approved requests',
-        )
+        # v2: revoke the matching AuthorizedDevice record.
+        from core.device.models import AuthorizedDevice as _V2Dev, DeviceAuditEvent as _V2Audit
+        from django.utils import timezone as _tz
+        try:
+            v2_dev = _V2Dev.objects.filter(
+                ip_last_seen=revoke_ip,
+                status__in=[_V2Dev.Status.ACTIVE, _V2Dev.Status.SUSPENDED],
+            ).order_by('-enrolled_at').first()
+            if v2_dev:
+                v2_dev.status = _V2Dev.Status.REVOKED
+                v2_dev.revoked_at = _tz.now()
+                v2_dev.save(update_fields=['status', 'revoked_at'])
+                _V2Audit.log(v2_dev, 'REVOKED', request.user, notes='Deleted by admin from approved requests')
+        except Exception:
+            pass
 
     messages.success(request, f'Device request "{request_label}" deleted successfully.')
     return redirect('armguard_admin:manage_device_requests')
