@@ -761,20 +761,31 @@ def request_device_authorization(request):
         """Return the active v2 AuthorizedDevice for this request, or None."""
         from core.device.models import AuthorizedDevice as _V2Device
         try:
-            # Prefer a v2 token already present in the request cookies.
+            active_qs = _V2Device.objects.filter(status=_V2Device.Status.ACTIVE)
+
+            # 1. Prefer a v2 token already present in the request cookies.
             existing_v2_token = request.COOKIES.get('armguard_device_token', '')
             if existing_v2_token:
-                dev = _V2Device.objects.filter(
-                    device_token=existing_v2_token,
-                    status=_V2Device.Status.ACTIVE,
-                ).first()
+                dev = active_qs.filter(device_token=existing_v2_token).first()
                 if dev:
                     return dev
-            # Fall back: find any active device registered from this IP.
-            return _V2Device.objects.filter(
-                ip_address=ip_address,
-                status=_V2Device.Status.ACTIVE,
-            ).order_by('-enrolled_at').first()
+
+            # 2. Match by IP (ip_last_seen or ip_first_seen — the fields seeded
+            #    from authorized_devices.json via migration_seed.py).
+            dev = active_qs.filter(ip_last_seen=ip_address).order_by('-enrolled_at').first()
+            if dev:
+                return dev
+            dev = active_qs.filter(ip_first_seen=ip_address).order_by('-enrolled_at').first()
+            if dev:
+                return dev
+
+            # 3. Last resort: if exactly one active device exists system-wide,
+            #    use it.  Safe for single-workstation deployments.
+            all_active = list(active_qs.order_by('-enrolled_at')[:2])
+            if len(all_active) == 1:
+                return all_active[0]
+
+            return None
         except Exception:
             return None
 
