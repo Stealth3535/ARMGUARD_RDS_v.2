@@ -29,9 +29,14 @@ def seed_from_json(dry_run: bool = False):
     from django.contrib.auth.models import User
     from core.device.models import AuthorizedDevice, DeviceAuditEvent
 
-    json_path = Path(__file__).resolve().parent.parent.parent / 'authorized_devices.json'
+    from django.conf import settings
+    # BASE_DIR is the armguard/ project root — authorized_devices.json lives there
+    json_path = Path(settings.BASE_DIR) / 'authorized_devices.json'
     if not json_path.exists():
-        print(f'[SKIP] {json_path} not found')
+        # Fallback: one level up from BASE_DIR
+        json_path = Path(settings.BASE_DIR).parent / 'authorized_devices.json'
+    if not json_path.exists():
+        print(f'[SKIP] authorized_devices.json not found (looked in {Path(settings.BASE_DIR)})')
         return
 
     with open(json_path) as f:
