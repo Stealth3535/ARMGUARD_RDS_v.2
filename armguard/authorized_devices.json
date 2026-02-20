@@ -1,26 +1,6 @@
 {
     "devices": [
         {
-            "name": "Localhost Development",
-            "fingerprint": "444be32e095db424f8b4ae5b1e5cf8bb",
-            "ip": "127.0.0.1",
-            "hostname": "localhost",
-            "mac": "00:00:00:00:00:00",
-            "can_transact": true,
-            "active": true,
-            "created_at": "2026-02-11T14:59:00",
-            "authorized_by": "system",
-            "description": "Localhost development workstation for admin access",
-            "roles": [
-                "admin",
-                "development",
-                "superuser"
-            ],
-            "max_daily_transactions": 1000,
-            "security_level": "DEVELOPMENT",
-            "last_updated": "2026-02-11T14:59:00"
-        },
-        {
             "name": "Developer PC",
             "hostname": "DESKTOP-E3N8R9V",
             "ip": "192.168.0.82",
@@ -36,30 +16,7 @@
             ],
             "max_daily_transactions": 100,
             "security_level": "HIGH_SECURITY",
-            "last_updated": "2026-02-09T20:52:45.209447"
-        },
-        {
-            "name": "Armory PC Terminal",
-            "hostname": "ARMORY-PC-001",
-            "ip": "192.168.0.100",
-            "mac": "00:00:00:00:00:01",
-            "can_transact": true,
-            "active": true,
-            "created_at": "2026-02-09T10:00:00",
-            "authorized_by": "system",
-            "description": "Primary armory transaction terminal - Military operations",
-            "roles": [
-                "armory",
-                "transactions"
-            ],
-            "max_daily_transactions": 200,
-            "security_level": "MILITARY",
-            "authorized_users": [
-                "armorer",
-                "admin"
-            ],
-            "active_hours": "06:00-18:00",
-            "last_updated": "2026-02-09T20:52:45.209447"
+            "last_updated": "2026-02-20T00:00:00"
         }
     ],
     "allow_all": false,
