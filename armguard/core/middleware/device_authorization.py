@@ -440,15 +440,43 @@ class DeviceAuthorizationMiddleware(MiddlewareMixin):
             cache.set(attempts_key, attempts_data, timeout=3600)  # 1 hour
     
     def _is_within_active_hours(self, device_config):
-        """Check if current time is within device's active hours"""
+        """Check if current time is within device's active hours.
+
+        Supports two storage formats:
+        - dict:   {"start": "HH:MM", "end": "HH:MM"}
+        - string: "HH:MM-HH:MM"
+        """
         active_hours = device_config.get('active_hours')
         if not active_hours:
             return True  # No restrictions
-            
-        current_time = timezone.now().time()
-        start_time = time.fromisoformat(active_hours.get('start', '00:00:00'))
-        end_time = time.fromisoformat(active_hours.get('end', '23:59:59'))
-        
+
+        try:
+            if isinstance(active_hours, dict):
+                start_str = active_hours.get('start', '00:00')
+                end_str = active_hours.get('end', '23:59')
+            elif isinstance(active_hours, str):
+                parts = active_hours.split('-')
+                if len(parts) != 2:
+                    logger.warning("Invalid active_hours format for device: %s", active_hours)
+                    return True  # Malformed — allow access rather than deny
+                start_str, end_str = parts[0].strip(), parts[1].strip()
+            else:
+                logger.warning("Unexpected active_hours type: %s", type(active_hours))
+                return True
+
+            # Normalise to HH:MM:SS
+            if start_str.count(':') == 1:
+                start_str += ':00'
+            if end_str.count(':') == 1:
+                end_str += ':00'
+
+            current_time = timezone.now().time()
+            start_time = time.fromisoformat(start_str)
+            end_time = time.fromisoformat(end_str)
+        except (ValueError, AttributeError) as exc:
+            logger.warning("Could not parse active_hours '%s': %s", active_hours, exc)
+            return True  # Parse error — allow access rather than deny
+
         if start_time <= end_time:
             return start_time <= current_time <= end_time
         else:
