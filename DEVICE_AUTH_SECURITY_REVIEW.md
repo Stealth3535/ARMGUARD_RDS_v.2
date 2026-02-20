@@ -1,13 +1,17 @@
-# ARMGUARD RDS — Device Authorization System: Security Review & Documentation
+# ARMGUARD RDS — Device Authorization System: Security Review & Enterprise Redesign
 
-> **Prepared by:** GitHub Copilot Security Analysis  
-> **Scope:** `core/middleware/device_authorization.py`, `admin/device_auth_models.py`, `admin/views.py`, `admin/models.py (DeviceAccessLog)`, `authorized_devices.json`  
-> **Classification:** Internal — Security Sensitive
+> **Prepared by:** GitHub Copilot — Senior Cybersecurity Architect  
+> **Version:** 2.0 — Enterprise Redesign  
+> **Scope:** Full system audit (v1) + Production-ready redesign (v2)  
+> **Files:** `core/device/` (new), `core/middleware/device_authorization.py` (v1 legacy)  
+> **Classification:** Internal — Security Sensitive  
+> **Standards:** OWASP ASVS v4.0 L2 · NIST SP 800-63B · NIST SP 800-207 (Zero Trust) · FISMA Moderate
 
 ---
 
 ## Table of Contents
 
+### Part I — v1 System Audit
 1. [Executive Summary](#1-executive-summary)
 2. [System Architecture](#2-system-architecture)
 3. [Authorization Flow](#3-authorization-flow)
@@ -23,8 +27,18 @@
 13. [Pros & Strengths](#13-pros--strengths)
 14. [Cons & Risks](#14-cons--risks)
 15. [Bug Report: Active Hours Parsing](#15-bug-report-active-hours-parsing)
-16. [Security Improvement Recommendations](#16-security-improvement-recommendations)
-17. [Compliance Claims vs. Reality](#17-compliance-claims-vs-reality)
+
+### Part II — v2 Enterprise Redesign
+16. [Security Assessment Summary](#16-security-assessment-summary)
+17. [Threat Model](#17-threat-model)
+18. [New Architecture Design](#18-new-architecture-design)
+19. [Code Implementation Overview](#19-code-implementation-overview)
+20. [Database Schema](#20-database-schema)
+21. [Security Controls Added](#21-security-controls-added)
+22. [MFA Integration](#22-mfa-integration)
+23. [Testing Strategy](#23-testing-strategy)
+24. [Compliance Gap Closure](#24-compliance-gap-closure)
+25. [Deployment & Migration Plan](#25-deployment--migration-plan)
 
 ---
 
@@ -572,256 +586,601 @@ The view handles multiple edge cases (stale approvals, incognito sessions, IP ch
 
 **File:** `core/middleware/device_authorization.py`  
 **Method:** `_is_within_active_hours(device_config)`  
-**Affected device:** Any device with `active_hours` stored as a string in `authorized_devices.json`
+**Affected device:** Any device with `active_hours` stored as a string in `authorized_devices.json`  
+**Status:** ✅ **FIXED** in commit `b47be146`
 
-### Current (Broken) Code
+### Root Cause
 
-```python
-def _is_within_active_hours(self, device_config):
-    active_hours = device_config.get('active_hours')
-    if not active_hours:
-        return True
-    
-    current_time = timezone.now().time()
-    start_time = time.fromisoformat(active_hours.get('start', '00:00:00'))  # ← BUG: str has no .get()
-    end_time = time.fromisoformat(active_hours.get('end', '23:59:59'))      # ← BUG
-```
+The middleware called `active_hours.get('start', ...)` but `authorized_devices.json` stores the field as `"06:00-18:00"` (a string). Strings have no `.get()` method → `AttributeError` crash on every request for the Armory PC Terminal.
 
-### Proposed Fix
+### Fix Applied
 
-```python
-def _is_within_active_hours(self, device_config):
-    active_hours = device_config.get('active_hours')
-    if not active_hours:
-        return True
-    
-    current_time = timezone.now().time()
-    
-    # Support both dict {'start': 'HH:MM', 'end': 'HH:MM'} and string 'HH:MM-HH:MM'
-    if isinstance(active_hours, str):
-        parts = active_hours.split('-')
-        if len(parts) == 2:
-            start_str, end_str = parts[0].strip(), parts[1].strip()
-        else:
-            return True  # Invalid format, allow access
-    elif isinstance(active_hours, dict):
-        start_str = active_hours.get('start', '00:00')
-        end_str = active_hours.get('end', '23:59')
-    else:
-        return True  # Unknown format, allow access
-    
-    try:
-        # Pad to full HH:MM:SS if needed
-        if start_str.count(':') == 1:
-            start_str += ':00'
-        if end_str.count(':') == 1:
-            end_str += ':00'
-        start_time = time.fromisoformat(start_str)
-        end_time = time.fromisoformat(end_str)
-    except ValueError:
-        return True  # Malformed time, allow access
-    
-    if start_time <= end_time:
-        return start_time <= current_time <= end_time
-    else:
-        return current_time >= start_time or current_time <= end_time
-```
-
-Also update `authorized_devices.json` for the Armory PC Terminal to use the dict format:
-```json
-"active_hours": {"start": "06:00", "end": "18:00"}
-```
+Both string (`"HH:MM-HH:MM"`) and dict (`{"start": "HH:MM", "end": "HH:MM"}`) formats are now parsed with full error tolerance. The Armory PC Terminal's active-hours restriction is now enforced correctly.
 
 ---
 
-## 16. Security Improvement Recommendations
+# Part II — v2 Enterprise Redesign
 
-### Priority 1 — Critical (Implement Immediately)
+---
 
-#### 1.1 Add Authorization Expiry / Periodic Re-validation
+## 16. Security Assessment Summary
 
-```json
-// authorized_devices.json device entry addition:
-{
-  "fingerprint": "...",
-  "active": true,
-  "created_at": "2026-02-11T14:59:00",
-  "expires_at": "2027-02-11T14:59:00",   ← ADD THIS
-  "last_validated": "2026-11-01T08:00:00" ← ADD THIS (periodic re-auth)
+### Overall v1 Verdict
+
+| Domain | Score | Finding |
+|--------|-------|---------|
+| Device Identity | 3/10 | Header-based fingerprint + cookie — trivially spoofable |
+| Authorization Lifecycle | 2/10 | No expiry; indefinite trust once approved |
+| Credential Management | 2/10 | No MFA during enrollment; no key binding |
+| Audit & Forensics | 7/10 | Good DB log; lacks SIEM fields and retention enforcement |
+| Anomaly Detection | 0/10 | Not implemented |
+| Separation of Concerns | 3/10 | All logic in middleware; no service layer |
+| Compliance | 4/10 | Claims NIST/FISMA; major IA-3, AC-12, AU-11 gaps |
+
+### Critical Weaknesses Driving Redesign
+
+1. **MAC header (`HTTP_X_CLIENT_MAC`) trivially spoofed** — any HTTP client can set this header
+2. **No device authorization expiry** — perpetual trust violates Zero Trust principles  
+3. **No MFA on enrollment** — anyone with a user account can register any device  
+4. **No cryptographic binding** — no proof that the device is actually the authorized hardware  
+5. **Flat JSON storage** — no transactions, no integrity, breaks in multi-worker deployments  
+6. **Logic in middleware** — impossible to test, reuse, or extend independently
+
+---
+
+## 17. Threat Model
+
+### Assets
+
+| Asset | Value | Current Controls |
+|-------|-------|-----------------|
+| Armory transaction terminal | CRITICAL | IP binding, role binding |
+| Admin workstation | HIGH | Security tier check |
+| Authorized device token | HIGH | Cookie (httponly), no expiry ⚠️ |
+| Personnel / inventory data | HIGH | Auth + device check |
+| Device approval workflow | HIGH | Admin review only |
+
+### Threat Actors
+
+| Actor | Capability | Motivation |
+|-------|-----------|------------|
+| External attacker | Low–Medium | Data theft, ransomware pivot |
+| Malicious insider | High | Privilege escalation, data exfiltration |
+| Stolen device | Physical access | Use of pre-authorized device |
+| Network adversary (LAN) | Medium | IP spoofing, session hijack |
+
+### STRIDE Analysis
+
+| Threat | Vector | v1 Mitigated? | v2 Mitigation |
+|--------|--------|--------------|---------------|
+| **Spoofing** — forged headers | HTTP_X_CLIENT_MAC / UA | ❌ No | Cryptographic device token; optional key pair |
+| **Spoofing** — stolen cookie | Cookie theft | ⚠️ Partial (httponly) | Signed device token + IP binding + risk scoring |
+| **Tampering** — JSON edit | Filesystem access | ❌ No | DB storage with transaction integrity |
+| **Repudiation** — deny access | No per-event log | ⚠️ Partial | Immutable `DeviceAuditEvent` log |
+| **Info Disclosure** — log exposure | DB logs | ✅ DB Only | SIEM export; token prefix only in logs |
+| **Denial of Service** — lockout abuse | Rate limit on fingerprint | ⚠️ Cache-only | DB-backed lockout; rate limiter on enroll endpoint |
+| **Elevation of Privilege** — tier bypass | Security rank check | ✅ | Maintained + re-validation requirement |
+
+### Attack Scenarios
+
+**Scenario 1: Stolen Laptop (Authorized Device)**
+- v1: Perpetual access — device remains authorized forever
+- v2: 90-day expiry; risk score spikes on new IP anomaly; auto-suspend on threshold
+
+**Scenario 2: Insider Registers Unauthorized Device via Different Network**
+- v1: Possible if user account is compromised; no MFA gate
+- v2: TOTP/email OTP required before request reaches admin queue; admin must approve
+
+**Scenario 3: Network Attacker Spoofs IP of Authorized Terminal**
+- v1: IP binding blocks exact-IP mismatch, but fingerprint (UA/headers) is spoofable
+- v2: Cryptographic device token cannot be guessed; token is never in URL/headers (httponly cookie only); optional mutual TLS
+
+**Scenario 4: Server Restart Clears Lockout — Brute Force Resume**
+- v1: Django cache reset → lockout cleared → attacker retries immediately
+- v2: Lockout stored in `AuthorizedDevice.locked_until` field (DB-persistent)
+
+---
+
+## 18. New Architecture Design
+
+### Architectural Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Browser / API Client                            │
+│  Cookie: armguard_device_token (httponly, secure, 2y, 64-char hex)      │
+└───────────────────────────────────┬─────────────────────────────────────┘
+                                    │ HTTP Request
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│              DeviceAuthMiddleware  (thin adapter — HTTP only)           │
+│  1. call device_service.authorize_request(request)                      │
+│  2. if denied → 403 JSON or redirect                                    │
+│  3. attach request.device_decision for downstream views                 │
+└───────────────────────────────────┬─────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    DeviceService  (facade)                              │
+├───────────────┬───────────────────┬──────────────────┬─────────────────┤
+│ PathSecurity  │  DeviceIdentity   │  DeviceRisk       │  Decision       │
+│ Resolver      │  Service          │  Evaluator        │  Engine         │
+│               │                   │                   │                 │
+│ Reads         │ token → DB lookup │ new IP?           │ is_active?      │
+│ DEVICE_PATH   │ resolve device    │ UA changed?       │ tier check      │
+│ _CONFIG from  │ (no header hash!) │ velocity spike?   │ IP binding      │
+│ settings      │                   │ concurrent IPs?   │ active hours    │
+│               │                   │ → risk_score bump │ revalidation?   │
+│               │                   │ → alert dispatch  │ risk threshold  │
+└───────────────┴───────────────────┴──────────────────┴─────────────────┘
+                                    │
+                     ┌──────────────▼──────────────┐
+                     │       Django ORM / DB        │
+                     ├──────────────────────────────┤
+                     │  AuthorizedDevice            │
+                     │  DeviceAuditEvent (append)   │
+                     │  DeviceAccessLog             │
+                     │  DeviceRiskEvent             │
+                     │  DeviceMFAChallenge          │
+                     └──────────────────────────────┘
+```
+
+### Key Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **Server-issued opaque token** as identity anchor | Cannot be guessed or derived from request headers; replaces SHA-256(UA\|IP\|cookie) |
+| **DB-backed device records** | Survives restarts; atomic updates; auditable schema migrations |
+| **MFA gate before admin queue** | Proves the enrolling user controls a second factor; prevents insider auto-registration |
+| **Service layer pattern** | Logic is testable without Django request machinery; reusable in management commands, API views |
+| **Immutable audit events** | Append-only table; integrity preserved even if main record changes |
+| **Risk scoring** | Enables graduated response (alert → suspend → block) rather than binary allow/deny |
+| **Per-path config in settings** | Ops team can adjust security zones without changing code |
+
+### Zero Trust Alignment
+
+| ZT Principle | v1 | v2 |
+|-------------|----|----|
+| Never trust, always verify | ⚠️ Trust persists indefinitely | ✅ Re-evaluated per request; expiry enforced |
+| Verify explicitly | ⚠️ Header fingerprint | ✅ DB token + optional mTLS/key pair |
+| Least privilege access | ✅ Security tiers | ✅ Tiers + role binding + active hours |
+| Assume breach | ❌ No anomaly detection | ✅ Risk evaluator + alerts + auto-suspend |
+
+---
+
+## 19. Code Implementation Overview
+
+All new code is in `armguard/core/device/`:
+
+| File | Purpose |
+|------|---------|
+| `models.py` | `AuthorizedDevice`, `DeviceAuditEvent`, `DeviceMFAChallenge`, `DeviceAccessLog`, `DeviceRiskEvent` |
+| `service.py` | `DeviceService` facade + sub-services (`PathSecurityResolver`, `DeviceIdentityService`, `DeviceRiskEvaluator`, `AuthorizationDecisionEngine`) |
+| `mfa.py` | `TOTPService` (pyotp wrapper), `EmailOTPService`, `MFAReadinessCheck` |
+| `middleware.py` | `DeviceAuthMiddleware` — thin adapter, delegates entirely to `device_service` |
+| `migration_seed.py` | Data migration script: reads `authorized_devices.json` → seeds `AuthorizedDevice` table |
+| `tests.py` | 40+ test cases: unit, integration, penetration |
+
+### Settings Reference
+
+```python
+# settings.py additions for v2
+
+DEVICE_AUTH_EXPIRY_DAYS        = 90      # Days before re-authorization required
+DEVICE_EXPIRY_WARNING_DAYS     = 14      # Days before expiry to warn user
+DEVICE_MAX_FAILED_ATTEMPTS     = 5       # Before DB-persisted lockout
+DEVICE_LOCKOUT_MINUTES         = 30      # Lockout duration
+DEVICE_RISK_BLOCK_THRESHOLD    = 75      # Risk score that triggers hard block
+DEVICE_VELOCITY_THRESHOLD      = 120     # Requests/minute before risk event
+DEVICE_MFA_CHALLENGE_TTL_MINUTES = 15   # OTP / TOTP challenge window
+DEVICE_TOKEN_COOKIE            = 'armguard_device_token'
+DEVICE_COOKIE_MAX_AGE          = 63_072_000  # 2 years in seconds
+DEVICE_ALERT_EMAIL             = 'security@armguard.mil'  # Risk alert destination
+DEVICE_TOTP_CACHE_FALLBACK     = False   # True only while profile migration pending
+
+DEVICE_PATH_CONFIG = {
+    'protect_root_path': True,  # All unmatched paths → HIGH_SECURITY
+    'exempt': ['/static/', '/media/', '/login/', '/accounts/login/',
+               '/logout/', '/admin/device/request-authorization/'],
+    'restricted': ['/transactions/', '/inventory/api/', '/qr_manager/generate/',
+                   '/api/', '/personnel/api/'],
+    'high_security': ['/admin/', '/transactions/delete/', '/users/delete/',
+                      '/inventory/delete/', '/core/settings/'],
 }
 ```
 
-Add to `is_device_authorized()`:
-```python
-# Check expiry
-expires_at = device_config.get('expires_at')
-if expires_at:
-    if timezone.now() > datetime.fromisoformat(expires_at):
-        self._last_auth_reason = 'authorization_expired'
-        return False
+---
+
+## 20. Database Schema
+
+### AuthorizedDevice
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ AuthorizedDevice                                                │
+├──────────────────────────┬──────────────────────────────────────┤
+│ id                       │ UUIDField (PK, auto)                 │
+│ device_token             │ CharField(64), unique — server-issued│
+│ public_key_pem           │ TextField, optional — device keypair │
+│ public_key_fingerprint   │ CharField(64), indexed               │
+│ device_name              │ CharField(255)                       │
+│ device_type              │ CharField(64)                        │
+│ user                     │ FK → User                            │
+│ ip_first_seen            │ GenericIPAddressField                │
+│ ip_last_seen             │ GenericIPAddressField                │
+│ ip_binding               │ GenericIPAddressField (optional)     │
+│ user_agent_hash          │ CharField(64)                        │
+│ enrolled_at              │ DateTimeField (auto)                 │
+│ authorized_at            │ DateTimeField (nullable)             │
+│ expires_at               │ DateTimeField (default: now+90d)     │
+│ last_used                │ DateTimeField (nullable)             │
+│ revoked_at               │ DateTimeField (nullable)             │
+│ status                   │ CharField: PENDING_MFA/PENDING/      │
+│                          │   ACTIVE/EXPIRED/REVOKED/SUSPENDED   │
+│ security_tier            │ CharField: STANDARD/RESTRICTED/      │
+│                          │   HIGH_SECURITY/MILITARY             │
+│ can_transact             │ BooleanField                         │
+│ max_daily_transactions   │ PositiveIntegerField                 │
+│ active_hours_start       │ TimeField (nullable)                 │
+│ active_hours_end         │ TimeField (nullable)                 │
+│ authorized_roles         │ JSONField (list of role names)       │
+│ risk_score               │ PositiveSmallIntegerField (0-100)    │
+│ failed_auth_count        │ PositiveIntegerField                 │
+│ locked_until             │ DateTimeField (nullable) — DB-backed │
+│ enrollment_reason        │ TextField                            │
+│ reviewed_by              │ FK → User (nullable)                 │
+│ reviewed_at              │ DateTimeField (nullable)             │
+│ review_notes             │ TextField                            │
+│ revoke_reason            │ TextField                            │
+│ last_revalidated_at      │ DateTimeField (nullable)             │
+│ revalidation_required    │ BooleanField                         │
+└──────────────────────────┴──────────────────────────────────────┘
 ```
 
-Recommended defaults:
-- Standard devices: 1-year expiry
-- High-security/military: 90-day expiry with 30-day re-validation
+### DeviceAuditEvent (append-only)
 
-#### 1.2 Persist Lockout State to Database
-
-Move lockout state from Django cache to a database table so it survives server restarts:
-
-```python
-# New model: DeviceLockout
-class DeviceLockout(models.Model):
-    device_fingerprint = models.CharField(max_length=64, unique=True, db_index=True)
-    locked_until = models.DateTimeField()
-    attempts = models.PositiveIntegerField(default=0)
-    last_attempt_ip = models.GenericIPAddressField(null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ DeviceAuditEvent                                                │
+├──────────────────────────┬──────────────────────────────────────┤
+│ id                       │ BigAutoField (PK)                    │
+│ device                   │ FK → AuthorizedDevice                │
+│ event_type               │ CharField(30): ENROLLED, MFA_PASSED, │
+│                          │   ACTIVATED, REVOKED, TOKEN_ROTATED, │
+│                          │   IP_ANOMALY, AUTH_SUCCESS, etc.     │
+│ actor                    │ FK → User (nullable for auto-events) │
+│ notes                    │ TextField                            │
+│ ip_address               │ GenericIPAddressField (nullable)     │
+│ occurred_at              │ DateTimeField (indexed)              │
+│ metadata                 │ JSONField — SIEM-compatible          │
+└──────────────────────────┴──────────────────────────────────────┘
 ```
 
-#### 1.3 Fix Active Hours Bug
+### DeviceMFAChallenge
 
-Apply the fix described in §15 immediately. The Armory PC Terminal currently has broken active-hours enforcement.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ DeviceMFAChallenge                                              │
+├──────────────────────────┬──────────────────────────────────────┤
+│ id                       │ UUIDField (PK)                       │
+│ device                   │ OneToOneField → AuthorizedDevice     │
+│ method                   │ CharField: TOTP | EMAIL              │
+│ otp_hash                 │ CharField(64) — SHA-256 + salt       │
+│ otp_salt                 │ CharField(32)                        │
+│ attempts                 │ PositiveSmallIntegerField            │
+│ max_attempts             │ PositiveSmallIntegerField (5)        │
+│ created_at               │ DateTimeField (auto)                 │
+│ expires_at               │ DateTimeField (15min TTL)            │
+│ verified_at              │ DateTimeField (nullable)             │
+└──────────────────────────┴──────────────────────────────────────┘
+```
+
+### DeviceRiskEvent
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ DeviceRiskEvent                                                 │
+├──────────────────────────┬──────────────────────────────────────┤
+│ id                       │ BigAutoField (PK)                    │
+│ device                   │ FK → AuthorizedDevice                │
+│ risk_type                │ NEW_IP / IP_OUTSIDE / OFF_HOURS /    │
+│                          │   HIGH_VELOCITY / CONCURRENT_IP /    │
+│                          │   USER_AGENT_CHANGE / SUSPICIOUS_PATH│
+│ severity                 │ PositiveSmallIntegerField (1-50)     │
+│ detail                   │ TextField                            │
+│ ip_address               │ GenericIPAddressField (nullable)     │
+│ detected_at              │ DateTimeField (indexed)              │
+│ acknowledged             │ BooleanField                         │
+│ acknowledged_by          │ FK → User (nullable)                 │
+└──────────────────────────┴──────────────────────────────────────┘
+```
 
 ---
 
-### Priority 2 — High (Implement This Sprint)
+## 21. Security Controls Added
 
-#### 2.1 Move Authorization Store to Database
+### Controls Matrix vs. v1
 
-Replace `authorized_devices.json` with a proper database-backed store:
-- Atomic updates across multiple workers
-- Row-level locking prevents race conditions
-- DB backups include authorization state
-- No risk of corruption from concurrent writes
+| Control | v1 Status | v2 Implementation |
+|---------|-----------|-------------------|
+| Device identity | Header fingerprint (spoofable) | Server-issued 256-bit opaque token |
+| Cryptographic binding | None | Optional device key pair (PEM); challenge-response ready |
+| MFA on enrollment | None | TOTP or Email OTP required before admin queue |
+| Authorization expiry | None | `expires_at` field; configurable (default 90 days) |
+| Auto re-validation | None | `revalidation_required` flag + `revalidate()` method |
+| Brute-force lockout | Cache (lost on restart) | `locked_until` in DB — survives restarts |
+| Anomaly detection | None | IP change, UA change, velocity, concurrent IPs |
+| Risk scoring | None | 0–100 risk score; auto-suspend at threshold |
+| Audit trail | Per-request log | Per-request `DeviceAccessLog` + per-event `DeviceAuditEvent` (append-only) |
+| SIEM export | None | `siem_metadata` JSONField on every log row |
+| Security alerts | Cache (24h, lossy) | Email + persistent `DeviceRiskEvent` DB rows |
+| Transaction limits | Cache (lost on restart) | DB-backed (can be migrated; see §25) |
+| Active hours | Dict/string format bug | `active_hours_start` / `active_hours_end` TimeFields — proper DB types |
+| Multi-worker safety | JSON file per-worker | Single DB source of truth |
+| Secret integrity | Plain JSON file | DB with ORM access control + migration history |
+| Revocation | Manual + cache clear | `revoke()` DB method + `DeviceAuditEvent` entry |
+| Token rotation | None | `rotate_token()` method with audit trail |
+| Separation of concerns | Monolithic middleware | Service layer pattern; middleware is thin adapter |
 
-#### 2.2 Pre-Index Fingerprints in Memory
+### Security Properties
 
-Cache a fingerprint→device dict on load to make lookups O(1) instead of O(n):
-
-```python
-def load_authorized_devices(self):
-    # ... existing load logic ...
-    self._fingerprint_index = {
-        d['fingerprint']: d 
-        for d in self.authorized_devices['devices'] 
-        if d.get('fingerprint')
-    }
 ```
+Confidentiality: Device tokens are httponly cookies — JS cannot read them.
+                 OTP auth codes are stored as salted SHA-256 hashes only.
+                 Audit logs store only token PREFIX (8 chars), not full token.
 
-#### 2.3 Enforce Audit Log Retention
+Integrity:       DB transactions prevent partial state on approval.
+                 DeviceAuditEvent table is append-only (never UPDATE/DELETE).
+                 Risk events are immutable and require acknowledgement.
 
-Add a management command or celery task:
-```python
-# management/commands/purge_device_logs.py
-DeviceAccessLog.objects.filter(
-    checked_at__lt=timezone.now() - timedelta(days=settings.DEVICE_LOG_RETENTION_DAYS)
-).delete()
+Availability:    Exempt paths (static, login) bypass all device checks.
+                 DB-backed lockout survives restarts.
+                 Service layer returns fast AuthDecision even if DB is slow.
+
+Non-repudiation: Every state change records actor + timestamp + notes.
+                 auth_success / auth_denied logged per request with full context.
 ```
-
-Schedule via cron: `0 2 * * * python manage.py purge_device_logs`
-
-#### 2.4 Enable mTLS for HIGH_SECURITY Paths
-
-With mTLS infrastructure already in place, activating it provides hardware-level device attestation:
-```python
-# settings.py
-MTLS_ENABLED = True
-MTLS_REQUIRED_SECURITY_LEVEL = 'HIGH_SECURITY'
-```
-
-Requires nginx configuration with `ssl_verify_client on;`.
 
 ---
 
-### Priority 3 — Medium (Next Planning Cycle)
+## 22. MFA Integration
 
-#### 3.1 Device Certificate Pinning
+### TOTP (Authenticator App) Flow
 
-Issue unique client certificates per device. Bind the certificate serial number to the device entry. This makes identity forgery cryptographically hard.
-
-#### 3.2 IP Range Binding
-
-Instead of exact IP matching, support CIDR notation for device locations:
-```json
-"allowed_ip_ranges": ["192.168.0.0/24", "10.0.1.0/28"]
+```
+1. User visits /admin/device/request-authorization/
+         │
+         ▼
+2. If user has no TOTP secret:
+     TOTPService(user).get_or_create_secret()
+     → QR code displayed (provisioning URI)
+     → User scans with Google Authenticator / Authy
+         │
+         ▼
+3. User submits enrollment form + TOTP code
+         │
+         ▼
+4. device_service.enroll_device()
+     → AuthorizedDevice created (status=PENDING_MFA)
+     → DeviceMFAChallenge created
+         │
+         ▼
+5. device_service.complete_mfa(device, totp_valid=TOTPService(user).verify(code))
+     → status → PENDING (admin queue)
+         │
+         ▼
+6. Admin approves → device.activate() → status=ACTIVE
 ```
 
-#### 3.3 Geographic / Network Restrictions
+### Email OTP Flow
 
-Add network-segment awareness: devices should only be accessible from expected subnets (armory LAN, admin VLAN).
+```
+1. User submits enrollment form (no TOTP app configured)
+         │
+         ▼
+2. EmailOTPService.issue(device, challenge)
+     → 6-digit code sent to user.email
+     → Code stored as SHA-256(code+salt) on challenge record
+         │
+         ▼
+3. User submits OTP from inbox
+         │
+         ▼
+4. EmailOTPService.verify(challenge, submitted_code)
+     → challenge.verify_email_otp() checks hash
+     → Rate limited: max 3 emails per 2 minutes
+     → Max 5 attempts; expires after 15 minutes
+         │
+         ▼
+5. On success: device.status → PENDING
+```
 
-#### 3.4 Anomaly Detection Hook
+### Required Dependency
 
-Flag and alert on behavioral anomalies:
-- Device fingerprint seen from new IP (outside normal range)
-- Unusual access time patterns
-- Sudden spike in transaction attempts
-- Access from multiple IPs within a short window
+```bash
+pip install pyotp qrcode[pil]   # TOTP + QR code generation
+```
 
-#### 3.5 Periodic Background Revalidation
+Add to `requirements.txt`:
+```
+pyotp>=2.9.0
+qrcode[pil]>=7.4
+```
 
-For active sessions, re-check authorization at interval (e.g., every 15 minutes):
+---
+
+## 23. Testing Strategy
+
+### Test Coverage in `core/device/tests.py`
+
+| Category | Tests | Key Assertions |
+|----------|-------|----------------|
+| Path Security Resolver | 5 | Static exempt, admin HIGH_SECURITY, unknown path with protect_root |
+| Device Identity Service | 6 | Valid/invalid token formats, cookie presence, DB lookup |
+| Authorization Decision Engine | 14 | All status states, tier checks, IP binding, lockout, risk, revalidation, active hours |
+| Device Lifecycle (model) | 8 | activate, revoke, expire, revalidate, rotate_token, lockout, expiry warning, audit events |
+| MFA Challenges | 5 | Correct OTP, wrong OTP, expired, exhausted, replay |
+| Security / Penetration | 9 | Revoked replay, expired bypass, tier downgrade, IP spoof, lockout brute-force, risk block, pending-MFA access, force-revalidation bypass, unknown token |
+| Risk Evaluator | 2 | New IP alert, same IP no alert |
+| Service Integration | 5 | Exempt path, active device, missing cookie denied, superuser DEBUG bypass, enrollment flow |
+
+### Running Tests
+
+```bash
+cd armguard
+python manage.py test core.device.tests --verbosity=2
+```
+
+### Penetration Test Checklist
+
+```
+☐ Forge device token cookie  → must return 403
+☐ Reuse revoked device token → must return 403
+☐ Use expired device token   → must return 403
+☐ Access /admin/ with STANDARD tier device → must return 403
+☐ Modify IP binding and access from different IP → must return 403
+☐ Submit >5 wrong tokens rapidly → must trigger DB lockout
+☐ Clear Django cache after lockout → lockout must persist (DB)
+☐ Skip MFA during enrollment → device must remain PENDING_MFA
+☐ Submit expired OTP code → must fail
+☐ Submit correct OTP twice (replay) → second must fail
+☐ Set high risk_score via DB → access must be blocked at threshold
+☐ Set revalidation_required=True → access must be blocked
+☐ Access armory terminal outside 06:00-18:00 → must return 403
+☐ Inject X-Forwarded-For to spoof bound IP → must return 403 (IP binding checks REMOTE_ADDR or trusted proxy)
+```
+
+---
+
+## 24. Compliance Gap Closure
+
+| Standard | Control | v1 Gap | v2 Closure |
+|----------|---------|--------|------------|
+| NIST 800-53 **IA-3** | Device Identification | No cryptographic device ID | Server-issued token; optional PEM key pair |
+| NIST 800-53 **IA-3 (1)** | Cryptographic Bidirectional Authentication | Not implemented | Key pair + challenge-response framework ready |
+| NIST 800-53 **IA-5** | Authenticator Management | No rotation, no expiry | `rotate_token()`, `expires_at`, `revalidate()` |
+| NIST 800-53 **AC-12** | Session Termination | Not implemented | `revalidation_required` flag; expiry-driven re-auth |
+| NIST 800-53 **AU-9** | Protection of Audit Information | Mutable DB rows | `DeviceAuditEvent` is append-only |
+| NIST 800-53 **AU-11** | Audit Record Retention | No enforcement | `DeviceAccessLog` + management command hook for `retention_days` |
+| NIST 800-53 **SI-3** | Malicious Code / Config Integrity | JSON plaintext | DB storage; no direct file manipulation |
+| NIST 800-53 **SI-4** | System Monitoring | No anomaly detection | `DeviceRiskEvaluator` + `DeviceRiskEvent` table |
+| OWASP ASVS **2.7** | OTP Verification | No MFA on enrollment | `DeviceMFAChallenge` (TOTP + Email OTP) |
+| OWASP ASVS **2.2** | General Authenticator | No expiry | `expires_at` + `revalidation_required` |
+| OWASP ASVS **6.4** | Secret Management | Plaintext JSON | DB storage; OTP stored as salted hash only |
+| OWASP ASVS **7.2** | Log Processing | No SIEM fields | `siem_metadata` JSONField on access logs |
+| **Zero Trust** | Re-evaluate per request | Cache may persist stale state | DB lookup every request; no implicit trust |
+
+---
+
+## 25. Deployment & Migration Plan
+
+### Phase 0 — Prerequisites (Day 1)
+
+```bash
+# Install new dependencies
+pip install pyotp qrcode[pil]
+echo "pyotp>=2.9.0" >> requirements.txt
+echo "qrcode[pil]>=7.4" >> requirements.txt
+
+# Generate Django migrations for new models
+python manage.py makemigrations core --name=enterprise_device_auth
+python manage.py migrate
+```
+
+### Phase 1 — Parallel Operation (Week 1)
+
+Run both middleware stacks simultaneously. The new middleware is INACTIVE; v1 legacy middleware remains the enforcer.
+
 ```python
-# In process_request: check session-level cache
-last_validated_key = f"device_last_validated_{fingerprint}"
-if not cache.get(last_validated_key):
-    # Force re-check against JSON/DB
-    cache.set(last_validated_key, True, timeout=900)  # 15 min
+# settings.py — Phase 1: v1 active, v2 shadow mode
+MIDDLEWARE = [
+    ...
+    'core.middleware.device_authorization.DeviceAuthorizationMiddleware',  # v1 ACTIVE
+    # 'core.device.middleware.DeviceAuthMiddleware',                       # v2 disabled
+    ...
+]
 ```
 
-#### 3.6 Two-Factor Device Approval
+Seed the new DB tables from the existing JSON:
+```bash
+python manage.py shell < core/device/migration_seed.py
+# Or with dry-run first:
+python core/device/migration_seed.py --dry-run
+```
 
-Require a second administrator to countersign approvals for MILITARY-level devices (four-eyes principle).
+### Phase 2 — Migrate Users to New Enrollment Flow (Week 2)
 
-#### 3.7 Remove Legacy IP-Only Matching
+1. Deploy the updated `/admin/device/request-authorization/` view that:
+   - Uses `DeviceService.enroll_device()` instead of `DeviceAuthorizationRequest`
+   - Presents TOTP setup / Email OTP MFA gate
+2. New enrollments go through v2 flow; existing v1 approvals remain valid
+3. Run access log comparison: v1 vs v2 decisions should match for all existing devices
 
-All active devices should have a fingerprint. Audit the JSON to ensure no fingerprint-less legacy entries remain.
+### Phase 3 — Cutover (Week 3)
+
+```python
+# settings.py — Phase 3: v2 active, v1 retained but disabled
+MIDDLEWARE = [
+    ...
+    # 'core.middleware.device_authorization.DeviceAuthorizationMiddleware',  # v1 DISABLED
+    'core.device.middleware.DeviceAuthMiddleware',                           # v2 ACTIVE
+    ...
+]
+```
+
+Verify:
+- All known authorized devices pass in v2
+- Armory terminal active-hours restriction working
+- MFA enrollment flow complete to end
+
+### Phase 4 — Legacy Cleanup (Week 4+)
+
+- Remove `core/middleware/device_authorization.py` (legacy v1)
+- Remove `admin/device_auth_models.py` (replaced by `core/device/models.py`)
+- Archive `authorized_devices.json` to read-only
+- Enable DB-backed transaction counters (remove cache dependency)
+- Schedule `revalidation_required=True` for all devices enrolled > 90 days ago
+
+### Phase 5 — Advanced Features (Next Sprint)
+
+- Activate mTLS client certificates (`MTLS_ENABLED = True`)
+- Deploy `purge_device_logs` management command on cron
+- Wire `DeviceRiskEvent.acknowledged=False` count into admin dashboard widget
+- Implement Two-Factor Device Approval for MILITARY tier (four-eyes)
+- Add CIDR-based IP range binding as alternative to exact-IP binding
 
 ---
 
-## 17. Compliance Claims vs. Reality
+## Appendix A: Current v1 Authorized Devices Summary
 
-The `authorized_devices.json` claims compliance with the following standards:
-
-```json
-"security_compliance": {
-  "nist_800_53": true,
-  "fisma_moderate": true,
-  "owasp_2021": true,
-  "military_standards": true
-}
-```
-
-### Gap Analysis
-
-| Standard | Key Requirement | Status |
-|----------|----------------|--------|
-| **NIST 800-53 IA-3** (Device Identification) | Re-authentication required periodically | ❌ No expiry |
-| **NIST 800-53 AC-12** (Session Termination) | Terminate sessions after inactivity | ❌ Not implemented |
-| **NIST 800-53 AU-11** (Audit Record Retention) | Retain logs per org policy | ⚠️ Policy defined, no enforcement |
-| **NIST 800-53 SI-3** (Malicious Code Protection) | Integrity check for config files | ❌ JSON has no signature/hash |
-| **FISMA Moderate** | NIST 800-53 at moderate baseline | ⚠️ Partial (see above gaps) |
-| **OWASP 2021 A07** (Auth Failures) | Protect against brute-force | ✅ Lockout implemented (but cache-backed) |
-| **OWASP 2021 A02** (Crypto Failures) | Secure cookies, HTTPS enforcement | ✅ httponly, secure flag in production |
-| **Military Standards** | Role-based + terminal-bound access | ✅ Role binding, terminal binding |
-
-### Summary
-
-The compliance claims are **aspirational rather than certified**. Significant gaps exist in expiry/re-authentication (NIST IA-3), audit retention enforcement (NIST AU-11), and config integrity (NIST SI-3).
-
----
-
-## Appendix: Current Authorized Devices Summary (authorized_devices.json)
-
-| Device | IP | Security Level | Transactions | Active Hours | Roles |
+| Device | IP | Security Level | Transactions | Active Hours | Notes |
 |--------|-----|---------------|-------------|-------------|-------|
-| Localhost Development | 127.0.0.1 | DEVELOPMENT | 1000/day | Unrestricted | admin, development, superuser |
-| Developer PC | 192.168.0.82 | HIGH_SECURITY | 100/day | Unrestricted | admin, development |
-| Armory PC Terminal | 192.168.0.100 | MILITARY | 200/day | "06:00-18:00" ⚠️ (bug) | armory, transactions |
+| Localhost Development | 127.0.0.1 | DEVELOPMENT | 1000/day | Unrestricted | Dev only |
+| Developer PC | 192.168.0.82 | HIGH_SECURITY | 100/day | Unrestricted | No fingerprint in JSON |
+| Armory PC Terminal | 192.168.0.100 | MILITARY | 200/day | 06:00–18:00 | Bug fixed in v1; no fingerprint |
 
-**Note:** The Armory PC Terminal does not have a `fingerprint` field — it relies on the legacy IP-only match.
+> All three devices will be seeded into `AuthorizedDevice` via `migration_seed.py` during Phase 1.  
+> The Armory PC Terminal will receive a new server-issued `device_token` and MFA will be required on next re-enrollment.
 
 ---
 
-*End of ARMGUARD RDS Device Authorization Security Review*
+## Appendix B: File Index — New Implementation
+
+```
+armguard/core/device/
+├── __init__.py           Module marker
+├── models.py             AuthorizedDevice, DeviceAuditEvent, DeviceMFAChallenge,
+│                         DeviceAccessLog, DeviceRiskEvent
+├── service.py            DeviceService (facade), PathSecurityResolver,
+│                         DeviceIdentityService, DeviceRiskEvaluator,
+│                         AuthorizationDecisionEngine, AuthDecision
+├── mfa.py                TOTPService, EmailOTPService, MFAReadinessCheck
+├── middleware.py         DeviceAuthMiddleware (thin adapter)
+├── migration_seed.py     One-time data migration from authorized_devices.json
+└── tests.py              40+ unit, integration, and penetration tests
+```
+
+---
+
+*End of ARMGUARD RDS Device Authorization Security Review & Enterprise Redesign*  
+*Commit this document alongside the implementation in `core/device/`.*
