@@ -313,13 +313,7 @@
         </div>
     </div>
 
-    {% if user.is_superuser or user.groups.all.0.name == 'Admin' %}
-    <div class="profile-actions">
-        <a href="{% url 'armguard_admin:edit_personnel' personnel.id %}" class="btn-edit">
-            <i class="fas fa-edit"></i> Edit
-        </a>
-    </div>
-    {% endif %}
+
 </div>
 
 <!-- Info Cards: 2-column -->
