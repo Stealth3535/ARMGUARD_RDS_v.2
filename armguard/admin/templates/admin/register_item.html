@@ -175,13 +175,6 @@
             <label for="{{ form.item_type.id_for_label }}">{{ form.item_type.label }}</label>
             {{ form.item_type }}
         </div>
-
-        <div class="form-group">
-            {{ form.item_number.errors }}
-            <label for="{{ form.item_number.id_for_label }}">Item Number <small style="color:#9ca3af;font-weight:400;">(optional)</small></label>
-            {{ form.item_number }}
-            <small style="color:#9ca3af;">Number of this item within the same type (e.g. 1, 2, 3)</small>
-        </div>
         
         <!-- Factory QR Code Scanner Section (Shows for M4 Carbine ONLY) -->
         <div class="qr-scanner-section" id="qrScannerSection" style="display: none;">

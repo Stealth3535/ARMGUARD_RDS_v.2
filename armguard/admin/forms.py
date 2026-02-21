@@ -581,10 +581,9 @@ class ItemRegistrationForm(forms.ModelForm):
     
     class Meta:
         model = Item
-        fields = ['item_type', 'item_number', 'serial', 'description', 'stencil_picture', 'condition', 'status']
+        fields = ['item_type', 'serial', 'description', 'stencil_picture', 'condition', 'status']
         widgets = {
             'item_type': forms.Select(attrs={'class': 'form-control'}),
-            'item_number': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'e.g. 1, 2, 3'}),
             'serial': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'stencil_picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),

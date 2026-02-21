@@ -183,10 +183,10 @@
             
             <div class="form-group">
                 <label for="{{ form.item_number.id_for_label }}">
-                    Item Number
+                    Item Number <small style="color:#9ca3af;font-weight:400;">(auto-assigned per type)</small>
                 </label>
                 {{ form.item_number }}
-                <p class="help-text">Item number within the same type (e.g. 1, 2, 3)</p>
+                <p class="help-text">Auto-assigned sequential number within the same item type. Override only if needed.</p>
                 {% if form.item_number.errors %}
                     <span class="error">{{ form.item_number.errors }}</span>
                 {% endif %}

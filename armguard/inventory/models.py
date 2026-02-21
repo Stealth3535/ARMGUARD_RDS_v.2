@@ -4,6 +4,7 @@ Based on APP/app/backend/database.py items table
 """
 
 from django.db import models
+from django.db.models import Max
 from django.utils import timezone
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
@@ -108,6 +109,12 @@ class Item(models.Model):
         errors = validate_item_data(self)
         if errors:
             raise ValueError(f"Item validation failed: {errors}")
+        # Auto-assign item_number per item_type if not set
+        if not self.item_number:
+            max_num = Item.objects.filter(item_type=self.item_type).aggregate(
+                Max('item_number'))['item_number__max']
+            self.item_number = (max_num or 0) + 1
+
         if not self.id:
             # Check if using existing QR code (passed via _existing_qr attribute)
             if hasattr(self, '_existing_qr') and self._existing_qr:
