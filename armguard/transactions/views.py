@@ -105,12 +105,13 @@ class TransactionListView(LoginRequiredMixin, ListView):
                 'by_status_type': status_type_counts,
             }
 
+            today = timezone.now().date()
             context['transaction_mode_counts'] = {
-                'defcon_released': Transaction.objects.filter(transaction_mode=Transaction.MODE_DEFCON, action=Transaction.ACTION_TAKE).count(),
-                'defcon_returned': Transaction.objects.filter(transaction_mode=Transaction.MODE_DEFCON, action=Transaction.ACTION_RETURN).count(),
-                'normal_released': Transaction.objects.filter(transaction_mode=Transaction.MODE_NORMAL, action=Transaction.ACTION_TAKE).count(),
-                'normal_returned': Transaction.objects.filter(transaction_mode=Transaction.MODE_NORMAL, action=Transaction.ACTION_RETURN).count(),
-                'total_transactions': Transaction.objects.count(),
+                'defcon_released': Transaction.objects.filter(transaction_mode=Transaction.MODE_DEFCON, action=Transaction.ACTION_TAKE, date_time__date=today).count(),
+                'defcon_returned': Transaction.objects.filter(transaction_mode=Transaction.MODE_DEFCON, action=Transaction.ACTION_RETURN, date_time__date=today).count(),
+                'normal_released': Transaction.objects.filter(transaction_mode=Transaction.MODE_NORMAL, action=Transaction.ACTION_TAKE, date_time__date=today).count(),
+                'normal_returned': Transaction.objects.filter(transaction_mode=Transaction.MODE_NORMAL, action=Transaction.ACTION_RETURN, date_time__date=today).count(),
+                'total_transactions': Transaction.objects.filter(date_time__date=today).count(),
             }
 
             selected_history = (self.request.GET.get('history') or 'week').strip().lower()
