@@ -653,25 +653,23 @@ def register_item(request):
                         defaults={'qr_data': item.id, 'is_active': True}
                     )
                     if not created:
-                        # Record existed — make sure the physical file is actually there
-                        file_missing = (
+                        # Record existed — reactivate and ensure file is present
+                        needs_regen = (
                             not qr_obj.qr_image or
                             not _os.path.exists(
                                 _os.path.join(settings.MEDIA_ROOT, qr_obj.qr_image.name)
                             )
                         )
-                        if file_missing:
+                        if needs_regen:
                             if qr_obj.qr_image:
                                 qr_obj.qr_image.delete(save=False)
                             qr_obj.qr_image = None
                             qr_obj.qr_data = item.id
-                            qr_obj.is_active = True
+                        qr_obj.is_active = True
+                        qr_obj.deleted_at = None
+                        if needs_regen:
                             qr_obj.generate_qr_code()
-                            qr_obj.save()
-                        elif not qr_obj.is_active:
-                            qr_obj.is_active = True
-                            qr_obj.deleted_at = None
-                            qr_obj.save()
+                        qr_obj.save()
 
                     # Generate item tag PNG
                     try:
@@ -707,25 +705,23 @@ def register_item(request):
                         defaults={'qr_data': item_data, 'is_active': True}
                     )
                     if not created:
-                        # Record existed — make sure the physical file is actually there
-                        file_missing = (
+                        # Record existed — reactivate and ensure file is present
+                        needs_regen = (
                             not qr_obj.qr_image or
                             not _os.path.exists(
                                 _os.path.join(settings.MEDIA_ROOT, qr_obj.qr_image.name)
                             )
                         )
-                        if file_missing:
+                        if needs_regen:
                             if qr_obj.qr_image:
                                 qr_obj.qr_image.delete(save=False)
                             qr_obj.qr_image = None
                             qr_obj.qr_data = item_data
-                            qr_obj.is_active = True
+                        qr_obj.is_active = True
+                        qr_obj.deleted_at = None
+                        if needs_regen:
                             qr_obj.generate_qr_code()
-                            qr_obj.save()
-                        elif not qr_obj.is_active:
-                            qr_obj.is_active = True
-                            qr_obj.deleted_at = None
-                            qr_obj.save()
+                        qr_obj.save()
 
                     # Generate item tag PNG
                     try:

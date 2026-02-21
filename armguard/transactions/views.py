@@ -192,29 +192,35 @@ def verify_qr_code(request):
             return JsonResponse({'success': False, 'error': 'No QR code data provided'})
         
         # Parse QR code data
-        # Format: "PERSONNEL:PE-123456:SGT Name:123456" or "ITEM:ITM-123456:Type:Serial"
+        # Format: "PERSONNEL:PE-123456:SGT Name:123456" or "ITEM:IR-xxxxx:Type:Serial"
+        # Also handles raw factory QR (M4 etc.) which encode the item.id directly.
         personnel_id = None
         item_id = None
-        
+
         if qr_data.startswith('PERSONNEL:'):
-            # Extract personnel ID from QR data
             parts = qr_data.split(':')
             if len(parts) >= 2:
                 personnel_id = parts[1]
         elif qr_data.startswith('ITEM:'):
-            # Extract item ID from QR data
             parts = qr_data.split(':')
             if len(parts) >= 2:
                 item_id = parts[1]
+        elif qr_data.startswith('PE-') or qr_data.startswith('PO-'):
+            personnel_id = qr_data
+        elif qr_data.startswith('ITM-'):
+            item_id = qr_data
         else:
-            # Assume it's a direct ID (legacy format)
-            # Try to determine type by prefix
-            if qr_data.startswith('PE-') or qr_data.startswith('PO-'):
-                personnel_id = qr_data
-            elif qr_data.startswith('ITM-'):
-                item_id = qr_data
-            else:
-                return JsonResponse({'success': False, 'error': 'Invalid QR code format'})
+            # Factory QR fallback: raw value may be an Item ID or Item.qr_code
+            from inventory.models import Item as _Item
+            try:
+                _item = _Item.objects.get(id=qr_data)
+                item_id = _item.id
+            except _Item.DoesNotExist:
+                try:
+                    _item = _Item.objects.get(qr_code=qr_data)
+                    item_id = _item.id
+                except _Item.DoesNotExist:
+                    return JsonResponse({'success': False, 'error': 'Invalid QR code format'})
         
         try:
             if personnel_id:
@@ -416,12 +422,22 @@ def lookup_transactions(request):
             parts = qr_data.split(':')
             if len(parts) >= 2:
                 item_id = parts[1]
+        elif qr_data.startswith('PE-') or qr_data.startswith('PO-'):
+            personnel_id = qr_data
+        elif qr_data.startswith('ITM-'):
+            item_id = qr_data
         else:
-            # Legacy format - direct ID
-            if qr_data.startswith('PE-') or qr_data.startswith('PO-'):
-                personnel_id = qr_data
-            elif qr_data.startswith('ITM-'):
-                item_id = qr_data
+            # Factory QR fallback: raw value may be an Item ID or Item.qr_code
+            from inventory.models import Item as _Item
+            try:
+                _item = _Item.objects.get(id=qr_data)
+                item_id = _item.id
+            except _Item.DoesNotExist:
+                try:
+                    _item = _Item.objects.get(qr_code=qr_data)
+                    item_id = _item.id
+                except _Item.DoesNotExist:
+                    pass  # item_id stays None, handled below
         
         try:
             if personnel_id:
