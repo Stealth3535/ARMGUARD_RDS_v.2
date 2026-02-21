@@ -209,6 +209,28 @@
         width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;
         object-fit: contain; max-height: 100px; background: #f9fafb; display: block;
     }
+
+    /* ── Stencil card below tag card ── */
+    .stencil-card {
+        width: 280px; min-width: 280px;
+        background: #fff;
+        border-radius: 12px;
+        border: 1.5px solid #e5e7eb;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+        overflow: hidden;
+        align-self: flex-start;
+    }
+    .stencil-card img {
+        width: 100%; display: block;
+        object-fit: contain; background: #f9fafb;
+        max-height: 140px;
+    }
+    .stencil-card-empty {
+        width: 100%; height: 90px;
+        display: flex; align-items: center; justify-content: center;
+        flex-direction: column; gap: 0.3rem;
+        color: #d1d5db; font-size: 0.75rem;
+    }
 </style>
 {% endblock %}
 
@@ -251,6 +273,9 @@
     <!-- Profile row: tag card (left) + info card (right) -->
     <div class="profile-row" style="margin-bottom:1rem;">
 
+    <!-- Left column: tag card + stencil card -->
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+
     <!-- Physical item tag card -->
     <div class="item-tag-card">
         <!-- Row 1: item number + QR -->
@@ -269,15 +294,23 @@
             <span class="tag-type">{{ item.item_type }}</span>
             <span class="tag-serial">{{ item.serial }}</span>
         </div>
-        <!-- Row 3: stencil photo -->
+    </div><!-- end item-tag-card -->
+
+    <!-- Stencil card (below tag card) -->
+    <div class="stencil-card">
         {% if item.stencil_picture %}
-        <div class="tag-stencil-wrap">
-            <a href="{{ item.stencil_picture.url }}" target="_blank">
-                <img src="{{ item.stencil_picture.url }}" alt="Stencil" class="tag-stencil">
-            </a>
+        <a href="{{ item.stencil_picture.url }}" target="_blank">
+            <img src="{{ item.stencil_picture.url }}" alt="Stencil">
+        </a>
+        {% else %}
+        <div class="stencil-card-empty">
+            <i class="fas fa-image" style="font-size:1.6rem;"></i>
+            <span>No stencil image</span>
         </div>
         {% endif %}
-    </div><!-- end item-tag-card -->
+    </div>
+
+    </div><!-- end left column -->
 
     <!-- Info Card (right) -->
     <div class="info-card">
