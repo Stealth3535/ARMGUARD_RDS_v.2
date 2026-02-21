@@ -196,37 +196,8 @@
         {% endif %}
     </div>
 
-    <!-- Profile row: item card left, info right -->
-    <div class="profile-row">
-
-        <!-- Item Card -->
-        <div class="item-id-card">
-            <div class="item-card-top">
-                <span class="item-card-logo">ARMGUARD RDS</span>
-                <div class="item-icon-circle">
-                    {% if item.is_rifle %}<i class="fas fa-crosshairs"></i>{% else %}<i class="fas fa-bullseye"></i>{% endif %}
-                </div>
-            </div>
-            <div class="item-card-body">
-                <p class="item-card-name">{{ item.item_type }}</p>
-                <p class="item-card-serial">{{ item.serial }}</p>
-                <div class="item-card-badges">
-                    {% if item.is_rifle %}
-                    <span class="badge-pill badge-rifle"><i class="fas fa-crosshairs"></i> Rifle</span>
-                    {% else %}
-                    <span class="badge-pill badge-pistol"><i class="fas fa-bullseye"></i> Pistol</span>
-                    {% endif %}
-                    <span class="badge-pill badge-{{ item.status|lower }}">{{ item.status }}</span>
-                </div>
-            </div>
-            <div class="item-card-footer">
-                <span class="item-card-id-label">Item ID</span>
-                <span class="item-card-id-value">{{ item.id }}</span>
-            </div>
-        </div>
-
-        <!-- Info Card -->
-        <div class="info-card">
+    <!-- Info Card (full width) -->
+    <div class="info-card" style="margin-bottom:1rem;">
             <p class="info-card-title"><i class="fas fa-info-circle" style="margin-right:0.35rem;"></i>Item Information</p>
             <div class="info-rows">
                 <div class="info-row">
@@ -281,9 +252,7 @@
                     <div style="font-family:monospace;font-size:0.75rem;color:#374151;word-break:break-all;">{{ item.qr_code }}</div>
                 </div>
             </div>
-        </div>
-
-    </div><!-- end profile row -->
+    </div><!-- end info card -->
 
     <!-- Transaction History -->
     <div class="tx-card">
