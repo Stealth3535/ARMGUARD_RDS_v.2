@@ -106,7 +106,7 @@ SECRET_KEY = config('DJANGO_SECRET_KEY')  # No default - must be set in .env
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='127.0.0.1,localhost,192.168.68.129,192.168.56.1,192.168.42.1,192.168.59.1,192.168.0.177,ubuntu.local,armguard.rds,testserver', cast=Csv())
+ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='127.0.0.1,localhost,192.168.0.10,192.168.68.129,192.168.56.1,192.168.42.1,192.168.59.1,192.168.0.177,ubuntu.local,armguard.rds,testserver', cast=Csv())
 
 # Reverse Proxy Configuration (for Nginx)
 USE_X_FORWARDED_HOST = True
@@ -117,6 +117,8 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost',
     'http://127.0.0.1',
+    'http://192.168.0.10',
+    'https://192.168.0.10',
     'http://192.168.0.177',
     'https://192.168.0.177',
     'http://ubuntu.local',
@@ -631,7 +633,11 @@ USE_L10N = False
 # Enhanced Production Security Settings
 if not DEBUG:
     # SSL/TLS Configuration
-    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
+    # SECURE_SSL_REDIRECT is False by default because nginx terminates SSL;
+    # Django never sees raw HTTP — enabling redirect here causes an infinite
+    # redirect loop (nginx HTTPS → Gunicorn HTTP → Django 301 → nginx HTTPS…).
+    # Set SECURE_SSL_REDIRECT=True in .env ONLY if Django is directly exposed.
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
     SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
     CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=True, cast=bool)
     SECURE_BROWSER_XSS_FILTER = True
