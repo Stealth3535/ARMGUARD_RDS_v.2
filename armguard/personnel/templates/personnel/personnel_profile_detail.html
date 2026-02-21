@@ -27,7 +27,7 @@
     /* Flip Card */
     .id-card-scene {
         width: 220px;
-        height: 430px;
+        height: 349px;
         perspective: 900px;
         margin-bottom: 1.1rem;
         display: inline-block;
@@ -105,8 +105,8 @@
     }
 
     .profile-photo {
-        width: 120px;
-        height: 130px;
+        width: 100px;
+        height: 110px;
         border-radius: 8px;
         object-fit: cover;
         border: 3px solid rgba(255,255,255,0.9);
@@ -114,8 +114,8 @@
     }
 
     .no-photo {
-        width: 120px;
-        height: 130px;
+        width: 100px;
+        height: 110px;
         border-radius: 8px;
         background: rgba(255,255,255,0.15);
         display: flex;
@@ -418,9 +418,9 @@
             </div>
             <div class="id-card-back-body">
                 {% if qr_code_obj and qr_code_obj.qr_image %}
-                <img src="{{ qr_code_obj.qr_image.url }}?v={{ qr_code_obj.updated_at|date:'U' }}" alt="QR Code" style="width:155px;height:155px;border-radius:8px;border:1px solid #e5e7eb;">
+                <img src="{{ qr_code_obj.qr_image.url }}?v={{ qr_code_obj.updated_at|date:'U' }}" alt="QR Code" style="width:175px;height:175px;border-radius:8px;border:1px solid #e5e7eb;">
                 {% else %}
-                <div style="width:155px;height:155px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.8rem;">No QR Code</div>
+                <div style="width:175px;height:175px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.8rem;">No QR Code</div>
                 {% endif %}
 
             </div>
