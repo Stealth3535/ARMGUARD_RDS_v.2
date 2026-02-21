@@ -174,13 +174,17 @@
 
     .id-card-footer {
         width: 100%;
+        height: 52px;
+        min-height: 52px;
         border-top: 1px solid #f3f4f6;
         background: #f9fafb;
-        padding: 0.5rem 1rem;
+        padding: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: center;
         gap: 0.1rem;
+        flex-shrink: 0;
     }
 
     .id-card-id-label {
@@ -411,7 +415,6 @@
         <div class="id-card-face back">
             <div class="id-card-top">
                 <span class="id-card-logo">ARMGUARD RDS</span>
-                <span style="color:rgba(255,255,255,0.85);font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;">QR CODE</span>
             </div>
             <div class="id-card-back-body">
                 {% if qr_code_obj and qr_code_obj.qr_image %}
