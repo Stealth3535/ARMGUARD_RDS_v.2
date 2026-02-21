@@ -30,6 +30,20 @@ def dashboard(request):
     issued_items = Item.objects.filter(status='Issued').count()
     maintenance_items = Item.objects.filter(status='Maintenance').count()
     
+    # Per-type breakdown for each status
+    item_types = ['M14', 'M16', 'M4', 'Glock', '.45']
+    def type_breakdown(status):
+        qs = Item.objects.filter(status=status).values('item_type').annotate(count=Count('id'))
+        return {row['item_type']: row['count'] for row in qs}
+    def type_total():
+        qs = Item.objects.values('item_type').annotate(count=Count('id'))
+        return {row['item_type']: row['count'] for row in qs}
+    available_by_type   = type_breakdown('Available')
+    issued_by_type      = type_breakdown('Issued')
+    maintenance_by_type = type_breakdown('Maintenance')
+    total_by_type       = type_total()
+    all_item_types = sorted(set(available_by_type) | set(issued_by_type) | set(maintenance_by_type) | set(total_by_type))
+    
     # Items by type
     items_by_type = Item.objects.values('item_type').annotate(count=Count('id'))
     
@@ -50,6 +64,11 @@ def dashboard(request):
         'issued_items': issued_items,
         'maintenance_items': maintenance_items,
         'items_by_type': items_by_type,
+        'all_item_types': all_item_types,
+        'available_by_type': available_by_type,
+        'issued_by_type': issued_by_type,
+        'maintenance_by_type': maintenance_by_type,
+        'total_by_type': total_by_type,
         'recent_transactions': recent_transactions,
         'transactions_this_week': transactions_this_week,
     }

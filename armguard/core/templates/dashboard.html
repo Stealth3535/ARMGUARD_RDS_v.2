@@ -28,6 +28,44 @@
 .stat-card.inventory    { --card-color: #1e40af; }
 .stat-card.transactions { --card-color: #1e40af; }
 
+/* Inventory detail cards */
+.inv-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin: 0 0 1.5rem;
+}
+.inv-stat-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 0.9rem 1rem 0.75rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-top: 4px solid var(--icard-color, #cbd5e1);
+}
+.inv-stat-card.available    { --icard-color: #10b981; }
+.inv-stat-card.issued       { --icard-color: #f59e0b; }
+.inv-stat-card.maintenance  { --icard-color: #ef4444; }
+.inv-stat-card.total        { --icard-color: #667eea; }
+.inv-stat-label {
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: #6b7280; margin: 0 0 0.1rem;
+}
+.inv-stat-value {
+    font-size: 2.2rem; font-weight: 900; line-height: 1;
+    color: var(--icard-color); margin: 0 0 0.25rem;
+}
+.inv-stat-sub {
+    font-size: 0.75rem; color: #6b7280; margin: 0 0 0.4rem;
+}
+.inv-stat-sub i { margin-right: 0.25rem; }
+.inv-breakdown {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 0.1rem 0.75rem; font-size: 0.8rem; color: #374151;
+    border-top: 1px solid #f3f4f6; padding-top: 0.4rem; margin-top: 0.2rem;
+}
+.inv-breakdown span { color: #9ca3af; font-size: 0.75rem; }
+.inv-breakdown strong { font-weight: 700; }
+
 .stat-head {
     display: flex;
     align-items: center;
@@ -127,8 +165,49 @@
                 <div class="stat-number">{{ transactions_this_week }}</div>
             </div>
         </div>
-    </div>
-    
+    </div><!-- end stats-grid -->
+
+    <!-- Detailed Inventory Cards -->
+    <div class="inv-stats-grid">
+
+        <div class="inv-stat-card available">
+            <p class="inv-stat-label">Available Items</p>
+            <p class="inv-stat-value">{{ available_items }}</p>
+            <p class="inv-stat-sub"><i class="fas fa-arrow-up"></i> Ready for deployment</p>
+            <div class="inv-breakdown">
+                {% for t, c in available_by_type.items %}<span>{{ t }}:</span><strong>{{ c }}</strong>{% endfor %}
+            </div>
+        </div>
+
+        <div class="inv-stat-card issued">
+            <p class="inv-stat-label">Currently Issued</p>
+            <p class="inv-stat-value">{{ issued_items }}</p>
+            <p class="inv-stat-sub"><i class="fas fa-user-check"></i> In field operations</p>
+            <div class="inv-breakdown">
+                {% for t, c in issued_by_type.items %}<span>{{ t }}:</span><strong>{{ c }}</strong>{% endfor %}
+            </div>
+        </div>
+
+        <div class="inv-stat-card maintenance">
+            <p class="inv-stat-label">Under Maintenance</p>
+            <p class="inv-stat-value">{{ maintenance_items }}</p>
+            <p class="inv-stat-sub"><i class="fas fa-exclamation-triangle"></i> Requires attention</p>
+            <div class="inv-breakdown">
+                {% for t, c in maintenance_by_type.items %}<span>{{ t }}:</span><strong>{{ c }}</strong>{% endfor %}
+            </div>
+        </div>
+
+        <div class="inv-stat-card total">
+            <p class="inv-stat-label">Total Inventory</p>
+            <p class="inv-stat-value">{{ total_items }}</p>
+            <p class="inv-stat-sub"><i class="fas fa-database"></i> Complete arsenal</p>
+            <div class="inv-breakdown">
+                {% for t, c in total_by_type.items %}<span>{{ t }}:</span><strong>{{ c }}</strong>{% endfor %}
+            </div>
+        </div>
+
+    </div><!-- end inv-stats-grid -->
+
     <!-- Recent Transactions -->
     <div class="recent-section">
         <h2>Recent Transactions</h2>
