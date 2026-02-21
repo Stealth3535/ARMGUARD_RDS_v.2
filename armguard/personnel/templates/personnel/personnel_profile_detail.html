@@ -205,14 +205,8 @@
 
     /* Info grid */
     .info-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+        display: block;
         margin-bottom: 1rem;
-    }
-
-    @media (max-width: 768px) {
-        .info-grid { grid-template-columns: 1fr; }
     }
 
     /* Compact cards */
@@ -433,52 +427,55 @@
     </div>
 </div>
 
-<!-- Info Cards: 2-column -->
+<!-- Info Card: merged -->
 <div class="info-grid">
-    <!-- Personal Information -->
     <div class="info-card">
-        <p class="info-card-title"><i class="fas fa-user" style="margin-right:0.35rem;"></i>Personal Information</p>
-        <div class="info-rows">
-            <div class="info-row">
-                <span class="info-label">Full Name</span>
-                <span class="info-value">{{ personnel.get_full_name }}</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 2rem;">
+            <!-- Personal Information -->
+            <div>
+                <p class="info-card-title"><i class="fas fa-user" style="margin-right:0.35rem;"></i>Personal Information</p>
+                <div class="info-rows">
+                    <div class="info-row">
+                        <span class="info-label">Full Name</span>
+                        <span class="info-value">{{ personnel.get_full_name }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Contact</span>
+                        <span class="info-value">{{ personnel.tel }}</span>
+                    </div>
+                </div>
             </div>
-            <div class="info-row">
-                <span class="info-label">Contact</span>
-                <span class="info-value">{{ personnel.tel }}</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Military & System Information -->
-    <div class="info-card">
-        <p class="info-card-title"><i class="fas fa-id-badge" style="margin-right:0.35rem;"></i>Military &amp; System</p>
-        <div class="info-rows">
-            <div class="info-row">
-                <span class="info-label">Rank</span>
-                <span class="info-value">
-                    {% if personnel.classification == 'SUPERUSER' %}N/A – Superuser{% else %}{{ personnel.rank }}{% endif %}
-                </span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Serial No.</span>
-                <span class="info-value" style="font-family:monospace;">{{ personnel.get_serial_display }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Group</span>
-                <span class="info-value">{{ personnel.group }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Registered</span>
-                <span class="info-value">{{ personnel.registration_date|date:"d/m/y" }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Created</span>
-                <span class="info-value">{{ personnel.created_at|date:"d/m/y H:i" }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Last Updated</span>
-                <span class="info-value">{{ personnel.updated_at|date:"d/m/y H:i" }}</span>
+            <!-- Military & System -->
+            <div>
+                <p class="info-card-title"><i class="fas fa-id-badge" style="margin-right:0.35rem;"></i>Military &amp; System</p>
+                <div class="info-rows">
+                    <div class="info-row">
+                        <span class="info-label">Rank</span>
+                        <span class="info-value">
+                            {% if personnel.classification == 'SUPERUSER' %}N/A – Superuser{% else %}{{ personnel.rank }}{% endif %}
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Serial No.</span>
+                        <span class="info-value" style="font-family:monospace;">{{ personnel.get_serial_display }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Group</span>
+                        <span class="info-value">{{ personnel.group }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Registered</span>
+                        <span class="info-value">{{ personnel.registration_date|date:"d/m/y" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Created</span>
+                        <span class="info-value">{{ personnel.created_at|date:"d/m/y H:i" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Last Updated</span>
+                        <span class="info-value">{{ personnel.updated_at|date:"d/m/y H:i" }}</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
