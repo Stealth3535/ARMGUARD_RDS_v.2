@@ -144,6 +144,9 @@
     --border-4: 4px;
     --border-8: 8px;
 
+    /* Border Color */
+    --border-color: #d1d5db;
+
     /* Border Radius */
     --radius-none: 0;
     --radius-sm: 0.25rem;    /* 4px */

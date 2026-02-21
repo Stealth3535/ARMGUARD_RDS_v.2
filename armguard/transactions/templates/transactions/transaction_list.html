@@ -16,6 +16,28 @@
         box-shadow: none;
         border-top: none;
     }
+
+    .transaction-form .form-control,
+    .mode-action-row .form-control {
+        border: 1.5px solid #d1d5db;
+        border-radius: 8px;
+        padding: 0.6rem 0.85rem;
+        font-size: 0.97rem;
+        background: #fff;
+        color: #111827;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .transaction-form .form-control:focus,
+    .mode-action-row .form-control:focus {
+        outline: none;
+        border-color: #2c5f2d;
+        box-shadow: 0 0 0 3px rgba(44, 95, 45, 0.15);
+    }
+
+    .transaction-form .form-control::placeholder {
+        color: #9ca3af;
+    }
     
     .page-title {
         font-size: 2rem;
