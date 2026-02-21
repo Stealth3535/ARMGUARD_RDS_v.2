@@ -993,7 +993,6 @@
                 <p class="px-id-role" id="pxRole">---</p>
                 <div class="px-id-badges">
                     <span id="pxClassBadge" class="px-id-badge officer">Officer</span>
-                    <span id="pxStatusBadge" class="px-id-badge active">Active</span>
                 </div>
             </div>
             <div class="px-id-footer">
@@ -1639,16 +1638,6 @@ function showPersonnelCard(data) {
     } else {
         classBadge.textContent = 'Enlisted';
         classBadge.className = 'px-id-badge enlisted';
-    }
-
-    // Status badge
-    const statusBadge = document.getElementById('pxStatusBadge');
-    const status = (data.status || 'Active');
-    statusBadge.textContent = status;
-    if (status === 'Active') {
-        statusBadge.className = 'px-id-badge active';
-    } else {
-        statusBadge.className = 'px-id-badge inactive';
     }
 
     // Photo
