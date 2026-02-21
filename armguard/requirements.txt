@@ -17,6 +17,7 @@ psycopg2-binary==2.9.10      # PostgreSQL adapter (ARM64 ready)
 Pillow==10.4.0               # ARM64: Install libjpeg-dev zlib1g-dev first
 qrcode[pil]==7.4.2           # ARM64 compatible with Pillow
 pyotp==2.9.0                 # TOTP/HOTP MFA for device authorization
+numpy>=1.26.0                # Fast gradient rendering for ID card generator (ARM64 native)
 
 # PDF generation and form filling (ARM64 Compatible)
 reportlab==4.2.5             # ARM64 native support
