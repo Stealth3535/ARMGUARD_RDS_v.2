@@ -1274,12 +1274,8 @@ let suppressPersonnelAutoTab = false;
 let currentPersonnelData = null; // stores last successfully looked-up personnel
 
 function focusAfterItemScan() {
-    // Focus the submit button, NOT the Notes field, so that over-scan
-    // characters don't bleed into Notes. User can still click Notes manually.
-    const submitButton = document.querySelector('.btn-submit-transaction');
-    if (submitButton) {
-        submitButton.focus();
-    }
+    // Leave focus neutral — don't highlight Submit or Notes after a scan.
+    if (document.activeElement) document.activeElement.blur();
 }
 
 function trySubmitOnHotkey() {
