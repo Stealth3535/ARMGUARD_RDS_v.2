@@ -286,7 +286,7 @@
 
 <script>
 const GEN_URL   = "{% url 'print_handler:generate_item_tags' %}";
-const REGEN_BASE = "{% url 'print_handler:regenerate_item_tag' item_id='PLACEHOLDER' %}".replace('PLACEHOLDER', '');
+const REGEN_BASE = "{% url 'print_handler:regenerate_item_tag' item_id='PLACEHOLDER' %}".replace('PLACEHOLDER/', '');
 const PRINT_URL = "{% url 'print_handler:print_item_tags_view' %}";
 const CSRF      = "{{ csrf_token }}";
 
