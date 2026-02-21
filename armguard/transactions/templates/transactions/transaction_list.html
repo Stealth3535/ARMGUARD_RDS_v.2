@@ -1611,17 +1611,16 @@ document.addEventListener('keydown', function(e) {
 
 // ---- Preview card helpers ----
 function showPersonnelCard(data) {
-    // Name
-    const parts = [data.firstname];
-    if (data.middle_initial) parts.push(data.middle_initial + '.');
-    parts.push(data.surname);
-    document.getElementById('pxName').textContent = parts.join(' ').toUpperCase();
+    // Name: rank + fullname
+    const nameParts = [data.firstname];
+    if (data.middle_initial) nameParts.push(data.middle_initial + '.');
+    nameParts.push(data.surname);
+    const rankPrefix = data.rank ? data.rank + ' ' : '';
+    document.getElementById('pxName').textContent = (rankPrefix + nameParts.join(' ')).toUpperCase();
 
-    // Role line: "rank · group"  (mirrors the profile card's role line)
-    const rankPart = data.rank || '';
-    const groupPart = data.group || '';
-    const roleParts = [rankPart, groupPart].filter(Boolean);
-    document.getElementById('pxRole').textContent = roleParts.join(' · ');
+    // Role line: serial PAF
+    const serial = data.serial || '';
+    document.getElementById('pxRole').textContent = serial ? serial + ' PAF' : '---';
 
     // Personnel ID (uses the system id field, e.g. PO-154068180226)
     document.getElementById('pxPersonnelId').textContent = data.id || '---';

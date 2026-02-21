@@ -377,9 +377,9 @@
                 {% endif %}
             </div>
             <div class="id-card-body">
-                <p class="profile-name">{{ personnel.get_full_name }}</p>
+                <p class="profile-name">{{ personnel.rank }} {{ personnel.get_full_name }}</p>
                 <p class="profile-role">
-                    {{ personnel.rank }}{% if personnel.classification != 'SUPERUSER' %} &nbsp;·&nbsp; {{ personnel.group }}{% endif %}
+                    {{ personnel.serial }} PAF
                 </p>
                 <div class="profile-badges">
                     {% if personnel.classification == 'OFFICER' %}
