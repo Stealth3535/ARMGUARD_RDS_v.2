@@ -299,9 +299,16 @@
 
             <!-- Private key save notice (shown after generation) -->
             <div id="key-save-notice" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:8px; background:#fffbeb; border:2px solid #fcd34d; color:#78350f; font-size:0.88rem;">
-                <strong>🔑 Two files saved to Downloads:</strong><br>
+                <strong>🔑 Two files saved to your Downloads folder:</strong><br>
                 &bull; <code>armguard_device.key</code> — private key, <strong>never share this</strong><br>
-                &bull; <code>armguard_device.csr</code> — certificate request (safe to keep for records)
+                &bull; <code>armguard_device.csr</code> — certificate request (safe to keep for records)<br>
+                <br>
+                <div style="margin-top:0.5rem; padding:0.6rem 0.75rem; background:#fee2e2; border:1px solid #fca5a5; border-radius:6px; color:#7f1d1d; font-size:0.85rem;">
+                    ⚠️ <strong>DO NOT delete <code>armguard_device.key</code> from Downloads.</strong><br>
+                    If you clear browser data (Cookies &amp; site data), the hidden backup is also wiped.
+                    The Downloads copy is then your <strong>only recovery option</strong>.
+                    Losing it means your certificate is permanently invalidated — a new request must be submitted.
+                </div>
             </div>
 
             <button type="submit" id="btn-submit" class="btn-submit" disabled style="opacity:0.5;cursor:not-allowed;">
@@ -317,6 +324,59 @@
 (function () {
     'use strict';
 
+    /* ── Storage layer 1: IndexedDB (hidden, survives history/download clear) ── */
+    const DB_NAME    = 'armguard-keystore';
+    const DB_VERSION = 1;
+    const STORE      = 'keys';
+    const RECORD_ID  = 'device-keypair';
+    const LS_KEY     = 'armguard.device.keypair';   /* localStorage backup key */
+
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = e => e.target.result.createObjectStore(STORE, { keyPath: 'id' });
+            req.onsuccess = e => resolve(e.target.result);
+            req.onerror   = e => reject(e.target.error);
+        });
+    }
+
+    /* ── Storage layer 2: localStorage (different bucket — independent backup) ── */
+    function lsSave(record) {
+        try { localStorage.setItem(LS_KEY, JSON.stringify(record)); } catch (e) { /* quota full */ }
+    }
+    function lsLoad() {
+        try { const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; }
+        catch (e) { return null; }
+    }
+
+    async function loadStored() {
+        /* Try IndexedDB first; fall back to localStorage if IDB unavailable/empty */
+        try {
+            const db  = await openDB();
+            const rec = await new Promise((resolve, reject) => {
+                const req = db.transaction(STORE, 'readonly').objectStore(STORE).get(RECORD_ID);
+                req.onsuccess = e => resolve(e.target.result || null);
+                req.onerror   = e => reject(e.target.error);
+            });
+            if (rec) return rec;
+        } catch (e) { /* IDB blocked or unavailable */ }
+        return lsLoad();   /* fallback to localStorage backup */
+    }
+
+    async function saveStored(record) {
+        /* Write to BOTH storage buckets for redundancy */
+        lsSave(record);   /* localStorage — immediate, synchronous */
+        try {
+            const db = await openDB();
+            await new Promise((resolve, reject) => {
+                const req = db.transaction(STORE, 'readwrite').objectStore(STORE)
+                              .put({ id: RECORD_ID, ...record });
+                req.onsuccess = () => resolve();
+                req.onerror   = e => reject(e.target.error);
+            });
+        } catch (e) { /* IDB write failed — localStorage backup will cover */ }
+    }
+
     /* ── ASN.1 DER helpers ─────────────────────────────────────── */
     function encLen(l) {
         if (l < 128) return [l];
@@ -328,83 +388,72 @@
     function set_(arr)      { return tlv(0x31, arr); }
     function int_(arr)      { return tlv(0x02, arr); }
     function oid_(bytes)    { return tlv(0x06, bytes); }
-    function utf8_(str)     { return tlv(0x0C, [...new TextEncoder().encode(str)]); }
-    function bits_(arr)     { return tlv(0x03, [0, ...arr]); }   // 0 unused bits
-    function ctx0_(arr)     { return tlv(0xA0, arr); }           // [0] IMPLICIT
+    function bits_(arr)     { return tlv(0x03, [0, ...arr]); }
+    function ctx0_(arr)     { return tlv(0xA0, arr); }
     function null_()        { return [0x05, 0x00]; }
-
     function toPEM(bytes, label) {
-        const b64   = btoa(String.fromCharCode(...bytes));
-        const lines = b64.match(/.{1,64}/g).join('\n');
-        return `-----BEGIN ${label}-----\n${lines}\n-----END ${label}-----`;
+        const b64 = btoa(String.fromCharCode(...bytes));
+        return `-----BEGIN ${label}-----\n${b64.match(/.{1,64}/g).join('\n')}\n-----END ${label}-----`;
     }
 
     /* ── CSR generator ─────────────────────────────────────────── */
     async function generateCSR(cn) {
-        const org = '9533 RDS Squadron';
-        const country = 'PH';
-
         const kp = await crypto.subtle.generateKey(
             { name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048,
               publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
             true, ['sign', 'verify']
         );
-
         const privDer = new Uint8Array(await crypto.subtle.exportKey('pkcs8', kp.privateKey));
         const pubSpki = new Uint8Array(await crypto.subtle.exportKey('spki',  kp.publicKey));
-
-        /* Subject: C=PH, O=9533 RDS Squadron, CN=<device name> */
-        const cnOID  = [0x55, 0x04, 0x03];   // 2.5.4.3
-        const orgOID = [0x55, 0x04, 0x0A];   // 2.5.4.10
-        const cntOID = [0x55, 0x04, 0x06];   // 2.5.4.6
-
-        function atv(oidBytes, value, tag) {
-            tag = tag || 0x0C;  // UTF8String default; country uses PrintableString
-            const valBytes = (tag === 0x13)
-                ? [...new TextEncoder().encode(value)]
-                : [...new TextEncoder().encode(value)];
-            return seq([...oid_(oidBytes), ...tlv(tag, valBytes)]);
+        function atv(oidBytes, val, tag) {
+            tag = tag || 0x0C;
+            return seq([...oid_(oidBytes), ...tlv(tag, [...new TextEncoder().encode(val)])]);
         }
-
         const subject = seq([
-            ...set_(atv(cntOID, country, 0x13)),   // PrintableString for country
-            ...set_(atv(orgOID, org)),
-            ...set_(atv(cnOID,  cn)),
+            ...set_(atv([0x55,0x04,0x06], 'PH',               0x13)),
+            ...set_(atv([0x55,0x04,0x0A], '9533 RDS Squadron'     )),
+            ...set_(atv([0x55,0x04,0x03], cn                      )),
         ]);
-
-        const version = int_([0x00]);
-        const spki    = [...pubSpki];
-        const attrs   = ctx0_([]);
-
-        const certReqInfo = seq([...version, ...subject, ...spki, ...attrs]);
-
-        const sig = new Uint8Array(
-            await crypto.subtle.sign({ name: 'RSASSA-PKCS1-v1_5' }, kp.privateKey, new Uint8Array(certReqInfo))
-        );
-
-        /* sha256WithRSAEncryption OID: 1.2.840.113549.1.1.11 */
-        const sigAlgOID = [0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0B];
-        const sigAlg    = seq([...oid_(sigAlgOID), ...null_()]);
-        const sigBS     = bits_([...sig]);
-
-        const csr = seq([...certReqInfo, ...sigAlg, ...sigBS]);
-
+        const certReqInfo = seq([...int_([0x00]), ...subject, ...pubSpki, ...ctx0_([])]);
+        const sig = new Uint8Array(await crypto.subtle.sign(
+            { name: 'RSASSA-PKCS1-v1_5' }, kp.privateKey, new Uint8Array(certReqInfo)));
+        const sigAlg = seq([...oid_([0x2A,0x86,0x48,0x86,0xF7,0x0D,0x01,0x01,0x0B]), ...null_()]);
+        const csr    = seq([...certReqInfo, ...sigAlg, ...bits_([...sig])]);
         return {
             csrPem:     toPEM([...csr],     'CERTIFICATE REQUEST'),
             privKeyPem: toPEM([...privDer], 'PRIVATE KEY'),
         };
     }
 
-    /* ── Auto-download PEM file ───────────────────────────────── */
+    /* ── Auto-download PEM file ────────────────────────────────── */
     function downloadPEM(pem, filename) {
-        const blob = new Blob([pem], { type: 'application/x-pem-file' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href     = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+        const a = Object.assign(document.createElement('a'), {
+            href:     URL.createObjectURL(new Blob([pem], { type: 'application/x-pem-file' })),
+            download: filename,
+        });
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    }
+
+    /* ── UI helpers ────────────────────────────────────────────── */
+    function setReady(spinner, msg, certBox, notice, btn, csrField, readyFlag, isNew) {
+        spinner.style.animation = 'none';
+        spinner.textContent     = '✅';
+        certBox.style.background   = '#f0fdf4';
+        certBox.style.borderColor  = '#4ade80';
+        btn.disabled       = false;
+        btn.style.opacity  = '1';
+        btn.style.cursor   = 'pointer';
+        readyFlag.value    = '1';
+        if (isNew) {
+            msg.textContent      = 'Certificate secured on this device — private key & CSR saved to Downloads.';
+            notice.style.display = 'block';
+        } else {
+            msg.textContent      = '🔒 Existing certificate loaded from secure device storage (no re-download needed).';
+            msg.style.color      = '#1d4ed8';
+            certBox.style.background  = '#eff6ff';
+            certBox.style.borderColor = '#93c5fd';
+        }
     }
 
     /* ── Main ──────────────────────────────────────────────────── */
@@ -416,72 +465,66 @@
         const csrField  = document.getElementById('csr_pem');
         const readyFlag = document.getElementById('csr_ready');
         const btn       = document.getElementById('btn-submit');
-        const form      = document.querySelector('form');
         const nameInput = document.getElementById('device_name');
 
-        /* Wait until user has typed a device name, then generate */
-        async function doGenerate() {
-            const cn = (nameInput.value || 'ArmGuard Device').trim();
+        async function doGenerate(cn, forceNew) {
             try {
+                /* Check IndexedDB for existing key matching this CN */
+                if (!forceNew) {
+                    const stored = await loadStored();
+                    if (stored && stored.csrPem && stored.cn === cn) {
+                        csrField.value = stored.csrPem;
+                        setReady(spinner, msg, certBox, notice, btn, csrField, readyFlag, false);
+                        return;
+                    }
+                }
+
+                /* Generate new key pair */
                 const { csrPem, privKeyPem } = await generateCSR(cn);
+                csrField.value = csrPem;
 
-                csrField.value  = csrPem;
-                readyFlag.value = '1';
+                /* Persist to IndexedDB — survives history/download clears */
+                await saveStored({ cn, csrPem, privKeyPem, created: Date.now() });
 
-                /* Update status badge */
-                spinner.style.animation = 'none';
-                spinner.textContent = '✅';
-                msg.textContent     = 'Security certificate ready — private key & CSR saved to Downloads.';
-                certBox.style.background = '#f0fdf4';
-                certBox.style.borderColor = '#4ade80';
+                setReady(spinner, msg, certBox, notice, btn, csrField, readyFlag, true);
 
-                /* Enable submit */
-                btn.disabled    = false;
-                btn.style.opacity = '1';
-                btn.style.cursor  = 'pointer';
-
-                /* Auto-download private key, then CSR with slight delay */
+                /* Also download as backup copies */
                 downloadPEM(privKeyPem, 'armguard_device.key');
                 setTimeout(() => downloadPEM(csrPem, 'armguard_device.csr'), 600);
-                notice.style.display = 'block';
 
             } catch (err) {
                 spinner.textContent = '⚠️';
                 msg.textContent     = 'Certificate generation failed: ' + err.message + '. You can still submit without one.';
                 certBox.style.background  = '#fff7ed';
                 certBox.style.borderColor = '#fb923c';
-                /* Allow submission without CSR */
-                btn.disabled   = false;
-                btn.style.opacity = '1';
-                btn.style.cursor  = 'pointer';
-                console.error('CSR generation error:', err);
+                btn.disabled       = false;
+                btn.style.opacity  = '1';
+                btn.style.cursor   = 'pointer';
+                console.error('CSR error:', err);
             }
         }
 
-        /* Regenerate CSR if device name changes significantly */
-        let generateTimer = null;
+        /* Regenerate if device name changes (debounced) */
+        let timer = null;
         nameInput.addEventListener('blur', () => {
-            if (nameInput.value.trim() && readyFlag.value === '0') doGenerate();
+            const cn = nameInput.value.trim();
+            if (cn && readyFlag.value === '0') doGenerate(cn, false);
         });
         nameInput.addEventListener('input', () => {
-            clearTimeout(generateTimer);
-            generateTimer = setTimeout(() => {
-                if (nameInput.value.trim()) {
-                    readyFlag.value = '0'; /* mark stale */
-                    doGenerate();
-                }
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                const cn = nameInput.value.trim();
+                if (cn) { readyFlag.value = '0'; doGenerate(cn, false); }
             }, 1500);
         });
 
-        /* Start immediately with placeholder name */
-        doGenerate();
+        /* On load: try to restore from IndexedDB first */
+        doGenerate(nameInput.value.trim() || 'ArmGuard Device', false);
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
+    document.readyState === 'loading'
+        ? document.addEventListener('DOMContentLoaded', init)
+        : init();
 })();
 </script>
         {% endif %}

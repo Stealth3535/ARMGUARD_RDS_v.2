@@ -33,12 +33,19 @@
 
         <div id="csr-status" style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.75rem;">
             <span id="csr-spinner" style="font-size:1.2rem; animation:spin 1s linear infinite; display:inline-block;">⏳</span>
-            <span id="csr-msg" style="font-size:0.9rem; color:#14532d; font-weight:600;">Generating certificate in background…</span>
+            <span id="csr-msg" style="font-size:0.9rem; color:#14532d; font-weight:600;">Checking secure device storage…</span>
         </div>
 
         <div id="csr-key-notice" style="display:none; margin-bottom:0.75rem; padding:0.6rem 0.8rem; border-radius:7px; background:#fffbeb; border:1px solid #fcd34d; color:#78350f; font-size:0.85rem;">
-            🔑 <strong>Two files saved to Downloads:</strong>
-            <code>armguard_device.key</code> (keep secret) &amp; <code>armguard_device.csr</code> (record copy)
+            🔑 <strong>Two files saved to your Downloads folder:</strong><br>
+            &bull; <code>armguard_device.key</code> — private key (keep secret)<br>
+            &bull; <code>armguard_device.csr</code> — certificate request (record copy)<br>
+            <div style="margin-top:0.45rem; padding:0.5rem 0.65rem; background:#fee2e2; border:1px solid #fca5a5; border-radius:5px; color:#7f1d1d; font-size:0.82rem;">
+                ⚠️ <strong>DO NOT delete <code>armguard_device.key</code> from Downloads.</strong>
+                If browser data (Cookies &amp; site data) is cleared, the hidden backup is also wiped.
+                The Downloads copy is then your <strong>only recovery option</strong>.
+                Losing it permanently invalidates your certificate — a new request must be submitted.
+            </div>
         </div>
 
         <form id="csr-form" method="post" action="{% url 'armguard_admin:attach_csr_to_device' auth_request.id %}">
@@ -55,45 +62,38 @@
     <script>
     (function () {
         'use strict';
+        /* ── Storage layer 1: IndexedDB (hidden, survives history/download clear) ── */
+        const DB_NAME='armguard-keystore',DB_VERSION=1,STORE='keys',RECORD_ID='device-keypair';
+        const LS_KEY='armguard.device.keypair';  /* localStorage backup key */
+        function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=e=>e.target.result.createObjectStore(STORE,{keyPath:'id'});r.onsuccess=e=>res(e.target.result);r.onerror=e=>rej(e.target.error);});}
+        /* ── Storage layer 2: localStorage (independent bucket backup) ── */
+        function lsSave(rec){try{localStorage.setItem(LS_KEY,JSON.stringify(rec));}catch(e){}}
+        function lsLoad(){try{const r=localStorage.getItem(LS_KEY);return r?JSON.parse(r):null;}catch(e){return null;}}
+        async function loadStored(){
+            try{const db=await openDB();const rec=await new Promise((res,rej)=>{const r=db.transaction(STORE,'readonly').objectStore(STORE).get(RECORD_ID);r.onsuccess=e=>res(e.target.result||null);r.onerror=e=>rej(e.target.error);});if(rec)return rec;}catch(e){}
+            return lsLoad();
+        }
+        async function saveStored(rec){
+            lsSave(rec);
+            try{const db=await openDB();await new Promise((res,rej)=>{const r=db.transaction(STORE,'readwrite').objectStore(STORE).put({id:RECORD_ID,...rec});r.onsuccess=()=>res();r.onerror=e=>rej(e.target.error);});}catch(e){}
+        }
+        /* ── ASN.1 / CSR ────────────────────────────────────────── */
         function encLen(l){return l<128?[l]:l<256?[0x81,l]:[0x82,(l>>8)&0xff,l&0xff];}
         function tlv(t,a){return[t,...encLen(a.length),...a];}
-        function seq(a){return tlv(0x30,a);}
-        function set_(a){return tlv(0x31,a);}
-        function oid_(b){return tlv(0x06,b);}
-        function bits_(a){return tlv(0x03,[0,...a]);}
-        function ctx0_(a){return tlv(0xA0,a);}
-        function null_(){return[0x05,0x00];}
-        function int_(a){return tlv(0x02,a);}
-        function toPEM(bytes,label){
-            const b64=btoa(String.fromCharCode(...bytes));
-            return `-----BEGIN ${label}-----\n${b64.match(/.{1,64}/g).join('\n')}\n-----END ${label}-----`;
-        }
-        function downloadPEM(pem,filename){
-            const a=Object.assign(document.createElement('a'),{
-                href:URL.createObjectURL(new Blob([pem],{type:'application/x-pem-file'})),
-                download:filename});
-            document.body.appendChild(a);a.click();
-            setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
-        }
+        function seq(a){return tlv(0x30,a);} function set_(a){return tlv(0x31,a);}
+        function oid_(b){return tlv(0x06,b);} function bits_(a){return tlv(0x03,[0,...a]);}
+        function ctx0_(a){return tlv(0xA0,a);} function null_(){return[0x05,0x00];} function int_(a){return tlv(0x02,a);}
+        function toPEM(bytes,label){const b64=btoa(String.fromCharCode(...bytes));return`-----BEGIN ${label}-----\n${b64.match(/.{1,64}/g).join('\n')}\n-----END ${label}-----`;}
+        function downloadPEM(pem,filename){const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([pem],{type:'application/x-pem-file'})),download:filename});document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
         async function generateCSR(cn){
-            const kp=await crypto.subtle.generateKey(
-                {name:'RSASSA-PKCS1-v1_5',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},
-                true,['sign','verify']);
+            const kp=await crypto.subtle.generateKey({name:'RSASSA-PKCS1-v1_5',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['sign','verify']);
             const privDer=new Uint8Array(await crypto.subtle.exportKey('pkcs8',kp.privateKey));
             const pubSpki=new Uint8Array(await crypto.subtle.exportKey('spki',kp.publicKey));
-            function atv(oidBytes,val,tag){
-                tag=tag||0x0C;
-                return seq([...oid_(oidBytes),...tlv(tag,[...new TextEncoder().encode(val)])]);
-            }
-            const subject=seq([
-                ...set_(atv([0x55,0x04,0x06],'PH',0x13)),
-                ...set_(atv([0x55,0x04,0x0A],'9533 RDS Squadron')),
-                ...set_(atv([0x55,0x04,0x03],cn)),
-            ]);
+            function atv(o,v,t){t=t||0x0C;return seq([...oid_(o),...tlv(t,[...new TextEncoder().encode(v)])]);}
+            const subject=seq([...set_(atv([0x55,0x04,0x06],'PH',0x13)),...set_(atv([0x55,0x04,0x0A],'9533 RDS Squadron')),...set_(atv([0x55,0x04,0x03],cn))]);
             const certReqInfo=seq([...int_([0x00]),...subject,...pubSpki,...ctx0_([])]);
             const sig=new Uint8Array(await crypto.subtle.sign({name:'RSASSA-PKCS1-v1_5'},kp.privateKey,new Uint8Array(certReqInfo)));
-            const sigAlg=seq([...oid_([0x2A,0x86,0x48,0x86,0xF7,0x0D,0x01,0x01,0x0B]),...null_()]);
-            const csr=seq([...certReqInfo,...sigAlg,...bits_([...sig])]);
+            const csr=seq([...certReqInfo,...seq([...oid_([0x2A,0x86,0x48,0x86,0xF7,0x0D,0x01,0x01,0x0B]),...null_()]),...bits_([...sig])]);
             return{csrPem:toPEM([...csr],'CERTIFICATE REQUEST'),privKeyPem:toPEM([...privDer],'PRIVATE KEY')};
         }
         async function init(){
@@ -105,18 +105,29 @@
             const btn=document.getElementById('csr-attach-btn');
             const cn='{{ auth_request.device_name|escapejs }}'||'ArmGuard Device';
             try{
+                /* ── Check IndexedDB first — reuse if already stored on this machine ── */
+                const stored=await loadStored();
+                if(stored && stored.csrPem && stored.cn===cn){
+                    hiddenCsr.value=stored.csrPem;
+                    spinner.style.animation='none';spinner.textContent='🔒';
+                    msg.textContent='Existing certificate loaded from secure device storage — no re-download needed.';
+                    msg.style.color='#1d4ed8';
+                    panel.style.background='#eff6ff';panel.style.borderColor='#93c5fd';
+                    btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';
+                    return;
+                }
+                /* ── No stored key — generate fresh ── */
                 const{csrPem,privKeyPem}=await generateCSR(cn);
+                await saveStored({cn,csrPem,privKeyPem,created:Date.now()});
                 hiddenCsr.value=csrPem;
                 spinner.style.animation='none';spinner.textContent='✅';
-                msg.textContent='Certificate ready — private key & CSR saved to Downloads.';
+                msg.textContent='Certificate secured on this device — private key & CSR saved to Downloads.';
                 downloadPEM(privKeyPem,'armguard_device.key');
                 setTimeout(()=>downloadPEM(csrPem,'armguard_device.csr'),600);
                 notice.style.display='block';
                 btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';
             }catch(e){
-                spinner.textContent='⚠️';
-                msg.textContent='Generation failed: '+e.message;
-                msg.style.color='#b45309';
+                spinner.textContent='⚠️';msg.textContent='Generation failed: '+e.message;msg.style.color='#b45309';
             }
         }
         document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init):init();
