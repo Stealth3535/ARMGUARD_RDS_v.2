@@ -285,6 +285,53 @@ def serve_id_card_image(request, personnel_id, side):
     return FileResponse(open(filepath, 'rb'), content_type='image/png')
 
 
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def id_card_diagnostics(request):
+    """Superuser-only diagnostic page — shows exactly what paths Django is checking."""
+    from django.http import HttpResponse
+    import glob
+
+    media_root = settings.MEDIA_ROOT
+    id_cards_dir = os.path.join(media_root, 'personnel_id_cards')
+
+    # List actual files on disk
+    actual_files = []
+    if os.path.isdir(id_cards_dir):
+        actual_files = sorted(os.listdir(id_cards_dir))
+
+    # Check each personnel
+    rows = []
+    for p in Personnel.objects.filter(deleted_at__isnull=True).order_by('surname')[:5]:
+        front_path = os.path.join(id_cards_dir, f"{p.id}_front.png")
+        combined_path = os.path.join(id_cards_dir, f"{p.id}.png")
+        rows.append(
+            f"<tr><td>{p.id}</td>"
+            f"<td>{front_path}</td>"
+            f"<td>{'EXISTS' if os.path.exists(front_path) else 'MISSING'}</td>"
+            f"<td>{combined_path}</td>"
+            f"<td>{'EXISTS' if os.path.exists(combined_path) else 'MISSING'}</td></tr>"
+        )
+
+    html = f"""
+    <html><head><title>ID Card Diagnostics</title>
+    <style>body{{font-family:monospace;padding:2rem}}table{{border-collapse:collapse}}
+    td,th{{border:1px solid #ccc;padding:6px 12px}}</style></head><body>
+    <h2>ID Card Path Diagnostics</h2>
+    <p><strong>MEDIA_ROOT</strong> = <code>{media_root}</code></p>
+    <p><strong>personnel_id_cards dir</strong> = <code>{id_cards_dir}</code></p>
+    <p><strong>Dir exists?</strong> {os.path.isdir(id_cards_dir)}</p>
+    <p><strong>Files in dir ({len(actual_files)} total)</strong></p>
+    <pre>{'<br>'.join(actual_files[:30]) or '(empty)'}</pre>
+    <h3>First 5 personnel path check:</h3>
+    <table><tr><th>ID</th><th>Front path</th><th>Front</th><th>Combined path</th><th>Combined</th></tr>
+    {''.join(rows)}
+    </table>
+    </body></html>
+    """
+    return HttpResponse(html)
+
+
 def _id_card_img_url(request, personnel_id, side='front'):
     """Return the URL for an ID card image served through the Django view."""
     from django.urls import reverse
