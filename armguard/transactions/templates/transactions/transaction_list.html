@@ -1720,24 +1720,45 @@ personnelInput.addEventListener('blur', async function() {
         if (response.ok) {
             const data = await response.json();
 
-            if (data.has_issued_firearm) {
+            const action = actionSelect.value; // 'withdraw' or 'return'
+            const fullName = `${data.firstname} ${data.middle_initial ? data.middle_initial + '.' : ''} ${data.surname}`;
+
+            if (data.has_issued_firearm && action === 'withdraw') {
+                // Trying to withdraw but already has a firearm — error
                 personnelValidated = false;
                 personnelInfo.className = 'info-text error';
-                personnelInfo.textContent = '✗ Personnel already has an issued firearm';
+                personnelInfo.textContent = `✗ ${fullName} already has an issued firearm`;
                 personnelInfo.style.display = 'block';
-                showNotification('Personnel already has and issued firearm', 'error');
+                showNotification(`Personnel already has an issued firearm`, 'error');
+                showPersonnelCard(data);
+                return;
+            }
+
+            if (!data.has_issued_firearm && action === 'return') {
+                // Trying to return but nothing issued — warning
+                personnelValidated = false;
+                personnelInfo.className = 'info-text warning';
+                personnelInfo.textContent = `⚠ ${fullName} has no issued firearm to return`;
+                personnelInfo.style.display = 'block';
+                showNotification(`Personnel has no issued firearm to return`, 'warning');
                 showPersonnelCard(data);
                 return;
             }
 
             personnelValidated = true;
             personnelInfo.className = 'info-text success';
-            personnelInfo.textContent = `✓ ${data.firstname} ${data.middle_initial ? data.middle_initial + '.' : ''} ${data.surname} - ${data.rank}`;
+            personnelInfo.textContent = `✓ ${fullName} - ${data.rank}`;
             personnelInfo.style.display = 'block';
-            
+
             // Show automatic notification for successful personnel scan
-            showNotification(`Personnel scanned: ${data.firstname} ${data.surname} - ${data.rank}`, 'success');
+            showNotification(`Personnel scanned: ${fullName} - ${data.rank}`, 'success');
             showPersonnelCard(data);
+
+            // If returning and person has an issued item, auto-fill the item ID
+            if (action === 'return' && data.has_issued_firearm && data.issued_item_id) {
+                itemInput.value = data.issued_item_id;
+                itemInput.dispatchEvent(new Event('blur'));
+            }
 
             // Move directly to Item ID input after successful personnel validation
             if (suppressPersonnelAutoTab) {
