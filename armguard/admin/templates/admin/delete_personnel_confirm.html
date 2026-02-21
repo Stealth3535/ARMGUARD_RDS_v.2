@@ -1,275 +1,361 @@
+﻿{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delete Personnel - Armguard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
+
+{% block title %}Delete Personnel - ArmGuard{% endblock %}
+
+{% block extra_css %}
 <style>
-    .delete-warning {
+    /* â”€â”€ Unified Delete Confirmation Design â”€â”€ */
+    .delete-page-wrap {
+        max-width: 680px;
+        margin: 2.5rem auto;
+        padding: 0 1rem;
+    }
+
+    .delete-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+        overflow: hidden;
+    }
+
+    /* Red gradient header */
+    .delete-card-header {
         background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(220, 53, 69, 0.3);
-        margin-bottom: 2rem;
-        border: 2px solid rgba(255,255,255,0.1);
+        color: #fff;
+        padding: 2rem 2rem 1.5rem;
+        text-align: center;
+        border-bottom: 3px solid rgba(255,255,255,0.15);
     }
-    
-    .warning-icon {
-        font-size: 4rem;
+
+    .delete-card-header .warn-icon {
+        font-size: 3.5rem;
         color: #ffc107;
-        text-shadow: 0 0 20px rgba(255,193,7,0.5);
-        animation: pulse 2s infinite;
+        text-shadow: 0 0 16px rgba(255,193,7,0.5);
+        animation: warn-pulse 2s infinite;
+        display: block;
+        margin-bottom: 0.75rem;
     }
-    
-    @keyframes pulse {
+
+    @keyframes warn-pulse {
         0%, 100% { opacity: 1; }
-        50% { opacity: 0.6; }
+        50%       { opacity: 0.55; }
     }
-    
-    .personnel-details {
-        background: white;
-        border-radius: 12px;
+
+    .delete-card-header h2 {
+        margin: 0 0 0.5rem;
+        font-size: 1.6rem;
+        font-weight: 700;
+    }
+
+    .delete-card-header p {
+        margin: 0;
+        font-size: 1rem;
+        opacity: 0.9;
+    }
+
+    /* Card body */
+    .delete-card-body {
         padding: 2rem;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-        margin-bottom: 2rem;
     }
-    
+
+    /* Section title */
+    .del-section-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #495057;
+        margin: 0 0 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Details table */
+    .del-details {
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+        border: 1px solid #e9ecef;
+    }
+
     .detail-row {
         display: flex;
         justify-content: space-between;
-        padding: 0.75rem 0;
+        align-items: center;
+        padding: 0.7rem 1rem;
         border-bottom: 1px solid #e9ecef;
     }
-    
-    .detail-row:last-child {
-        border-bottom: none;
-    }
-    
+
+    .detail-row:last-child { border-bottom: none; }
+
     .detail-label {
         font-weight: 600;
-        color: #495057;
+        color: #6c757d;
+        font-size: 0.9rem;
     }
-    
+
     .detail-value {
         color: #212529;
         font-weight: 500;
+        font-size: 0.9rem;
+        text-align: right;
     }
-    
-    .btn-danger-custom {
-        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-        border: none;
-        padding: 0.75rem 2rem;
+
+    .detail-value.danger { color: #dc3545; }
+
+    /* Inline badge styles */
+    .del-badge {
+        display: inline-block;
+        padding: 0.2rem 0.65rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
         font-weight: 600;
-        letter-spacing: 0.5px;
-        box-shadow: 0 4px 16px rgba(220, 53, 69, 0.3);
-        transition: all 0.3s ease;
     }
-    
-    .btn-danger-custom:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 24px rgba(220, 53, 69, 0.4);
-    }
-    
-    .btn-secondary-custom {
-        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-        border: none;
-        padding: 0.75rem 2rem;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        box-shadow: 0 4px 16px rgba(108, 117, 125, 0.3);
-        transition: all 0.3s ease;
-    }
-    
-    .btn-secondary-custom:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 24px rgba(108, 117, 125, 0.4);
-    }
-    
-    .reason-box {
-        background: #f8f9fa;
-        border: 2px solid #dee2e6;
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    
-    .reason-box textarea {
-        border: 2px solid #ced4da;
-        border-radius: 6px;
-        min-height: 120px;
-        transition: border-color 0.3s ease;
-    }
-    
-    .reason-box textarea:focus {
-        border-color: #dc3545;
-        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
-    }
-    
-    .warning-list {
+    .del-badge-active   { background: #d4edda; color: #155724; }
+    .del-badge-inactive { background: #f8d7da; color: #721c24; }
+    .del-badge-super    { background: #d1ecf1; color: #0c5460; }
+    .del-badge-staff    { background: #fff3cd; color: #856404; }
+    .del-badge-status   { background: #e2e3e5; color: #383d41; }
+
+    /* Yellow warning list */
+    .del-warning-list {
         background: #fff3cd;
         border-left: 4px solid #ffc107;
-        padding: 1rem;
-        margin: 1rem 0;
         border-radius: 4px;
+        padding: 0.9rem 1rem 0.9rem 1rem;
+        margin-bottom: 1.5rem;
     }
-    
-    .warning-list ul {
-        margin: 0.5rem 0 0 0;
-        padding-left: 1.5rem;
-    }
-    
-    .warning-list li {
+
+    .del-warning-list .warn-heading {
+        font-weight: 700;
         color: #856404;
-        margin: 0.25rem 0;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .del-warning-list ul {
+        margin: 0;
+        padding-left: 1.4rem;
+    }
+
+    .del-warning-list li {
+        color: #856404;
+        margin: 0.2rem 0;
+        font-size: 0.9rem;
+    }
+
+    /* Info note (cyan) */
+    .del-info-note {
+        background: #d1ecf1;
+        border-left: 4px solid #17a2b8;
+        border-radius: 4px;
+        padding: 0.9rem 1rem;
+        margin-bottom: 1.25rem;
+        color: #0c5460;
+        font-size: 0.9rem;
+    }
+
+    /* Reason box */
+    .del-reason-box {
+        margin-bottom: 1.75rem;
+    }
+
+    .del-reason-box label {
+        display: block;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .del-reason-box label .req { color: #dc3545; }
+
+    .del-reason-box textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #ced4da;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 0.95rem;
+        min-height: 100px;
+        resize: vertical;
+        transition: border-color 0.25s;
+        box-sizing: border-box;
+    }
+
+    .del-reason-box textarea:focus {
+        outline: none;
+        border-color: #dc3545;
+        box-shadow: 0 0 0 3px rgba(220,53,69,0.15);
+    }
+
+    .del-reason-box small {
+        display: block;
+        margin-top: 0.35rem;
+        color: #6c757d;
+        font-size: 0.8rem;
+    }
+
+    /* Action buttons row */
+    .del-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .del-btn {
+        padding: 0.75rem 1.75rem;
+        border: none;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .del-btn:hover { transform: translateY(-2px); }
+
+    .del-btn-cancel {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(108,117,125,0.3);
+    }
+
+    .del-btn-cancel:hover {
+        box-shadow: 0 6px 20px rgba(108,117,125,0.4);
+        color: #fff;
+    }
+
+    .del-btn-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(220,53,69,0.3);
+    }
+
+    .del-btn-danger:hover {
+        box-shadow: 0 6px 20px rgba(220,53,69,0.4);
+    }
+
+    .del-btn-danger:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
     }
 </style>
-</head>
-<body>
-<div class="container-fluid px-4">
-    <div class="row justify-content-center mt-4">
-        <div class="col-lg-8">
-            
-            <!-- Warning Header -->
-            <div class="delete-warning text-center">
-                <div class="warning-icon mb-3">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <h2 class="fw-bold mb-3">⚠️ Delete Personnel Record</h2>
-                <p class="mb-0 fs-5">
-                    You are about to permanently delete this personnel record.
-                </p>
-            </div>
-            
-            <!-- Personnel Details Card -->
-            <div class="personnel-details">
-                <h4 class="mb-4 text-center">
-                    <i class="fas fa-user-circle me-2"></i>Personnel Information
-                </h4>
-                
+{% endblock %}
+
+{% block content %}
+<div class="delete-page-wrap">
+    <div class="delete-card">
+
+        <!-- â”€â”€ Header â”€â”€ -->
+        <div class="delete-card-header">
+            <i class="fas fa-exclamation-triangle warn-icon"></i>
+            <h2>Delete Personnel Record</h2>
+            <p>You are about to permanently delete this personnel record.</p>
+        </div>
+
+        <!-- â”€â”€ Body â”€â”€ -->
+        <div class="delete-card-body">
+
+            <!-- Personnel details -->
+            <p class="del-section-title">
+                <i class="fas fa-user-circle"></i> Personnel Information
+            </p>
+            <div class="del-details">
                 <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="fas fa-id-badge me-2"></i>Personnel ID:
-                    </span>
+                    <span class="detail-label"><i class="fas fa-id-badge"></i> Personnel ID</span>
                     <span class="detail-value">{{ personnel_to_delete.id }}</span>
                 </div>
-                
                 <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="fas fa-user me-2"></i>Full Name:
-                    </span>
+                    <span class="detail-label"><i class="fas fa-user"></i> Full Name</span>
                     <span class="detail-value">{{ personnel_to_delete.get_full_name }}</span>
                 </div>
-                
                 <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="fas fa-star me-2"></i>Rank:
-                    </span>
+                    <span class="detail-label"><i class="fas fa-star"></i> Rank</span>
                     <span class="detail-value">{{ personnel_to_delete.rank }}</span>
                 </div>
-                
                 <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="fas fa-hashtag me-2"></i>Serial Number:
-                    </span>
+                    <span class="detail-label"><i class="fas fa-hashtag"></i> Serial Number</span>
                     <span class="detail-value">{{ personnel_to_delete.get_serial_display }}</span>
                 </div>
-                
                 <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="fas fa-users me-2"></i>Group/Unit:
-                    </span>
+                    <span class="detail-label"><i class="fas fa-users"></i> Group / Unit</span>
                     <span class="detail-value">{{ personnel_to_delete.group }}</span>
                 </div>
-                
                 {% if personnel_to_delete.user %}
                 <div class="detail-row">
-                    <span class="detail-label">
-                        <i class="fas fa-link me-2"></i>Linked User Account:
-                    </span>
-                    <span class="detail-value text-danger">
-                        <strong>{{ personnel_to_delete.user.username }}</strong>
-                    </span>
+                    <span class="detail-label"><i class="fas fa-link"></i> Linked User Account</span>
+                    <span class="detail-value danger"><strong>{{ personnel_to_delete.user.username }}</strong></span>
                 </div>
                 {% endif %}
             </div>
-            
-            <!-- Warning Message -->
-            <div class="warning-list">
-                <strong><i class="fas fa-exclamation-circle me-2"></i>Warning:</strong>
+
+            <!-- Warning list -->
+            <div class="del-warning-list">
+                <span class="warn-heading"><i class="fas fa-exclamation-circle"></i> This action cannot be undone</span>
                 <ul>
-                    <li>This action <strong>cannot be undone</strong></li>
                     <li>All personnel data will be permanently removed</li>
                     {% if personnel_to_delete.user %}
-                    <li><strong>Deleting this personnel will NOT delete the linked user account</strong></li>
+                    <li><strong>Deleting this record will NOT delete the linked user account</strong></li>
                     {% endif %}
-                    <li>Transaction history will remain but reference to this personnel will be lost</li>
+                    <li>Transaction history will remain but the reference to this personnel will be lost</li>
                     <li>A record of this deletion will be saved in the audit logs</li>
                 </ul>
             </div>
-            
-            <!-- Deletion Form -->
+
+            <!-- Deletion form -->
             <form method="post" id="deleteForm">
                 {% csrf_token %}
-                
-                <div class="reason-box">
-                    <label for="reason" class="form-label fw-bold">
-                        <i class="fas fa-comment-alt me-2"></i>Reason for Deletion <span class="text-danger">*</span>
+
+                <div class="del-reason-box">
+                    <label for="reason">
+                        <i class="fas fa-comment-alt"></i> Reason for Deletion <span class="req">*</span>
                     </label>
-                    <textarea 
-                        class="form-control" 
-                        id="reason" 
-                        name="reason" 
+                    <textarea
+                        id="reason"
+                        name="reason"
                         required
                         placeholder="Please provide a detailed reason for deleting this personnel record..."
                     ></textarea>
-                    <small class="text-muted mt-2 d-block">
-                        This reason will be saved in the audit logs for future reference.
-                    </small>
+                    <small>This reason will be saved in the audit logs for future reference.</small>
                 </div>
-                
-                <!-- Action Buttons -->
-                <div class="d-flex justify-content-between align-items-center">
-                    <a href="{% url 'armguard_admin:user_management' %}" class="btn btn-secondary-custom">
-                        <i class="fas fa-arrow-left me-2"></i>Cancel
+
+                <div class="del-actions">
+                    <a href="{% url 'armguard_admin:user_management' %}" class="del-btn del-btn-cancel">
+                        <i class="fas fa-arrow-left"></i> Cancel
                     </a>
-                    
-                    <button type="submit" class="btn btn-danger-custom" id="deleteBtn">
-                        <i class="fas fa-trash-alt me-2"></i>Confirm Deletion
+                    <button type="submit" class="del-btn del-btn-danger" id="deleteBtn">
+                        <i class="fas fa-trash-alt"></i> Confirm Deletion
                     </button>
                 </div>
             </form>
-            
-        </div>
-    </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+        </div><!-- /delete-card-body -->
+    </div><!-- /delete-card -->
+</div><!-- /delete-page-wrap -->
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const deleteForm = document.getElementById('deleteForm');
-    const deleteBtn = document.getElementById('deleteBtn');
-    
-    deleteForm.addEventListener('submit', function(e) {
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('deleteForm');
+    const btn  = document.getElementById('deleteBtn');
+    form.addEventListener('submit', function (e) {
         e.preventDefault();
-        
         const reason = document.getElementById('reason').value.trim();
-        if (!reason) {
-            alert('Please provide a reason for deletion.');
-            return;
-        }
-        
+        if (!reason) { alert('Please provide a reason for deletion.'); return; }
         if (confirm('Are you absolutely sure you want to delete this personnel record? This action cannot be undone.')) {
-            deleteBtn.disabled = true;
-            deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
-            deleteForm.submit();
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deletingâ€¦';
+            form.submit();
         }
     });
 });
 </script>
-</body>
-</html>
+{% endblock %}
