@@ -5,6 +5,7 @@ Based on APP/app/backend/database.py transactions table
 from django.db import models, transaction
 from django.utils import timezone
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db.models import F, Q, Exists, OuterRef
 from personnel.models import Personnel
 from inventory.models import Item
@@ -142,22 +143,22 @@ class Transaction(models.Model):
                     
                     if active_items_query.exists():
                         active_item = active_items_query.first().item
-                        raise ValueError(
+                        raise ValidationError(
                             f"Personnel {self.personnel} already has an active item: {active_item}"
                         )
                     
                     # Validate item availability
                     if locked_item.status != Item.STATUS_AVAILABLE:
                         if locked_item.status == Item.STATUS_ISSUED:
-                            raise ValueError(
+                            raise ValidationError(
                                 f"Cannot take item {locked_item.id} - already issued to another personnel"
                             )
                         elif locked_item.status in [Item.STATUS_MAINTENANCE, Item.STATUS_RETIRED]:
-                            raise ValueError(
+                            raise ValidationError(
                                 f"Cannot take item {locked_item.id} - status is {locked_item.status}"
                             )
                         else:
-                            raise ValueError(
+                            raise ValidationError(
                                 f"Cannot take item {locked_item.id} - invalid status: {locked_item.status}"
                             )
                     
@@ -172,7 +173,7 @@ class Transaction(models.Model):
                 elif self.action == self.ACTION_RETURN:
                     # Validate item is currently issued
                     if locked_item.status != Item.STATUS_ISSUED:
-                        raise ValueError(
+                        raise ValidationError(
                             f"Cannot return item {locked_item.id} - not currently issued (status: {locked_item.status})"
                         )
                     
@@ -192,7 +193,7 @@ class Transaction(models.Model):
                     
                     if not last_take_transaction or last_take_transaction.personnel != self.personnel:
                         current_holder = last_take_transaction.personnel if last_take_transaction else "Unknown"
-                        raise ValueError(
+                        raise ValidationError(
                             f"Cannot return item {locked_item.id} - was issued to {current_holder}, not {self.personnel}"
                         )
                     
@@ -205,9 +206,9 @@ class Transaction(models.Model):
                     )
                 
             except Item.DoesNotExist:
-                raise ValueError(f"Item {self.item.pk} does not exist")
+                raise ValidationError(f"Item {self.item.pk} does not exist")
             except Personnel.DoesNotExist:
-                raise ValueError(f"Personnel {self.personnel.pk} does not exist")
+                raise ValidationError(f"Personnel {self.personnel.pk} does not exist")
             except Exception as e:
                 logger.error(f"Transaction validation failed: {e}")
                 raise
