@@ -93,6 +93,12 @@
                 <i class="fas fa-tools"></i> Django Admin
             </a>
             {% endif %}
+
+            {% if can_edit and user.is_superuser or is_admin_group or is_armorer_group %}
+            <a href="{% url 'print_handler:index' %}" class="btn btn-primary btn-block">
+                <i class="fas fa-print"></i> Print Manager
+            </a>
+            {% endif %}
         </div>
     </div>
 </div>
