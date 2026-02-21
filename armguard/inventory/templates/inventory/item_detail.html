@@ -362,6 +362,23 @@
                     <span class="info-label">Item ID</span>
                     <span class="info-value" style="font-family:monospace;font-size:0.82rem;">{{ item.qr_code }}</span>
                 </div>
+                <div class="info-row">
+                    <span class="info-label">Status</span>
+                    <span class="info-value">
+                        {% if item.status == 'Available' %}<span style="color:#166534;font-weight:700;">Available</span>
+                        {% elif item.status == 'Issued' %}<span style="color:#92400e;font-weight:700;">Issued</span>
+                        {% elif item.status == 'Maintenance' %}<span style="color:#991b1b;font-weight:700;">Maintenance</span>
+                        {% else %}<span style="color:#6b7280;font-weight:700;">{{ item.status }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                {% if item.status == 'Issued' and last_take %}
+                <div class="info-row">
+                    <span class="info-label">Issued To</span>
+                    <span class="info-value"><strong>{{ last_take.personnel.rank }} {{ last_take.personnel.get_full_name }}</strong><br>
+                    <span style="font-family:monospace;font-size:0.78rem;color:#6b7280;">{{ last_take.personnel.serial }} PAF</span></span>
+                </div>
+                {% endif %}
             </div><!-- end info-rows -->
 
     </div><!-- end info card -->
