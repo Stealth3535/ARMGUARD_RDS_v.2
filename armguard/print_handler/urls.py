@@ -9,6 +9,7 @@ urlpatterns = [
     path('id-cards/', views.print_id_cards, name='print_id_cards'),
     path('id-cards/regenerate/<str:personnel_id>/', views.regenerate_id_card, name='regenerate_id_card'),
     path('id-cards/print/', views.print_id_cards_view, name='print_id_cards_view'),
+    path('id-cards/image/<str:personnel_id>/<str:side>/', views.serve_id_card_image, name='serve_id_card_image'),
 
     # Legacy QR code printing
     path('qr-codes/', views.print_qr_codes, name='print_qr_codes'),

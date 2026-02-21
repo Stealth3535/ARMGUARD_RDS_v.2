@@ -265,6 +265,35 @@ def print_transaction_pdf(request, transaction_id):
 
 @login_required
 @user_passes_test(is_admin_or_armorer)
+def serve_id_card_image(request, personnel_id, side):
+    """
+    Serve an ID card PNG file directly through Django (works in production
+    without relying on nginx media-file configuration).
+    side: 'front' | 'back' | 'combined'
+    """
+    from django.http import FileResponse, Http404
+    if side == 'front':
+        filename = f"{personnel_id}_front.png"
+    elif side == 'back':
+        filename = f"{personnel_id}_back.png"
+    else:
+        filename = f"{personnel_id}.png"
+
+    filepath = os.path.join(settings.MEDIA_ROOT, 'personnel_id_cards', filename)
+    if not os.path.exists(filepath):
+        raise Http404('ID card image not found')
+    return FileResponse(open(filepath, 'rb'), content_type='image/png')
+
+
+def _id_card_img_url(request, personnel_id, side='front'):
+    """Return the URL for an ID card image served through the Django view."""
+    from django.urls import reverse
+    return reverse('print_handler:serve_id_card_image',
+                   kwargs={'personnel_id': personnel_id, 'side': side})
+
+
+@login_required
+@user_passes_test(is_admin_or_armorer)
 def print_id_cards(request):
     """
     Personnel ID Card Print Manager.
@@ -283,21 +312,15 @@ def print_id_cards(request):
             DQ(rank__icontains=search_q)
         )
 
-    id_cards_dir = os.path.join(settings.MEDIA_ROOT, 'personnel_id_cards')
-    media_url = settings.MEDIA_URL.rstrip('/')
-
     personnel_cards = []
     for p in personnel_qs:
-        front_rel = f"personnel_id_cards/{p.id}_front.png"
-        combined_rel = f"personnel_id_cards/{p.id}.png"
-        front_abs = os.path.join(settings.MEDIA_ROOT, front_rel)
-        combined_abs = os.path.join(settings.MEDIA_ROOT, combined_rel)
+        front_abs    = os.path.join(settings.MEDIA_ROOT, 'personnel_id_cards', f"{p.id}_front.png")
+        combined_abs = os.path.join(settings.MEDIA_ROOT, 'personnel_id_cards', f"{p.id}.png")
 
         has_card = os.path.exists(front_abs) or os.path.exists(combined_abs)
-        if os.path.exists(front_abs):
-            thumb_url = f"{media_url}/{front_rel}"
-        elif os.path.exists(combined_abs):
-            thumb_url = f"{media_url}/{combined_rel}"
+        if has_card:
+            side = 'front' if os.path.exists(front_abs) else 'combined'
+            thumb_url = _id_card_img_url(request, p.id, side)
         else:
             thumb_url = None
 
@@ -333,9 +356,9 @@ def regenerate_id_card(request, personnel_id):
     try:
         from utils.personnel_id_card_generator import generate_personnel_id_card
         paths = generate_personnel_id_card(personnel)
-        media_url = settings.MEDIA_URL.rstrip('/')
-        front_url = f"{media_url}/{paths['front']}" if paths.get('front') else None
-        return JsonResponse({'success': True, 'thumb_url': front_url or f"{media_url}/{paths.get('combined', '')}"})
+        side = 'front' if paths.get('front') else 'combined'
+        thumb_url = _id_card_img_url(request, personnel_id, side)
+        return JsonResponse({'success': True, 'thumb_url': thumb_url})
     except Exception as exc:
         return JsonResponse({'success': False, 'error': str(exc)}, status=500)
 
@@ -347,9 +370,8 @@ def print_id_cards_view(request):
     Print-ready page for selected (or all) personnel ID cards.
     Accepts ?ids=PO-xxx,PE-xxx,... or ?all=1
     """
-    media_url = settings.MEDIA_URL.rstrip('/')
     ids_param = request.GET.get('ids', '')
-    show_all = request.GET.get('all', '')
+    show_all  = request.GET.get('all', '')
 
     if show_all:
         personnel_qs = Personnel.objects.filter(deleted_at__isnull=True).order_by('surname', 'firstname')
@@ -361,21 +383,18 @@ def print_id_cards_view(request):
 
     cards = []
     for p in personnel_qs:
-        front_rel = f"personnel_id_cards/{p.id}_front.png"
-        back_rel = f"personnel_id_cards/{p.id}_back.png"
-        combined_rel = f"personnel_id_cards/{p.id}.png"
-        front_abs = os.path.join(settings.MEDIA_ROOT, front_rel)
-        back_abs = os.path.join(settings.MEDIA_ROOT, back_rel)
-        combined_abs = os.path.join(settings.MEDIA_ROOT, combined_rel)
+        front_abs    = os.path.join(settings.MEDIA_ROOT, 'personnel_id_cards', f"{p.id}_front.png")
+        back_abs     = os.path.join(settings.MEDIA_ROOT, 'personnel_id_cards', f"{p.id}_back.png")
+        combined_abs = os.path.join(settings.MEDIA_ROOT, 'personnel_id_cards', f"{p.id}.png")
 
         if os.path.exists(front_abs):
-            front_url = f"{media_url}/{front_rel}"
+            front_url = _id_card_img_url(request, p.id, 'front')
         elif os.path.exists(combined_abs):
-            front_url = f"{media_url}/{combined_rel}"
+            front_url = _id_card_img_url(request, p.id, 'combined')
         else:
             front_url = None
 
-        back_url = f"{media_url}/{back_rel}" if os.path.exists(back_abs) else None
+        back_url = _id_card_img_url(request, p.id, 'back') if os.path.exists(back_abs) else None
 
         if front_url:
             cards.append({'personnel': p, 'front_url': front_url, 'back_url': back_url})
