@@ -1569,13 +1569,12 @@ document.addEventListener('keydown', function(e) {
             e.preventDefault();
             const payload = scannerCapture.buffer;
             resetScannerBuffer();
-            processScannerInput(payload).then(() => {
-                trySubmitOnHotkey();
-            });
+            // Process the scan only — do NOT auto-submit; user must click Submit
+            processScannerInput(payload);
         } else {
             e.preventDefault();
             resetScannerBuffer();
-            trySubmitOnHotkey();
+            // Enter/Tab with no scan buffer: do nothing (no auto-submit)
         }
         return;
     }
