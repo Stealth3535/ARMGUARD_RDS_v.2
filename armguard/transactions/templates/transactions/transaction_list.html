@@ -1288,6 +1288,7 @@ let hotkeySubmitting = false;
 let personnelValidated = false;
 let itemValidated = false;
 let suppressPersonnelAutoTab = false;
+let currentPersonnelData = null; // stores last successfully looked-up personnel
 
 function focusAfterItemScan() {
     const notesInput = document.getElementById('notes');
@@ -1667,6 +1668,7 @@ function showPersonnelCard(data) {
 
 function clearPersonnelCard() {
     document.getElementById('personnelPreviewCard').style.display = 'none';
+    currentPersonnelData = null;
 }
 
 function showItemCard(data) {
@@ -1737,6 +1739,7 @@ personnelInput.addEventListener('blur', async function() {
             if (!data.has_issued_firearm && action === 'return') {
                 // Trying to return but nothing issued — warning
                 personnelValidated = false;
+                currentPersonnelData = data;
                 personnelInfo.className = 'info-text warning';
                 personnelInfo.textContent = `⚠ ${fullName} has no issued firearm to return`;
                 personnelInfo.style.display = 'block';
@@ -1746,6 +1749,7 @@ personnelInput.addEventListener('blur', async function() {
             }
 
             personnelValidated = true;
+            currentPersonnelData = data;
             personnelInfo.className = 'info-text success';
             personnelInfo.textContent = `✓ ${fullName} - ${data.rank}`;
             personnelInfo.style.display = 'block';
@@ -1753,12 +1757,6 @@ personnelInput.addEventListener('blur', async function() {
             // Show automatic notification for successful personnel scan
             showNotification(`Personnel scanned: ${fullName} - ${data.rank}`, 'success');
             showPersonnelCard(data);
-
-            // If returning and person has an issued item, auto-fill the item ID
-            if (action === 'return' && data.has_issued_firearm && data.issued_item_id) {
-                itemInput.value = data.issued_item_id;
-                itemInput.dispatchEvent(new Event('blur'));
-            }
 
             // Move directly to Item ID input after successful personnel validation
             if (suppressPersonnelAutoTab) {
@@ -1811,33 +1809,46 @@ itemInput.addEventListener('blur', async function() {
             const action = actionSelect.value;
             const mode = modeSelect.value;
             itemValidated = true;
-            
+
             // Always show item info first
             itemInfo.className = 'info-text success';
             itemInfo.textContent = `✓ ${data.item_type} - Serial: ${data.serial} - Status: ${data.status}`;
-            
-            // Check action compatibility and suggest if needed
+
+            // Check action compatibility
             let actionWarning = '';
             if (mode === 'defcon') {
                 if (data.status !== 'Available') {
                     actionWarning = ` ⚠ Defcon mode allows withdrawal only. Item must be Available.`;
                     itemValidated = false;
+                    itemInfo.className = 'info-text warning';
+                }
+            } else if (action === 'return') {
+                if (data.status !== 'Issued') {
+                    // Item is not even issued — hard error
+                    itemValidated = false;
+                    itemInfo.className = 'info-text error';
+                    itemInfo.textContent = `✗ ${data.item_type} - Serial: ${data.serial} is not currently issued`;
+                } else if (personnelValidated && currentPersonnelData && currentPersonnelData.has_issued_firearm) {
+                    // Item is issued — check it belongs to this personnel
+                    if (data.id !== currentPersonnelData.issued_item_id) {
+                        const issuedType   = currentPersonnelData.issued_item_type   || 'Unknown';
+                        const issuedSerial = currentPersonnelData.issued_item_serial || '---';
+                        itemValidated = false;
+                        itemInfo.className = 'info-text error';
+                        itemInfo.textContent = `✗ Item mismatch — ${currentPersonnelData.firstname}'s issued item is ${issuedType} Serial: ${issuedSerial}`;
+                    }
+                    // else: correct item — leave success state
                 }
             } else if (action === 'withdraw' && data.status !== 'Available') {
                 actionWarning = ` ⚠ Item not available for withdrawal`;
-            } else if (action === 'return' && data.status !== 'Issued') {
-                actionWarning = ` ⚠ Item not issued - should withdraw instead`;
-                // Auto-suggest correct action
-                actionSelect.value = 'withdraw';
+                itemInfo.className = 'info-text warning';
             } else if (action === 'withdraw' && data.status === 'Issued') {
-                actionWarning = ` ⚠ Item already issued - should return instead`;
-                // Auto-suggest correct action  
-                actionSelect.value = 'return';
+                actionWarning = ` ⚠ Item already issued — switch to Return`;
+                itemInfo.className = 'info-text warning';
             }
-            
+
             if (actionWarning) {
                 itemInfo.textContent += actionWarning;
-                itemInfo.className = 'info-text warning';
             }
             
             // Auto-fill mags and rounds regardless of action compatibility
