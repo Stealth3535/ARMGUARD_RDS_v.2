@@ -120,42 +120,6 @@
         margin-bottom: 0.22rem;
     }
     
-    .stat-icon {
-        width: 46px;
-        height: 46px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        margin-left: 0.6rem;
-        transition: all 0.3s ease;
-    }
-    
-    .stat-card.available .stat-icon {
-        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-        color: #065f46;
-    }
-    
-    .stat-card.issued .stat-icon {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        color: #92400e;
-    }
-    
-    .stat-card.maintenance .stat-icon {
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        color: #991b1b;
-    }
-    
-    .stat-card.total .stat-icon {
-        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-        color: #3730a3;
-    }
-    
-    .stat-card:hover .stat-icon {
-        transform: scale(1.1) rotate(5deg);
-    }
-    
     .stat-value {
         font-size: 2rem;
         font-weight: 800;
@@ -529,11 +493,6 @@
             text-align: center;
         }
         
-        .stat-icon {
-            margin: 1rem 0 0 0;
-            order: -1;
-        }
-        
         .stat-value {
             font-size: 1.65rem;
         }
@@ -614,9 +573,6 @@
                     </div>
                     <div class="stat-breakdown" id="availableTypeBreakdown"></div>
                 </div>
-                <div class="stat-icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
             </div>
         </div>
         
@@ -632,9 +588,6 @@
                         In field operations
                     </div>
                     <div class="stat-breakdown" id="issuedTypeBreakdown"></div>
-                </div>
-                <div class="stat-icon">
-                    <i class="fas fa-hand-paper"></i>
                 </div>
             </div>
         </div>
@@ -652,9 +605,6 @@
                     </div>
                     <div class="stat-breakdown" id="maintenanceTypeBreakdown"></div>
                 </div>
-                <div class="stat-icon">
-                    <i class="fas fa-tools"></i>
-                </div>
             </div>
         </div>
         
@@ -670,9 +620,6 @@
                         Complete arsenal
                     </div>
                     <div class="stat-breakdown" id="totalTypeBreakdown"></div>
-                </div>
-                <div class="stat-icon">
-                    <i class="fas fa-chart-bar"></i>
                 </div>
             </div>
         </div>
