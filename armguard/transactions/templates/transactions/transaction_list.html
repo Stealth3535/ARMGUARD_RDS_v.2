@@ -123,50 +123,30 @@
         margin-bottom: 0;
     }
 
-    /* two-column card layout */
-    .tx-card-body {
-        display: flex;
-        align-items: stretch;
-        gap: 0.75rem;
-    }
-    .tx-card-left {
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-    }
-    .tx-card-right {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding-left: 0.6rem;
-        border-left: 2px solid #f3f4f6;
-    }
-
+    /* card header: title left, number right on same row */
     .tx-stat-head {
         display: flex;
-        flex-direction: column;
         align-items: flex-start;
-        gap: 0.1rem;
-        margin-bottom: 0.2rem;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 0.15rem;
     }
 
     .tx-stat-value {
-        font-size: 2.8rem;
+        font-size: 2.6rem;
         line-height: 1;
         font-weight: 900;
         color: var(--card-color, #111827);
         animation: countUp 0.8s ease-out;
         animation-delay: 0.5s;
         animation-fill-mode: both;
-        min-width: 2.5rem;
-        text-align: center;
     }
 
     .tx-stat-note {
-        font-size: 0.88rem;
-        color: #059669;
-        margin-bottom: 0.25rem;
+        font-size: 0.82rem;
+        color: var(--card-color, #059669);
+        margin-bottom: 0.3rem;
+        font-weight: 600;
     }
 
     .tx-stat-content {
@@ -840,59 +820,47 @@
     <span id="totalTransactionsCount" style="display:none;">{{ transaction_mode_counts.total_transactions }}</span>
     <div class="tx-dashboard-grid">
             <div class="tx-stat-card available">
-                <div class="tx-card-body">
-                    <div class="tx-card-left">
-                        <div class="tx-stat-title">Available Items</div>
-                        <div class="tx-stat-note"><i class="fas fa-arrow-up"></i> Ready for deployment</div>
-                        <div class="tx-stat-breakdown">
-                            <div>M14: <strong id="availableTypeM14">{{ inventory_counts.by_status_type.Available.M14 }}</strong></div>
-                            <div>M16: <strong id="availableTypeM16">{{ inventory_counts.by_status_type.Available.M16 }}</strong></div>
-                            <div>M4: <strong id="availableTypeM4">{{ inventory_counts.by_status_type.Available.M4 }}</strong></div>
-                            <div>Glock: <strong id="availableTypeGLOCK">{{ inventory_counts.by_status_type.Available.GLOCK }}</strong></div>
-                            <div>.45: <strong id="availableTypeP45">{{ inventory_counts.by_status_type.Available.P45 }}</strong></div>
-                        </div>
-                    </div>
-                    <div class="tx-card-right">
-                        <div class="tx-stat-value" id="availableItemsCount" data-target="{{ inventory_counts.available }}">0</div>
-                    </div>
+                <div class="tx-stat-head">
+                    <div class="tx-stat-title">Available Items</div>
+                    <div class="tx-stat-value" id="availableItemsCount" data-target="{{ inventory_counts.available }}">0</div>
+                </div>
+                <div class="tx-stat-note"><i class="fas fa-arrow-up"></i> Ready for deployment</div>
+                <div class="tx-stat-breakdown">
+                    <div>M14: <strong id="availableTypeM14">{{ inventory_counts.by_status_type.Available.M14 }}</strong></div>
+                    <div>M16: <strong id="availableTypeM16">{{ inventory_counts.by_status_type.Available.M16 }}</strong></div>
+                    <div>M4: <strong id="availableTypeM4">{{ inventory_counts.by_status_type.Available.M4 }}</strong></div>
+                    <div>Glock: <strong id="availableTypeGLOCK">{{ inventory_counts.by_status_type.Available.GLOCK }}</strong></div>
+                    <div>.45: <strong id="availableTypeP45">{{ inventory_counts.by_status_type.Available.P45 }}</strong></div>
                 </div>
             </div>
 
             <div class="tx-stat-card issued">
-                <div class="tx-card-body">
-                    <div class="tx-card-left">
-                        <div class="tx-stat-title">Currently Issued</div>
-                        <div class="tx-stat-note"><i class="fas fa-arrow-right"></i> In field operations</div>
-                        <div class="tx-stat-breakdown">
-                            <div>M14: <strong id="issuedTypeM14">{{ inventory_counts.by_status_type.Issued.M14 }}</strong></div>
-                            <div>M16: <strong id="issuedTypeM16">{{ inventory_counts.by_status_type.Issued.M16 }}</strong></div>
-                            <div>M4: <strong id="issuedTypeM4">{{ inventory_counts.by_status_type.Issued.M4 }}</strong></div>
-                            <div>Glock: <strong id="issuedTypeGLOCK">{{ inventory_counts.by_status_type.Issued.GLOCK }}</strong></div>
-                            <div>.45: <strong id="issuedTypeP45">{{ inventory_counts.by_status_type.Issued.P45 }}</strong></div>
-                        </div>
-                    </div>
-                    <div class="tx-card-right">
-                        <div class="tx-stat-value" id="issuedItemsCount" data-target="{{ inventory_counts.issued }}">0</div>
-                    </div>
+                <div class="tx-stat-head">
+                    <div class="tx-stat-title">Currently Issued</div>
+                    <div class="tx-stat-value" id="issuedItemsCount" data-target="{{ inventory_counts.issued }}">0</div>
+                </div>
+                <div class="tx-stat-note"><i class="fas fa-arrow-right"></i> In field operations</div>
+                <div class="tx-stat-breakdown">
+                    <div>M14: <strong id="issuedTypeM14">{{ inventory_counts.by_status_type.Issued.M14 }}</strong></div>
+                    <div>M16: <strong id="issuedTypeM16">{{ inventory_counts.by_status_type.Issued.M16 }}</strong></div>
+                    <div>M4: <strong id="issuedTypeM4">{{ inventory_counts.by_status_type.Issued.M4 }}</strong></div>
+                    <div>Glock: <strong id="issuedTypeGLOCK">{{ inventory_counts.by_status_type.Issued.GLOCK }}</strong></div>
+                    <div>.45: <strong id="issuedTypeP45">{{ inventory_counts.by_status_type.Issued.P45 }}</strong></div>
                 </div>
             </div>
 
             <div class="tx-stat-card total">
-                <div class="tx-card-body">
-                    <div class="tx-card-left">
-                        <div class="tx-stat-title">Total Inventory</div>
-                        <div class="tx-stat-note"><i class="fas fa-database"></i> Complete arsenal</div>
-                        <div class="tx-stat-breakdown">
-                            <div>M14: <strong>{{ inventory_counts.by_status_type.Total.M14 }}</strong></div>
-                            <div>M16: <strong>{{ inventory_counts.by_status_type.Total.M16 }}</strong></div>
-                            <div>M4: <strong>{{ inventory_counts.by_status_type.Total.M4 }}</strong></div>
-                            <div>Glock: <strong>{{ inventory_counts.by_status_type.Total.GLOCK }}</strong></div>
-                            <div>.45: <strong>{{ inventory_counts.by_status_type.Total.P45 }}</strong></div>
-                        </div>
-                    </div>
-                    <div class="tx-card-right">
-                        <div class="tx-stat-value" id="totalInventoryCount" data-target="{{ inventory_counts.total }}">0</div>
-                    </div>
+                <div class="tx-stat-head">
+                    <div class="tx-stat-title">Total Inventory</div>
+                    <div class="tx-stat-value" id="totalInventoryCount" data-target="{{ inventory_counts.total }}">0</div>
+                </div>
+                <div class="tx-stat-note"><i class="fas fa-database"></i> Complete arsenal</div>
+                <div class="tx-stat-breakdown">
+                    <div>M14: <strong>{{ inventory_counts.by_status_type.Total.M14 }}</strong></div>
+                    <div>M16: <strong>{{ inventory_counts.by_status_type.Total.M16 }}</strong></div>
+                    <div>M4: <strong>{{ inventory_counts.by_status_type.Total.M4 }}</strong></div>
+                    <div>Glock: <strong>{{ inventory_counts.by_status_type.Total.GLOCK }}</strong></div>
+                    <div>.45: <strong>{{ inventory_counts.by_status_type.Total.P45 }}</strong></div>
                 </div>
             </div>
 
