@@ -289,7 +289,7 @@
     
     .form-row {
         display: grid;
-        grid-template-columns: 200px 1fr;
+        grid-template-columns: 200px minmax(0, 50%);
         gap: 15px;
         margin-bottom: 20px;
         align-items: start;
@@ -431,7 +431,7 @@
     }
 
     .container.defcon-lock .form-row {
-        grid-template-columns: 170px 1fr;
+        grid-template-columns: 170px minmax(0, 50%);
         gap: 12px;
         margin-bottom: 14px;
     }
