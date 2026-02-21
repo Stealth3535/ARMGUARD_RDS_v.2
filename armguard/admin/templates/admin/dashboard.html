@@ -18,49 +18,6 @@
         display: block;
     }
     
-    .syslog-group {
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    .syslog-toggle {
-        width: 100%;
-        background: #f9fafb;
-        border: none;
-        padding: 0.65rem 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        font-size: 0.92rem;
-        font-weight: 600;
-        color: #374151;
-        cursor: pointer;
-        transition: background 0.15s;
-    }
-    .syslog-toggle:hover { background: #f3f4f6; }
-    .syslog-toggle .arrow { transition: transform 0.2s; }
-    .syslog-toggle.open .arrow { transform: rotate(180deg); }
-    .syslog-items {
-        display: none;
-        flex-direction: column;
-        gap: 0;
-        border-top: 1px solid #e5e7eb;
-    }
-    .syslog-items.open { display: flex; }
-    .syslog-items a {
-        padding: 0.6rem 1rem 0.6rem 1.5rem;
-        font-size: 0.88rem;
-        color: #374151;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        border-bottom: 1px solid #f3f4f6;
-        transition: background 0.15s;
-    }
-    .syslog-items a:last-child { border-bottom: none; }
-    .syslog-items a:hover { background: #f3f4f6; color: #111827; }
-    
     .transaction-item {
         display: flex;
         justify-content: space-between;
@@ -128,23 +85,9 @@
             {% endif %}
             
             {% if user.is_superuser %}
-            <div class="syslog-group">
-                <button class="syslog-toggle" onclick="toggleSyslog(this)">
-                    <span><i class="fas fa-database" style="margin-right:0.4rem;color:#6b7280;"></i> System Logs</span>
-                    <i class="fas fa-chevron-down arrow" style="font-size:0.75rem;color:#9ca3af;"></i>
-                </button>
-                <div class="syslog-items">
-                    <a href="{% url 'armguard_admin:audit_logs' %}">
-                        <i class="fas fa-list-alt" style="color:#6b7280;"></i> Audit Logs
-                    </a>
-                    <a href="{% url 'armguard_admin:dashboard' %}">
-                        <i class="fas fa-shield-alt" style="color:#6b7280;"></i> Admin Dashboard
-                    </a>
-                    <a href="{% url 'armguard_admin:system_settings' %}">
-                        <i class="fas fa-cog" style="color:#6b7280;"></i> Admin Settings
-                    </a>
-                </div>
-            </div>
+            <a href="{% url 'armguard_admin:audit_logs' %}" class="btn btn-secondary btn-block">
+                <i class="fas fa-list-alt"></i> Audit Logs
+            </a>
             
             <a href="/superadmin/" class="btn btn-danger btn-block" target="_blank">
                 <i class="fas fa-tools"></i> Django Admin
@@ -352,10 +295,5 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial sort
     filterAndSort();
 });
-
-function toggleSyslog(btn) {
-    btn.classList.toggle('open');
-    btn.nextElementSibling.classList.toggle('open');
-}
 </script>
 {% endblock %}
