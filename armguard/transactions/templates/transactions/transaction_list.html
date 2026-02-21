@@ -1418,6 +1418,15 @@ function fillScannedField(parsedScan) {
     if (parsedScan.type === 'item') {
         // Ignore duplicate scans when item is already validated
         if (itemValidated) return;
+
+        // If the item ID leaked into personnelInput (over-scan), clear it
+        if (personnelInput.value === parsedScan.value) {
+            personnelInput.value = '';
+            personnelValidated = false;
+            const pInfo = document.getElementById('personnelInfo');
+            if (pInfo) pInfo.style.display = 'none';
+        }
+
         itemInput.value = parsedScan.value;
         itemInput.dispatchEvent(new Event('blur'));
         showNotification(`Scanned item ID: ${parsedScan.value}`, 'info');
@@ -1572,11 +1581,12 @@ document.addEventListener('keydown', function(e) {
     const now = Date.now();
     const timeSinceLastKey = scannerCapture.lastKeyTime ? (now - scannerCapture.lastKeyTime) : 999;
 
-    // If focus is not on a scanner-designated input and keystrokes are rapid-fire
-    // (scanner fires < 50ms between chars), block chars from leaking into e.g. Notes.
-    const onScanField = (document.activeElement === personnelInput ||
-                         document.activeElement === itemInput);
-    if (!onScanField && timeSinceLastKey < 50) {
+    // Scanners fire chars every ~5-30ms; humans type > 80ms apart.
+    // If this char is part of a rapid-fire burst (< 50ms since last char)
+    // OR the buffer is already accumulating, always block it from typing
+    // into any field — programmatic fillScannedField handles population.
+    const isScanning = (timeSinceLastKey < 50) || (scannerCapture.buffer.length > 0 && timeSinceLastKey < scannerCapture.timeoutMs);
+    if (isScanning) {
         e.preventDefault();
     }
 
