@@ -8,7 +8,6 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 import os
 from django.conf import settings
-from qr_manager.models import QRCodeImage
 from transactions.models import Transaction
 from personnel.models import Personnel
 from inventory.models import Item
@@ -27,93 +26,139 @@ def is_admin_or_armorer(user):
     )
 
 
-@login_required
-@user_passes_test(is_admin_or_armorer)
-def print_qr_codes(request):
-    """Simple QR code printing - only shows valid QR codes with existing records"""
-    qr_type = request.GET.get('type', 'all')
-    
-    # Optimize with select_related to avoid N+1 queries
-    personnel_qrcodes = []
-    item_qrcodes = []
-    
-    if qr_type in ['all', 'personnel']:
-        # Get all personnel QR codes with active status
-        personnel_qr_ids = QRCodeImage.objects.filter(
-            qr_type='personnel',
-            is_active=True
-        ).exclude(qr_image='').values_list('reference_id', flat=True)
-        
-        # Get active personnel matching these QR codes
-        active_personnel = Personnel.objects.filter(
-            id__in=personnel_qr_ids,
-            deleted_at__isnull=True
-        ).values('id', 'firstname', 'surname', 'middle_initial', 'rank')
-        
-        # Create lookup dict for fast access
-        personnel_dict = {p['id']: p for p in active_personnel}
-        
-        # Build QR code list with names
-        for qr in QRCodeImage.objects.filter(reference_id__in=personnel_dict.keys(), qr_type='personnel', is_active=True).exclude(qr_image=''):
-            person = personnel_dict.get(qr.reference_id)
-            if person:
-                mi = f" {person['middle_initial']}" if person['middle_initial'] else ""
-                qr.name = f"{person['rank']} {person['firstname']}{mi} {person['surname']}"
-                personnel_qrcodes.append(qr)
-    
-    if qr_type in ['all', 'items']:
-        # Get all item QR codes with active status
-        item_qr_ids = QRCodeImage.objects.filter(
-            qr_type='item',
-            is_active=True
-        ).exclude(qr_image='').values_list('reference_id', flat=True)
-        
-        # Get items matching these QR codes
-        active_items = Item.objects.filter(
-            id__in=item_qr_ids
-        ).values('id', 'item_type', 'serial')
-        
-        # Create lookup dict
-        items_dict = {i['id']: i for i in active_items}
-        
-        # Build QR code list with names
-        for qr in QRCodeImage.objects.filter(reference_id__in=items_dict.keys(), qr_type='item', is_active=True).exclude(qr_image=''):
-            item = items_dict.get(qr.reference_id)
-            if item:
-                qr.name = f"{item['item_type']} - {item['serial']}"
-                item_qrcodes.append(qr)
-    
-    context = {
-        'personnel_qrcodes': personnel_qrcodes,
-        'item_qrcodes': item_qrcodes,
-        'qr_type': qr_type,
-        'qr_size_mm': QR_SIZE_MM,
-        'cards_per_row': CARDS_PER_ROW,
-        'card_width_mm': CARD_WIDTH_MM,
-        'card_height_mm': CARD_HEIGHT_MM,
-        'font_size_id': FONT_SIZE_ID,
-        'font_size_name': FONT_SIZE_NAME,
-        'font_size_badge': FONT_SIZE_BADGE,
-    }
-    return render(request, 'print_handler/print_qr_codes.html', context)
+# ---------------------------------------------------------------------------
+# Item Tag Print Manager
+# ---------------------------------------------------------------------------
+
+def _item_tag_img_url(request, item_id):
+    """Return the URL for an item tag image served through the Django view."""
+    from django.urls import reverse
+    return reverse('print_handler:serve_item_tag_image', kwargs={'item_id': item_id})
 
 
 @login_required
 @user_passes_test(is_admin_or_armorer)
-def print_single_qr(request, qr_id):
-    """Print one QR code"""
-    qr_code = get_object_or_404(QRCodeImage, id=qr_id)
-    
+def serve_item_tag_image(request, item_id):
+    """Serve an item tag PNG file directly through Django."""
+    from django.http import FileResponse, Http404
+    filepath = os.path.join(settings.MEDIA_ROOT, 'item_id_tags', f"{item_id}.png")
+    if not os.path.exists(filepath):
+        raise Http404('Item tag image not found')
+    return FileResponse(open(filepath, 'rb'), content_type='image/png')
+
+
+@login_required
+@user_passes_test(is_admin_or_armorer)
+def print_item_tags(request):
+    """
+    Item Tag Print Manager — lists all items, shows their tag thumbnail,
+    and allows single/bulk printing and re-generation.
+    """
+    search_q = request.GET.get('q', '').strip()
+
+    items_qs = Item.objects.all().order_by('item_type', 'serial')
+    if search_q:
+        from django.db.models import Q as DQ
+        items_qs = items_qs.filter(
+            DQ(serial__icontains=search_q) |
+            DQ(item_type__icontains=search_q) |
+            DQ(id__icontains=search_q)
+        )
+
+    item_tags = []
+    for item in items_qs:
+        tag_abs  = os.path.join(settings.MEDIA_ROOT, 'item_id_tags', f"{item.id}.png")
+        has_tag  = os.path.exists(tag_abs)
+        thumb_url = _item_tag_img_url(request, item.id) if has_tag else None
+        item_tags.append({
+            'item': item,
+            'has_tag': has_tag,
+            'thumb_url': thumb_url,
+        })
+
+    total      = len(item_tags)
+    with_tag   = sum(1 for t in item_tags if t['has_tag'])
+
     context = {
-        'qr_code': qr_code,
-        'qr_size_mm': QR_SIZE_MM,
-        'card_width_mm': CARD_WIDTH_MM,
-        'card_height_mm': CARD_HEIGHT_MM,
-        'font_size_id': FONT_SIZE_ID,
-        'font_size_name': FONT_SIZE_NAME,
-        'font_size_badge': FONT_SIZE_BADGE,
+        'item_tags': item_tags,
+        'search_q': search_q,
+        'total': total,
+        'with_tag': with_tag,
+        'without_tag': total - with_tag,
     }
-    return render(request, 'print_handler/print_single_qr.html', context)
+    return render(request, 'print_handler/print_item_tags.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_armorer)
+@require_POST
+def generate_item_tags(request):
+    """
+    Bulk-generate item tag PNGs.
+    force=1 → regenerate ALL (even those that exist).
+    Returns JSON {generated, skipped, errors}
+    """
+    from utils.item_tag_generator import generate_item_tag
+
+    force     = request.POST.get('force', '0') == '1'
+    generated = 0
+    skipped   = 0
+    errors    = []
+
+    for item in Item.objects.all():
+        tag_abs = os.path.join(settings.MEDIA_ROOT, 'item_id_tags', f"{item.id}.png")
+        if not force and os.path.exists(tag_abs):
+            skipped += 1
+            continue
+        try:
+            generate_item_tag(item)
+            generated += 1
+        except Exception as exc:
+            errors.append({'id': item.id, 'serial': item.serial, 'error': str(exc)})
+
+    return JsonResponse({'success': True, 'generated': generated, 'skipped': skipped, 'errors': errors})
+
+
+@login_required
+@user_passes_test(is_admin_or_armorer)
+@require_POST
+def regenerate_item_tag(request, item_id):
+    """Regenerate the tag PNG for a single item (AJAX POST)."""
+    try:
+        item = Item.objects.get(id=item_id)
+    except Item.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Item not found'}, status=404)
+    try:
+        from utils.item_tag_generator import generate_item_tag
+        generate_item_tag(item)
+        thumb_url = _item_tag_img_url(request, item_id)
+        return JsonResponse({'success': True, 'thumb_url': thumb_url})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+
+
+@login_required
+@user_passes_test(is_admin_or_armorer)
+def print_item_tags_view(request):
+    """Print-ready page for selected (or all) item tags."""
+    ids_param = request.GET.get('ids', '')
+    show_all  = request.GET.get('all', '')
+
+    if show_all:
+        items_qs = Item.objects.all().order_by('item_type', 'serial')
+    elif ids_param:
+        id_list  = [i.strip() for i in ids_param.split(',') if i.strip()]
+        items_qs = Item.objects.filter(id__in=id_list)
+    else:
+        items_qs = Item.objects.none()
+
+    tags = []
+    for item in items_qs:
+        tag_abs = os.path.join(settings.MEDIA_ROOT, 'item_id_tags', f"{item.id}.png")
+        if os.path.exists(tag_abs):
+            tags.append({'item': item, 'tag_url': _item_tag_img_url(request, item.id)})
+
+    return render(request, 'print_handler/print_item_tags_printview.html', {'tags': tags})
 
 
 @login_required

@@ -13,9 +13,12 @@ urlpatterns = [
     path('id-cards/image/<str:personnel_id>/<str:side>/', views.serve_id_card_image, name='serve_id_card_image'),
     path('id-cards/diagnostics/', views.id_card_diagnostics, name='id_card_diagnostics'),
 
-    # Legacy QR code printing
-    path('qr-codes/', views.print_qr_codes, name='print_qr_codes'),
-    path('single/<int:qr_id>/', views.print_single_qr, name='print_single_qr'),
+    # Item Tag Printer
+    path('item-tags/', views.print_item_tags, name='print_item_tags'),
+    path('item-tags/image/<str:item_id>/', views.serve_item_tag_image, name='serve_item_tag_image'),
+    path('item-tags/generate/', views.generate_item_tags, name='generate_item_tags'),
+    path('item-tags/regenerate/<str:item_id>/', views.regenerate_item_tag, name='regenerate_item_tag'),
+    path('item-tags/print/', views.print_item_tags_view, name='print_item_tags_view'),
 
     # Transaction printing
     path('transaction/<int:transaction_id>/', views.print_transaction_form, name='print_transaction_form'),

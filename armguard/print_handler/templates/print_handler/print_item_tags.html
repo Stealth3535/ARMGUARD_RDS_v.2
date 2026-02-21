@@ -1,0 +1,402 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Item Tag Manager – ArmGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Tag thumbnail card ─────────────────────────────────────────────── */
+    .tag-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1rem;
+    }
+
+    .tag-wrapper {
+        position: relative;
+    }
+
+    .tag-card {
+        background: #fff;
+        border-radius: 12px;
+        border: 1.5px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: box-shadow 0.2s;
+    }
+
+    .tag-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+
+    .tag-thumb-wrap {
+        width: 100%;
+        aspect-ratio: 2 / 1;
+        background: #f3f4f6;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .tag-thumb-wrap img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .tag-no-thumb {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 0.4rem;
+        color: #9ca3af;
+        font-size: 0.75rem;
+    }
+
+    .tag-info {
+        padding: 0.6rem 0.75rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .tag-name {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #111827;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .tag-sub {
+        font-size: 0.65rem;
+        color: #6b7280;
+        font-family: monospace;
+    }
+
+    .tag-actions {
+        padding: 0.5rem 0.75rem;
+        display: flex;
+        gap: 0.4rem;
+        border-top: 1px solid #f3f4f6;
+    }
+
+    .tag-actions .btn {
+        flex: 1;
+        font-size: 0.7rem;
+        padding: 0.3rem 0.4rem;
+    }
+
+    .select-checkbox {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        width: 1.1rem;
+        height: 1.1rem;
+        accent-color: #2563eb;
+        cursor: pointer;
+        z-index: 2;
+    }
+
+    .status-badge {
+        font-size: 0.65rem;
+        padding: 0.15rem 0.45rem;
+        border-radius: 999px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+    }
+
+    .badge-ok      { background: #dcfce7; color: #166534; }
+    .badge-missing { background: #fee2e2; color: #991b1b; }
+
+    .regen-spinner { display: none; }
+    .regen-icon    { display: inline; }
+
+    .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .toolbar-right {
+        margin-left: auto;
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="card mb-6 border-l-4" style="border-left-color: var(--armguard-primary);">
+    <div class="p-6 d-flex" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+        <div>
+            <h1 class="text-3xl font-bold text-neutral-900 m-0">
+                <i class="fas fa-tags text-primary"></i> Item Tag Manager
+            </h1>
+            <p class="text-neutral-500 mt-1 mb-0" style="font-size:0.9rem;">
+                Preview, print, and regenerate item tag PNGs
+            </p>
+        </div>
+        <a href="{% url 'print_handler:print_id_cards' %}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-id-card"></i> ID Card Manager
+        </a>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="card p-4 text-center">
+        <div style="font-size:1.8rem; font-weight:800; color:#2563eb;">{{ total }}</div>
+        <div style="font-size:0.8rem; color:#6b7280; text-transform:uppercase; letter-spacing:0.06em;">Total Items</div>
+    </div>
+    <div class="card p-4 text-center">
+        <div style="font-size:1.8rem; font-weight:800; color:#16a34a;">{{ with_tag }}</div>
+        <div style="font-size:0.8rem; color:#6b7280; text-transform:uppercase; letter-spacing:0.06em;">Tags Generated</div>
+    </div>
+    <div class="card p-4 text-center">
+        <div style="font-size:1.8rem; font-weight:800; color:#dc2626;">{{ without_tag }}</div>
+        <div style="font-size:0.8rem; color:#6b7280; text-transform:uppercase; letter-spacing:0.06em;">Tags Missing</div>
+    </div>
+</div>
+
+<!-- Search + Toolbar -->
+<div class="card mb-6 p-4">
+    <form method="get" class="mb-4" style="display:flex; gap:0.5rem; max-width:400px;">
+        <input type="text" name="q" value="{{ search_q }}" placeholder="Search by serial, type, or ID…"
+               class="form-control" style="flex:1;">
+        <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fas fa-search"></i>
+        </button>
+        {% if search_q %}
+        <a href="{% url 'print_handler:print_item_tags' %}" class="btn btn-secondary btn-sm">✕</a>
+        {% endif %}
+    </form>
+
+    <div class="toolbar">
+        <button class="btn btn-primary btn-sm" onclick="printSelected()">
+            <i class="fas fa-print"></i> Print Selected
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="printAll()">
+            <i class="fas fa-print"></i> Print All
+        </button>
+
+        <div class="toolbar-right">
+            <button class="btn btn-sm" style="background:#fef9c3; border:1px solid #fbbf24; color:#92400e; font-weight:600;"
+                    onclick="genMissing(this)">
+                <i class="fas fa-magic regen-icon"></i>
+                <i class="fas fa-spinner fa-spin regen-spinner"></i>
+                Generate Missing
+            </button>
+            <button class="btn btn-sm" style="background:#fee2e2; border:1px solid #fca5a5; color:#991b1b; font-weight:600;"
+                    onclick="regenAll(this)">
+                <i class="fas fa-sync-alt regen-icon"></i>
+                <i class="fas fa-spinner fa-spin regen-spinner"></i>
+                Regenerate All
+            </button>
+        </div>
+    </div>
+
+    <!-- Select helpers -->
+    <div style="font-size:0.75rem; color:#6b7280;">
+        <a href="#" onclick="selectAll();return false;">Select All</a> ·
+        <a href="#" onclick="clearAll();return false;">Clear All</a> ·
+        <span id="selCount">0</span> selected
+    </div>
+</div>
+
+<!-- Tag grid -->
+<div class="tag-grid" id="tagGrid">
+    {% for entry in item_tags %}
+    <div class="tag-wrapper" id="wrap-{{ entry.item.id }}">
+        <input type="checkbox" class="select-checkbox tag-checkbox"
+               value="{{ entry.item.id }}" onchange="updateCount()">
+
+        <div class="tag-card">
+            <!-- Thumbnail -->
+            <div class="tag-thumb-wrap"
+                 onclick="toggleCheck('{{ entry.item.id }}')"
+                 title="{{ entry.item.get_item_type_display }} {{ entry.item.serial }}">
+                {% if entry.has_tag %}
+                <img id="thumb-{{ entry.item.id }}"
+                     src="{{ entry.thumb_url }}"
+                     alt="Tag for {{ entry.item.id }}"
+                     loading="lazy">
+                {% else %}
+                <div class="tag-no-thumb" id="thumb-{{ entry.item.id }}">
+                    <i class="fas fa-tag" style="font-size:1.8rem; color:#d1d5db;"></i>
+                    <span>No tag</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Info row -->
+            <div class="tag-info">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:0.4rem;">
+                    <span class="tag-name">
+                        {{ entry.item.get_item_type_display }}
+                        {% if entry.item.item_number %} #{{ entry.item.item_number|stringformat:"04d" }}{% endif %}
+                    </span>
+                    <span class="status-badge {% if entry.has_tag %}badge-ok{% else %}badge-missing{% endif %}">
+                        {% if entry.has_tag %}OK{% else %}MISSING{% endif %}
+                    </span>
+                </div>
+                <span class="tag-sub">{{ entry.item.serial }}</span>
+                <span class="tag-sub" style="color:#9ca3af;">{{ entry.item.status }}</span>
+            </div>
+
+            <!-- Per-card actions -->
+            <div class="tag-actions">
+                <button class="btn btn-secondary btn-sm"
+                        onclick="regenTag('{{ entry.item.id }}', this)"
+                        title="Regenerate tag">
+                    <i class="fas fa-sync-alt regen-icon"></i>
+                    <i class="fas fa-spinner fa-spin regen-spinner"></i>
+                    Regen
+                </button>
+                {% if entry.has_tag %}
+                <a href="{% url 'print_handler:print_item_tags_view' %}?ids={{ entry.item.id }}"
+                   class="btn btn-primary btn-sm" target="_blank" title="Print this tag">
+                    <i class="fas fa-print"></i> Print
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card p-6 text-center" style="grid-column:1/-1; color:#6b7280;">
+        <i class="fas fa-box-open" style="font-size:2rem; margin-bottom:0.5rem;"></i>
+        <p>{% if search_q %}No items match "{{ search_q }}"{% else %}No items found{% endif %}</p>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+const GEN_URL   = "{% url 'print_handler:generate_item_tags' %}";
+const REGEN_BASE = "{% url 'print_handler:regenerate_item_tag' item_id='PLACEHOLDER' %}".replace('PLACEHOLDER', '');
+const PRINT_URL = "{% url 'print_handler:print_item_tags_view' %}";
+const CSRF      = "{{ csrf_token }}";
+
+function updateCount() {
+    document.getElementById('selCount').textContent =
+        document.querySelectorAll('.tag-checkbox:checked').length;
+}
+function toggleCheck(id) {
+    const cb = document.querySelector(`.tag-checkbox[value="${id}"]`);
+    if (cb) { cb.checked = !cb.checked; updateCount(); }
+}
+function selectAll() {
+    document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = true);
+    updateCount();
+}
+function clearAll() {
+    document.querySelectorAll('.tag-checkbox').forEach(c => c.checked = false);
+    updateCount();
+}
+
+function printSelected() {
+    const ids = [...document.querySelectorAll('.tag-checkbox:checked')].map(c => c.value);
+    if (!ids.length) { alert('Select at least one item.'); return; }
+    window.open(PRINT_URL + '?ids=' + ids.join(','), '_blank');
+}
+function printAll() {
+    window.open(PRINT_URL + '?all=1', '_blank');
+}
+
+function _setBusy(btn, busy) {
+    btn.querySelector('.regen-icon').style.display = busy ? 'none' : 'inline';
+    btn.querySelector('.regen-spinner').style.display = busy ? 'inline' : 'none';
+    btn.disabled = busy;
+}
+
+async function regenTag(itemId, btn) {
+    _setBusy(btn, true);
+    const url = REGEN_BASE + itemId + '/';
+    try {
+        const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' }
+        });
+        const ct = resp.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+            const txt = await resp.text();
+            throw new Error('Server returned non-JSON: ' + txt.substring(0, 120));
+        }
+        const data = await resp.json();
+        if (data.success) {
+            const wrap = document.getElementById('wrap-' + itemId);
+            // Update thumbnail
+            let img = wrap.querySelector('img');
+            if (img) {
+                img.src = data.thumb_url + '?v=' + Date.now();
+            } else {
+                const div = wrap.querySelector('.tag-no-thumb');
+                if (div) {
+                    const newImg = document.createElement('img');
+                    newImg.id = 'thumb-' + itemId;
+                    newImg.src = data.thumb_url;
+                    newImg.alt = 'Tag for ' + itemId;
+                    div.replaceWith(newImg);
+                }
+            }
+            // Update badge
+            const badge = wrap.querySelector('.status-badge');
+            if (badge) { badge.textContent = 'OK'; badge.className = 'status-badge badge-ok'; }
+            // Add print button if missing
+            const actions = wrap.querySelector('.tag-actions');
+            if (actions && !actions.querySelector('a.btn-primary')) {
+                const a = document.createElement('a');
+                a.href = PRINT_URL + '?ids=' + itemId;
+                a.target = '_blank';
+                a.className = 'btn btn-primary btn-sm';
+                a.innerHTML = '<i class="fas fa-print"></i> Print';
+                actions.appendChild(a);
+            }
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    } catch(e) {
+        alert('Request failed: ' + e.message);
+    }
+    _setBusy(btn, false);
+}
+
+async function _bulkGenerate(force, btn) {
+    if (force && !confirm('Regenerate ALL item tags? This may take a while.')) return;
+    _setBusy(btn, true);
+    try {
+        const fd = new FormData();
+        fd.append('force', force ? '1' : '0');
+        fd.append('csrfmiddlewaretoken', CSRF);
+        const resp = await fetch(GEN_URL, { method: 'POST', body: fd });
+        const ct = resp.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+            const txt = await resp.text();
+            throw new Error('Server returned non-JSON: ' + txt.substring(0, 120));
+        }
+        const data = await resp.json();
+        if (data.success) {
+            const msg = `Done — generated: ${data.generated}, skipped: ${data.skipped}`
+                + (data.errors.length ? `, errors: ${data.errors.length}` : '');
+            alert(msg);
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || JSON.stringify(data)));
+        }
+    } catch(e) {
+        alert('Request failed: ' + e.message);
+    }
+    _setBusy(btn, false);
+}
+
+function genMissing(btn) { _bulkGenerate(false, btn); }
+function regenAll(btn)   { _bulkGenerate(true,  btn); }
+</script>
+{% endblock %}
