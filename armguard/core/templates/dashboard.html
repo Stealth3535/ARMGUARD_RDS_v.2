@@ -84,6 +84,25 @@
 }
 .tx-stat-breakdown strong { font-weight: 700; color: #111827; }
 
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translate3d(0, 30px, 0); }
+    to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes countUp {
+    from { opacity: 0; transform: scale(0.8); }
+    to   { opacity: 1; transform: scale(1); }
+}
+.tx-stat-card {
+    animation: fadeInUp 0.6s ease-out both;
+}
+.tx-stat-card:nth-child(1) { animation-delay: 0.1s; }
+.tx-stat-card:nth-child(2) { animation-delay: 0.2s; }
+.tx-stat-card:nth-child(3) { animation-delay: 0.3s; }
+.tx-stat-card:nth-child(4) { animation-delay: 0.4s; }
+.tx-stat-value {
+    animation: countUp 0.8s ease-out 0.5s both;
+}
+
 .stat-head {
     display: flex;
     align-items: center;
