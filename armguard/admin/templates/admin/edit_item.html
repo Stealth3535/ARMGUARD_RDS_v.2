@@ -182,6 +182,17 @@
             </div>
             
             <div class="form-group">
+                <label for="{{ form.item_number.id_for_label }}">
+                    Item Number
+                </label>
+                {{ form.item_number }}
+                <p class="help-text">Item number within the same type (e.g. 1, 2, 3)</p>
+                {% if form.item_number.errors %}
+                    <span class="error">{{ form.item_number.errors }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
                 <label for="{{ form.serial.id_for_label }}">
                     Serial Number <span class="required">*</span>
                 </label>

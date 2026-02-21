@@ -59,6 +59,7 @@ class Item(models.Model):
     
     # Item Information
     item_type = models.CharField(max_length=20, choices=ITEM_TYPE_CHOICES)
+    item_number = models.PositiveIntegerField(blank=True, null=True, help_text='Item number (e.g. 1, 2, 3) within the same item type')
     serial = models.CharField(max_length=50, unique=True)
     description = models.TextField(blank=True, null=True)
     stencil_picture = models.ImageField(upload_to='inventory/stencils/', blank=True, null=True)

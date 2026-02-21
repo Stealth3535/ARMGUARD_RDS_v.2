@@ -204,6 +204,12 @@
                     <span class="info-label">Item Type</span>
                     <span class="info-value"><strong>{{ item.item_type }}</strong></span>
                 </div>
+                {% if item.item_number %}
+                <div class="info-row">
+                    <span class="info-label">Item No.</span>
+                    <span class="info-value"><strong>{{ item.item_number }}</strong></span>
+                </div>
+                {% endif %}
                 <div class="info-row">
                     <span class="info-label">Serial No.</span>
                     <span class="info-value" style="font-family:monospace;">{{ item.serial }}</span>
