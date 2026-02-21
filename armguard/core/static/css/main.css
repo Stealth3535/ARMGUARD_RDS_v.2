@@ -151,16 +151,11 @@ body {
 }
 
 .navbar-role-badge {
-    display: inline-block;
-    background: rgba(255, 255, 255, 0.2);
-    color: var(--white);
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-weight: var(--font-bold);
-    padding: 2px 8px;
-    border-radius: 999px;
-    letter-spacing: 0.05em;
+    color: var(--white);
     text-transform: uppercase;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    letter-spacing: 0.05em;
 }
 
 .navbar-logout-item {

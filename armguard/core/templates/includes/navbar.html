@@ -8,7 +8,7 @@
                 <span class="navbar-title">ArmGuard</span>
             </a>
             <div class="navbar-welcome">
-                Welcome, <strong>{{ user.username }}</strong> | Role: <span class="navbar-role-badge">{{ user|get_user_role }}</span>
+                Welcome, <strong>{{ user.username }}</strong> | Role: {{ user|get_user_role }}
             </div>
         </div>
         <ul class="navbar-menu">
