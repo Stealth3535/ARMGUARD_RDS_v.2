@@ -242,21 +242,59 @@ class DeviceAuthorizationRequest(models.Model):
             self.issued_certificate_downloaded_at = None
 
         self.save()
-        
-        # Add device to authorized_devices.json
-        from core.middleware.device_authorization import DeviceAuthorizationMiddleware
-        middleware = DeviceAuthorizationMiddleware(lambda req: None)
-        middleware.load_authorized_devices()
-        middleware.authorize_device(
-            device_fingerprint=self.device_fingerprint,
-            device_name=self.device_name,
-            ip_address=self.ip_address,
-            description=f"Requested by {self.requested_by.username}: {self.reason}",
-            can_transact=self.can_transact,
-            security_level=self.security_level,
-            roles=[],
-            max_daily_transactions=self.max_daily_transactions
-        )
+
+        # v2: create or activate the matching AuthorizedDevice record.
+        from core.device.models import AuthorizedDevice as _V2Dev, DeviceAuditEvent as _V2Audit
+        import secrets as _sec
+        _tier_map = {
+            'DEVELOPMENT':   _V2Dev.SecurityTier.STANDARD,
+            'STANDARD':      _V2Dev.SecurityTier.STANDARD,
+            'HIGH':          _V2Dev.SecurityTier.HIGH_SECURITY,
+            'HIGH_SECURITY': _V2Dev.SecurityTier.HIGH_SECURITY,
+            'MILITARY':      _V2Dev.SecurityTier.MILITARY,
+        }
+        v2_tier = _tier_map.get(self.security_level, _V2Dev.SecurityTier.STANDARD)
+        try:
+            v2_dev = _V2Dev.objects.filter(
+                ip_last_seen=self.ip_address,
+            ).order_by('-enrolled_at').first()
+            if v2_dev:
+                v2_dev.status        = _V2Dev.Status.ACTIVE
+                v2_dev.device_name   = self.device_name
+                v2_dev.security_tier = v2_tier
+                v2_dev.can_transact  = self.can_transact
+                v2_dev.max_daily_transactions = self.max_daily_transactions
+                v2_dev.authorized_at = timezone.now()
+                v2_dev.reviewed_by   = reviewer
+                v2_dev.reviewed_at   = timezone.now()
+                v2_dev.save(update_fields=[
+                    'status', 'device_name', 'security_tier', 'can_transact',
+                    'max_daily_transactions', 'authorized_at', 'reviewed_by', 'reviewed_at',
+                ])
+                _V2Audit.log(v2_dev, 'ACTIVATED', reviewer,
+                             notes=f'Approved via DeviceAuthorizationRequest #{self.pk}')
+            else:
+                v2_dev = _V2Dev.objects.create(
+                    device_token=_sec.token_hex(32),
+                    device_name=self.device_name,
+                    user=self.requested_by,
+                    ip_first_seen=self.ip_address,
+                    ip_last_seen=self.ip_address,
+                    status=_V2Dev.Status.ACTIVE,
+                    security_tier=v2_tier,
+                    can_transact=self.can_transact,
+                    max_daily_transactions=self.max_daily_transactions,
+                    authorized_at=timezone.now(),
+                    reviewed_by=reviewer,
+                    reviewed_at=timezone.now(),
+                    enrollment_reason=(
+                        f'Approved DeviceAuthorizationRequest #{self.pk}: {self.reason}'
+                    ),
+                )
+                _V2Audit.log(v2_dev, 'ACTIVATED', reviewer,
+                             notes=f'Created via DeviceAuthorizationRequest #{self.pk}')
+        except Exception:
+            pass
 
         # Clear any stale lockout/attempt counters for this device after approval.
         cache.delete(f"device_lockout_{self.device_fingerprint}")

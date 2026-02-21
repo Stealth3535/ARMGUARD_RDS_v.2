@@ -490,7 +490,7 @@ class DeviceRiskEvaluatorTests(TestCase):
         with patch('core.device.service.cache') as mock_cache:
             mock_cache.get.return_value = set()
             alerts = self.evaluator._check_new_ip(device, '10.0.0.99')
-        self.assertTrue(any('new IP' in a.lower() for a in alerts))
+        self.assertTrue(any('new ip' in a.lower() for a in alerts))
 
     def test_same_ip_no_alert(self):
         device = _make_active_device(self.user, ip_first_seen='10.0.0.1')
@@ -536,8 +536,7 @@ class DeviceServiceIntegrationTests(TestCase):
     def test_superuser_debug_bypass(self):
         superuser = _make_user('super', superuser=True)
         req = _make_request(path='/admin/')
-        req.user = superuser
-        req.user.is_authenticated = True
+        req.user = superuser   # real User instance; is_authenticated is always True
         decision = self.service.authorize_request(req)
         self.assertTrue(decision.allowed)
         self.assertEqual(decision.reason, 'superuser_debug_bypass')
@@ -570,3 +569,287 @@ class DeviceServiceIntegrationTests(TestCase):
         self.assertTrue(result)
         device.refresh_from_db()
         self.assertEqual(device.status, AuthorizedDevice.Status.PENDING)
+
+
+# ===========================================================================
+# 9. RELIABILITY TESTS — same input, always same output
+# ===========================================================================
+
+class ReliabilityTests(TestCase):
+    """
+    Each check is repeated multiple times to confirm deterministic behaviour
+    under identical conditions (no state bleed, no race).
+    """
+
+    def setUp(self):
+        self.user = _make_user('reliability_user')
+        self.resolver = PathSecurityResolver()
+        self.engine = AuthorizationDecisionEngine()
+        self.service = DeviceService()
+
+    def test_path_resolver_is_deterministic(self):
+        paths_and_expected = [
+            ('/admin/', PathTier.HIGH_SECURITY),
+            ('/login/', None),
+            ('/transactions/api/', PathTier.RESTRICTED),
+            ('/admin/device/request-authorization/', None),
+        ]
+        for path, expected in paths_and_expected:
+            results = [self.resolver.resolve(path) for _ in range(10)]
+            self.assertTrue(
+                all(r == expected for r in results),
+                f'Path {path} produced inconsistent results: {set(results)}'
+            )
+
+    def test_decision_engine_is_deterministic(self):
+        device = _make_active_device(self.user)
+        results = [
+            self.engine.decide(device, '10.0.0.1', '/admin/', 'HIGH_SECURITY')
+            for _ in range(10)
+        ]
+        self.assertTrue(
+            all(r == results[0] for r in results),
+            'Decision engine produced inconsistent results'
+        )
+
+    def test_repeated_valid_auth_always_succeeds(self):
+        device = _make_active_device(self.user)
+        for i in range(10):
+            req = _make_request(path='/admin/', cookie_token=device.device_token)
+            req.user = self.user
+            decision = self.service.authorize_request(req)
+            self.assertTrue(decision.allowed,
+                            f'Request {i+1} unexpectedly denied: {decision.reason}')
+
+    def test_repeated_invalid_auth_always_fails(self):
+        for i in range(10):
+            req = _make_request(path='/admin/', cookie_token=secrets.token_hex(32))
+            req.COOKIES = {}
+            decision = self.service.authorize_request(req)
+            self.assertFalse(decision.allowed,
+                             f'Request {i+1} unexpectedly allowed')
+
+    def test_revoked_device_consistently_denied(self):
+        device = _make_active_device(self.user, status=AuthorizedDevice.Status.REVOKED)
+        for _ in range(5):
+            allowed, reason = self.engine.decide(
+                device, '10.0.0.1', '/admin/', 'HIGH_SECURITY'
+            )
+            self.assertFalse(allowed)
+            self.assertEqual(reason, 'device_revoked')
+
+
+# ===========================================================================
+# 10. AUDIT TRAIL INTEGRITY TESTS
+# ===========================================================================
+
+class AuditTrailIntegrityTests(TestCase):
+    """
+    Every state transition must produce an immutable audit record.
+    """
+
+    def setUp(self):
+        self.actor = _make_user('auditor', superuser=True)
+        self.user = _make_user('auditee')
+
+    def test_every_transition_logs_event(self):
+        device = _make_active_device(self.user, status=AuthorizedDevice.Status.PENDING)
+        device.activate(self.actor, notes='Approved')
+        device.suspend(self.actor, 'Suspicious activity')
+        device.revoke(self.actor, 'Policy violation')
+
+        event_types = list(
+            DeviceAuditEvent.objects.filter(device=device)
+            .values_list('event_type', flat=True)
+        )
+        self.assertIn('ACTIVATED', event_types)
+        self.assertIn('SUSPENDED', event_types)
+        self.assertIn('REVOKED', event_types)
+
+    def test_token_rotation_logged(self):
+        device = _make_active_device(self.user)
+        device.rotate_token(self.actor)
+        events = DeviceAuditEvent.objects.filter(device=device, event_type='TOKEN_ROTATED')
+        self.assertEqual(events.count(), 1)
+
+    def test_lockout_event_created_at_threshold(self):
+        device = _make_active_device(self.user)
+        with self.settings(DEVICE_MAX_FAILED_ATTEMPTS=2, DEVICE_LOCKOUT_MINUTES=30):
+            device.record_failed_attempt('1.2.3.4')
+            device.record_failed_attempt('1.2.3.4')
+        events = DeviceAuditEvent.objects.filter(device=device, event_type='LOCKED_OUT')
+        self.assertEqual(events.count(), 1)
+
+    def test_access_log_created_for_each_request(self):
+        from core.device.models import DeviceAccessLog
+        device = _make_active_device(self.user)
+        service = DeviceService()
+        initial = DeviceAccessLog.objects.count()
+        for _ in range(5):
+            req = _make_request(path='/admin/', cookie_token=device.device_token)
+            req.user = self.user
+            service.authorize_request(req)
+        self.assertEqual(DeviceAccessLog.objects.count(), initial + 5)
+
+    def test_access_log_records_correct_verdict(self):
+        from core.device.models import DeviceAccessLog
+        device = _make_active_device(self.user)
+        service = DeviceService()
+
+        # Authorized request
+        req_ok = _make_request(path='/admin/', cookie_token=device.device_token)
+        req_ok.user = self.user
+        d_ok = service.authorize_request(req_ok)
+        self.assertTrue(DeviceAccessLog.objects.get(pk=d_ok.log_entry.pk).is_authorized)
+
+        # Denied request
+        req_bad = _make_request(path='/admin/')
+        req_bad.COOKIES = {}
+        d_bad = service.authorize_request(req_bad)
+        self.assertFalse(DeviceAccessLog.objects.get(pk=d_bad.log_entry.pk).is_authorized)
+
+
+# ===========================================================================
+# 11. BRUTE FORCE PROTECTION TESTS
+# ===========================================================================
+
+class BruteForceProtectionTests(TestCase):
+
+    def setUp(self):
+        self.user = _make_user('bf_target')
+        self.engine = AuthorizationDecisionEngine()
+
+    def test_failed_attempts_do_not_affect_other_devices(self):
+        """Hammering fake tokens must not pollute other devices' counters."""
+        real_device = _make_active_device(self.user)
+        service = DeviceService()
+        for _ in range(20):
+            req = _make_request(path='/admin/', cookie_token=secrets.token_hex(32))
+            req.COOKIES = {}
+            service.authorize_request(req)
+        real_device.refresh_from_db()
+        self.assertEqual(real_device.failed_auth_count, 0)
+
+    def test_locked_device_denied_with_valid_token(self):
+        device = _make_active_device(
+            self.user,
+            locked_until=timezone.now() + timedelta(minutes=30),
+            failed_auth_count=5,
+        )
+        allowed, reason = self.engine.decide(
+            device, '10.0.0.1', '/admin/', 'HIGH_SECURITY'
+        )
+        self.assertFalse(allowed)
+        self.assertEqual(reason, 'device_locked_out')
+
+    def test_lockout_expires_naturally(self):
+        """After locked_until passes, device should be accessible again."""
+        device = _make_active_device(
+            self.user,
+            locked_until=timezone.now() - timedelta(seconds=1),  # already past
+            failed_auth_count=3,
+        )
+        self.assertFalse(device.is_locked)
+        allowed, reason = self.engine.decide(
+            device, '10.0.0.1', '/admin/', 'HIGH_SECURITY'
+        )
+        self.assertTrue(allowed)
+
+    def test_workflow_denials_do_not_increment_failed_count(self):
+        """PENDING, REVOKED, SUSPENDED must not trigger brute-force counter."""
+        service = DeviceService()
+        for status in [
+            AuthorizedDevice.Status.PENDING,
+            AuthorizedDevice.Status.REVOKED,
+            AuthorizedDevice.Status.SUSPENDED,
+            AuthorizedDevice.Status.PENDING_MFA,
+        ]:
+            user = _make_user(f'wf_{status}_{secrets.token_hex(4)}')
+            device = _make_active_device(user, status=status)
+            req = _make_request(path='/admin/', cookie_token=device.device_token)
+            service.authorize_request(req)
+            device.refresh_from_db()
+            self.assertEqual(
+                device.failed_auth_count, 0,
+                f'Status {status} should not increment failed_auth_count'
+            )
+
+
+# ===========================================================================
+# 12. GUI FLOW SIMULATION (approval creates v2 AuthorizedDevice)
+# ===========================================================================
+
+class GUIApprovalFlowTests(TestCase):
+    """
+    Simulates the full admin approval flow:
+      Request form submission → superuser approves → AuthorizedDevice created.
+    """
+
+    def setUp(self):
+        self.admin = _make_user('gui_admin', superuser=True)
+        self.officer = _make_user('gui_officer')
+
+    def test_approval_creates_active_v2_device(self):
+        from admin.models import DeviceAuthorizationRequest
+        req = DeviceAuthorizationRequest.objects.create(
+            device_fingerprint=secrets.token_hex(16),
+            ip_address='10.10.10.50',
+            user_agent='Officer/Chrome',
+            requested_by=self.officer,
+            reason='Need access to admin panel',
+            device_name='Officer Station',
+            security_level='HIGH_SECURITY',
+        )
+        count_before = AuthorizedDevice.objects.count()
+        req.approve(
+            reviewer=self.admin,
+            device_name='Officer Station',
+            security_level='HIGH_SECURITY',
+            notes='Approved in test',
+        )
+        count_after = AuthorizedDevice.objects.count()
+        self.assertEqual(count_after, count_before + 1)
+
+        v2 = AuthorizedDevice.objects.filter(ip_last_seen='10.10.10.50').last()
+        self.assertIsNotNone(v2)
+        self.assertEqual(v2.status, AuthorizedDevice.Status.ACTIVE)
+        self.assertEqual(v2.security_tier, AuthorizedDevice.SecurityTier.HIGH_SECURITY)
+        self.assertEqual(v2.reviewed_by, self.admin)
+
+    def test_approved_token_grants_middleware_access(self):
+        """Token from the approved v2 device passes the decision engine."""
+        from admin.models import DeviceAuthorizationRequest
+        req = DeviceAuthorizationRequest.objects.create(
+            device_fingerprint=secrets.token_hex(16),
+            ip_address='10.10.10.55',
+            user_agent='Officer/Firefox',
+            requested_by=self.officer,
+            reason='Test access',
+            device_name='Test Station',
+            security_level='HIGH_SECURITY',
+        )
+        req.approve(self.admin, 'Test Station', 'HIGH_SECURITY')
+
+        v2 = AuthorizedDevice.objects.filter(ip_last_seen='10.10.10.55').last()
+        self.assertIsNotNone(v2)
+
+        service = DeviceService()
+        http_req = _make_request(path='/admin/', cookie_token=v2.device_token)
+        http_req.user = self.officer
+        decision = service.authorize_request(http_req)
+        self.assertTrue(decision.allowed, f'Expected allowed, got: {decision.reason}')
+
+    def test_rejection_does_not_create_v2_device(self):
+        from admin.models import DeviceAuthorizationRequest
+        req = DeviceAuthorizationRequest.objects.create(
+            device_fingerprint=secrets.token_hex(16),
+            ip_address='10.10.10.60',
+            user_agent='BadActor/1.0',
+            requested_by=self.officer,
+            reason='Suspicious',
+            device_name='Unknown PC',
+            security_level='STANDARD',
+        )
+        count_before = AuthorizedDevice.objects.count()
+        req.reject(reviewer=self.admin, notes='Rejected in test')
+        self.assertEqual(AuthorizedDevice.objects.count(), count_before)
