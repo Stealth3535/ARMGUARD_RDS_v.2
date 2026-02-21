@@ -70,14 +70,43 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
         from qr_manager.models import QRCodeImage
         from transactions.models import Transaction
         from admin.permissions import check_restricted_admin
-        
+        import os as _os
+
+        qr_code_obj = None
         try:
-            context['qr_code_obj'] = QRCodeImage.objects.get(
+            qr_code_obj = QRCodeImage.objects.get(
                 qr_type=QRCodeImage.TYPE_ITEM,
-                reference_id=self.object.id  # Use item.id, not item.serial
+                reference_id=self.object.id
             )
+            # Auto-heal: if the image filename stem contains dots it won't serve
+            # correctly — delete the old file and regenerate with the sanitized name.
+            if qr_code_obj and qr_code_obj.qr_image:
+                stem = _os.path.splitext(
+                    _os.path.basename(qr_code_obj.qr_image.name))[0]
+                if '.' in stem:
+                    try:
+                        qr_code_obj.qr_image.delete(save=False)
+                        qr_code_obj.qr_image = None
+                        qr_code_obj.generate_qr_code()
+                        qr_code_obj.save()
+                    except Exception:
+                        pass
         except QRCodeImage.DoesNotExist:
-            context['qr_code_obj'] = None
+            # No active record — create/reactivate and generate QR image on the fly
+            try:
+                qr_code_obj, _ = QRCodeImage.all_objects.get_or_create(
+                    qr_type=QRCodeImage.TYPE_ITEM,
+                    reference_id=self.object.id,
+                    defaults={'qr_data': self.object.id, 'is_active': True},
+                )
+                if not qr_code_obj.is_active:
+                    qr_code_obj.is_active = True
+                    qr_code_obj.deleted_at = None
+                    qr_code_obj.save()
+            except Exception:
+                qr_code_obj = None
+
+        context['qr_code_obj'] = qr_code_obj
         
         # Get last 'Take' transaction for issued items
         if self.object.status == 'Issued':
