@@ -247,3 +247,55 @@ def _build_tag(item) -> Image.Image:
 
     return img
 
+
+def _build_stacked_tag(item, stack: int) -> Image.Image:
+    """
+    Build a single PNG with `stack` number+QR rows above one shared bottom label.
+    Each row is separated by a thin line; only the last row has the bottom label.
+    """
+    if stack <= 1:
+        return _build_tag(item)
+
+    # ── Derive geometry from the single-tag constants ─────────────────────
+    SECTION_H = PAD_TOP + QR_SIZE + DIV_GAP   # = 230 px  (top section up to divider)
+    BOTTOM_H  = TAG_H - SECTION_H              # = 80 px   (divider + label row)
+    SEP_H     = 4                              # thin separator between copies
+
+    total_h = stack * SECTION_H + (stack - 1) * SEP_H + BOTTOM_H
+
+    # Build the base single tag so we can crop sections from it
+    base = _build_tag(item)
+    section_crop = base.crop((0, 0, TAG_W, SECTION_H))
+    bottom_crop  = base.crop((0, SECTION_H, TAG_W, TAG_H))
+
+    img  = Image.new('RGB', (TAG_W, total_h), BG)
+    draw = ImageDraw.Draw(img)
+
+    y = 0
+    for i in range(stack):
+        img.paste(section_crop, (0, y))
+        y += SECTION_H
+        if i < stack - 1:
+            # Thin separator line between rows
+            draw.line([(PAD_X, y + SEP_H // 2), (TAG_W - PAD_X, y + SEP_H // 2)],
+                      fill=DIVIDER, width=2)
+            y += SEP_H
+
+    img.paste(bottom_crop, (0, y))
+
+    # Redraw card outline over the full stacked image
+    _rounded_rect(draw, [0, 0, TAG_W - 1, total_h - 1],
+                  CORNER_R, None, BORDER, BORDER_W)
+
+    return img
+
+
+def get_stacked_tag_b64(item, stack: int) -> str:
+    """Return a base64 data-URL PNG for use as an <img src=...>."""
+    import io, base64
+    img = _build_stacked_tag(item, stack)
+    buf = io.BytesIO()
+    img.save(buf, 'PNG', dpi=(300, 300))
+    b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+    return f'data:image/png;base64,{b64}'
+

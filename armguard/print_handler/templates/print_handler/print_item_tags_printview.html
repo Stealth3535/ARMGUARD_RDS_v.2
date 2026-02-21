@@ -73,7 +73,7 @@
         /* Each tag image */
         .tag-print-item {
             width: 90mm;
-            height: 31mm;
+            height: auto;
             overflow: hidden;
             page-break-inside: avoid;
             border: 1px solid #e5e7eb;
@@ -82,8 +82,8 @@
 
         .tag-print-item img {
             width: 100%;
-            height: 100%;
-            object-fit: contain;
+            height: auto;
+            display: block;
             image-rendering: -webkit-optimize-contrast;
             image-rendering: crisp-edges;
         }

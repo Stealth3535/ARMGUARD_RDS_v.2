@@ -157,13 +157,18 @@ def print_item_tags_view(request):
     except (ValueError, TypeError):
         stack = 1
 
+    from utils.item_tag_generator import get_stacked_tag_b64
+
     tags = []
     for item in items_qs:
         tag_abs = os.path.join(settings.MEDIA_ROOT, 'item_id_tags', f"{item.id}.png")
-        if os.path.exists(tag_abs):
-            entry = {'item': item, 'tag_url': _item_tag_img_url(request, item.id)}
-            for _ in range(stack):
-                tags.append(entry)
+        if not os.path.exists(tag_abs):
+            continue
+        if stack == 1:
+            tag_src = _item_tag_img_url(request, item.id)
+        else:
+            tag_src = get_stacked_tag_b64(item, stack)
+        tags.append({'item': item, 'tag_url': tag_src, 'stack': stack})
 
     return render(request, 'print_handler/print_item_tags_printview.html', {'tags': tags, 'stack': stack})
 
