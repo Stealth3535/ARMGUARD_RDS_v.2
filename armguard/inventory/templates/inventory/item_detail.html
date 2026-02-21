@@ -260,9 +260,6 @@
         <a href="{% url 'armguard_admin:edit_item' item.id %}" class="btn-action btn-edit"><i class="fas fa-edit"></i> Edit</a>
         <a href="{% url 'armguard_admin:delete_item' item.id %}" class="btn-action btn-del"><i class="fas fa-trash"></i> Delete</a>
         {% endif %}
-        {% if qr_code_obj %}
-        <a href="{% url 'print_handler:print_single_qr' qr_code_obj.id %}" class="btn-action btn-print" target="_blank"><i class="fas fa-print"></i> Print QR</a>
-        {% endif %}
         {% if item.status != 'Issued' and user.is_staff %}
         <form method="post" action="{% url 'inventory:update_item_status' item.pk %}" style="display:contents;">
             {% csrf_token %}
