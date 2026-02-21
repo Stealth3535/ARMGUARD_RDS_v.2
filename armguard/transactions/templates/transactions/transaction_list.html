@@ -1889,6 +1889,18 @@ itemInput.addEventListener('input', function() {
     if (!this.value.trim()) clearItemCard();
 });
 
+// Re-validate personnel & item when action (withdraw/return) changes
+actionSelect.addEventListener('change', function() {
+    if (personnelInput.value.trim()) {
+        personnelValidated = false;
+        personnelInput.dispatchEvent(new Event('blur'));
+    }
+    if (itemInput.value.trim()) {
+        itemValidated = false;
+        itemInput.dispatchEvent(new Event('blur'));
+    }
+});
+
 // Prevent any automatic form submission
 document.getElementById('transactionForm').addEventListener('submit', function(e) {
     e.preventDefault();
