@@ -25,7 +25,6 @@
 }
 
 .stat-card.personnel    { --card-color: #1e40af; }
-.stat-card.inventory    { --card-color: #1e40af; }
 .stat-card.transactions { --card-color: #1e40af; }
 
 /* Inventory detail cards */
@@ -179,19 +178,6 @@
                 <p>Active: {{ active_personnel }}</p>
                 <p>Officers: {{ officers }}</p>
                 <p>Enlisted: {{ enlisted }}</p>
-            </div>
-        </div>
-        
-        <!-- Inventory Stats -->
-        <div class="stat-card inventory">
-            <div class="stat-head">
-                <div class="stat-title">Inventory</div>
-                <div class="stat-number">{{ total_items }}</div>
-            </div>
-            <div class="stat-details">
-                <p>Available: {{ available_items }}</p>
-                <p>Issued: {{ issued_items }}</p>
-                <p>Maintenance: {{ maintenance_items }}</p>
             </div>
         </div>
         
