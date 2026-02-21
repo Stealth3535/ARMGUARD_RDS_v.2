@@ -163,7 +163,7 @@ def personnel_registration(request):
 
             # Generate ID card PNG (front + back) saved to core/media/personnel_id_cards/
             try:
-                from personnel.id_card_generator import generate_personnel_id_card
+                from utils.personnel_id_card_generator import generate_personnel_id_card
                 generate_personnel_id_card(personnel)
             except Exception:
                 logger.exception("ID card generation failed for personnel %s — registration still succeeded.", personnel.id)
