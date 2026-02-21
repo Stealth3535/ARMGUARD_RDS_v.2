@@ -558,67 +558,51 @@
     <!-- Enhanced Statistics Dashboard -->
     <div class="stats-container">
         <div class="stat-card available">
-            <div class="stat-content">
-                <div class="stat-info">
-                    <div class="stat-head">
-                        <div class="stat-label">Available Items</div>
-                        <div class="stat-value" id="availableCount">0</div>
-                    </div>
-                    <div class="stat-change">
-                        <i class="fas fa-arrow-up"></i>
-                        Ready for deployment
-                    </div>
-                    <div class="stat-breakdown" id="availableTypeBreakdown"></div>
-                </div>
+            <div class="stat-head">
+                <div class="stat-label">Available Items</div>
+                <div class="stat-value" id="availableCount">0</div>
             </div>
+            <div class="stat-change">
+                <i class="fas fa-arrow-up"></i>
+                Ready for deployment
+            </div>
+            <div class="stat-breakdown" id="availableTypeBreakdown"></div>
         </div>
         
         <div class="stat-card issued">
-            <div class="stat-content">
-                <div class="stat-info">
-                    <div class="stat-head">
-                        <div class="stat-label">Currently Issued</div>
-                        <div class="stat-value" id="issuedCount">0</div>
-                    </div>
-                    <div class="stat-change">
-                        <i class="fas fa-user-check"></i>
-                        In field operations
-                    </div>
-                    <div class="stat-breakdown" id="issuedTypeBreakdown"></div>
-                </div>
+            <div class="stat-head">
+                <div class="stat-label">Currently Issued</div>
+                <div class="stat-value" id="issuedCount">0</div>
             </div>
+            <div class="stat-change">
+                <i class="fas fa-user-check"></i>
+                In field operations
+            </div>
+            <div class="stat-breakdown" id="issuedTypeBreakdown"></div>
         </div>
         
         <div class="stat-card maintenance">
-            <div class="stat-content">
-                <div class="stat-info">
-                    <div class="stat-head">
-                        <div class="stat-label">Under Maintenance</div>
-                        <div class="stat-value" id="maintenanceCount">0</div>
-                    </div>
-                    <div class="stat-change negative">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Requires attention
-                    </div>
-                    <div class="stat-breakdown" id="maintenanceTypeBreakdown"></div>
-                </div>
+            <div class="stat-head">
+                <div class="stat-label">Under Maintenance</div>
+                <div class="stat-value" id="maintenanceCount">0</div>
             </div>
+            <div class="stat-change negative">
+                <i class="fas fa-exclamation-triangle"></i>
+                Requires attention
+            </div>
+            <div class="stat-breakdown" id="maintenanceTypeBreakdown"></div>
         </div>
         
         <div class="stat-card total">
-            <div class="stat-content">
-                <div class="stat-info">
-                    <div class="stat-head">
-                        <div class="stat-label">Total Inventory</div>
-                        <div class="stat-value" id="totalCount">{{ items|length|default:0 }}</div>
-                    </div>
-                    <div class="stat-change">
-                        <i class="fas fa-database"></i>
-                        Complete arsenal
-                    </div>
-                    <div class="stat-breakdown" id="totalTypeBreakdown"></div>
-                </div>
+            <div class="stat-head">
+                <div class="stat-label">Total Inventory</div>
+                <div class="stat-value" id="totalCount">{{ items|length|default:0 }}</div>
             </div>
+            <div class="stat-change">
+                <i class="fas fa-database"></i>
+                Complete arsenal
+            </div>
+            <div class="stat-breakdown" id="totalTypeBreakdown"></div>
         </div>
     </div>
 
