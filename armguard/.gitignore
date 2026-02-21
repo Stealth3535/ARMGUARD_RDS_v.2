@@ -63,6 +63,8 @@ core/media/transaction_forms/
 core/media/qr_codes/
 core/media/images/
 !core/media/qr_codes/.gitkeep
+!core/media/item_id_cards/.gitkeep
+!core/media/personnel_id_cards/.gitkeep
 !print_handler/templates/pdf_forms/*.pdf
 
 # Backup files
