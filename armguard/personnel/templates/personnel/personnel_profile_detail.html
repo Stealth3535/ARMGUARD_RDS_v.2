@@ -280,11 +280,14 @@
 
 <!-- Profile Header -->
 <div class="profile-header">
-    {% if personnel.picture %}
-    <img src="{{ personnel.picture.url }}" alt="{{ personnel.get_full_name }}" class="profile-photo">
-    {% else %}
-    <div class="no-photo">No Photo</div>
-    {% endif %}
+    <div style="display:flex;flex-direction:column;align-items:center;gap:0.4rem;flex-shrink:0;">
+        {% if personnel.picture %}
+        <img src="{{ personnel.picture.url }}" alt="{{ personnel.get_full_name }}" class="profile-photo">
+        {% else %}
+        <div class="no-photo">No Photo</div>
+        {% endif %}
+        <span style="font-family:monospace;font-size:0.72rem;color:#6b7280;text-align:center;">{{ personnel.id }}</span>
+    </div>
 
     <div class="profile-meta">
         <p class="profile-name">{{ personnel.get_full_name }}</p>
@@ -351,10 +354,6 @@
             <div class="info-row">
                 <span class="info-label">Group</span>
                 <span class="info-value">{{ personnel.group }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Personnel ID</span>
-                <span class="info-value" style="font-family:monospace;font-size:0.8rem;">{{ personnel.id }}</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Registered</span>
