@@ -214,6 +214,11 @@
                 <button id="btn-regen-missing" class="btn btn-warning btn-sm" onclick="regenMissing()">
                     <i class="fas fa-sync-alt"></i> Generate Missing
                 </button>
+                <!-- Regenerate ALL (force, picks up newly available photos) -->
+                <button id="btn-regen-all" class="btn btn-danger btn-sm" onclick="regenAll()"
+                        title="Regenerate every card — use this when profile photos have changed or been migrated">
+                    <i class="fas fa-redo"></i> Regenerate All
+                </button>
             </div>
         </div>
     </div>
@@ -386,6 +391,55 @@ function regenCard(pid, slug) {
         btn.disabled = false;
         iconEl.style.display = 'inline';
         spinEl.style.display = 'none';
+    });
+}
+
+// ---- Regen All (force) ----
+function regenAll() {
+    if (!confirm(
+        `Regenerate ALL ${document.querySelectorAll('.card-wrapper').length} ID cards?\n\n` +
+        'Use this when profile photos have been uploaded or migrated since cards were last generated.\n' +
+        'This may take 30–60 seconds.'
+    )) return;
+
+    const btn = document.getElementById('btn-regen-all');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Regenerating all…';
+
+    const form = new FormData();
+    form.append('force', '1');
+
+    fetch(GEN_MISSING_URL, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+        body: form
+    })
+    .then(r => {
+        const ct = r.headers.get('Content-Type') || '';
+        if (!ct.includes('application/json')) {
+            return r.text().then(() => { throw new Error('Server returned HTTP ' + r.status + ' (not JSON). Pull latest code and restart.'); });
+        }
+        return r.json();
+    })
+    .then(data => {
+        if (data.success) {
+            let msg = `Regenerated ${data.generated} cards.`;
+            if (data.errors && data.errors.length) {
+                msg += `\n\n${data.errors.length} error(s):\n` + data.errors.map(e => `• ${e.id}: ${e.error}`).join('\n');
+            }
+            btn.innerHTML = `<i class="fas fa-check"></i> Done (${data.generated})`;
+            alert(msg);
+            setTimeout(() => location.reload(), 500);
+        } else {
+            alert('Error regenerating cards.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-redo"></i> Regenerate All';
+        }
+    })
+    .catch(err => {
+        alert(err.message || ('Request failed: ' + err));
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-redo"></i> Regenerate All';
     });
 }
 

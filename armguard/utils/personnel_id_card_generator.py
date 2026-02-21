@@ -232,8 +232,24 @@ def _build_front(personnel) -> Image.Image:
     photo_radius = _px(8)
 
     try:
-        if personnel.picture and os.path.exists(personnel.picture.path):
-            photo = Image.open(personnel.picture.path).convert("RGBA")
+        photo_path = None
+        if personnel.picture:
+            candidate = personnel.picture.path  # uses current MEDIA_ROOT
+            if os.path.exists(candidate):
+                photo_path = candidate
+            else:
+                # Fallback: the file may still be in the old MEDIA_ROOT
+                # (armguard/media/) from before the path was corrected.
+                # Try the same relative path under BASE_DIR / 'media'.
+                from pathlib import Path as _P
+                rel = personnel.picture.name  # e.g. "personnel/pictures/abc.jpg"
+                old_root = _P(settings.BASE_DIR) / "media"
+                old_candidate = old_root / rel
+                if old_candidate.exists():
+                    photo_path = str(old_candidate)
+
+        if photo_path:
+            photo = Image.open(photo_path).convert("RGBA")
             photo = ImageOps.fit(photo, (photo_w, photo_h), method=Image.LANCZOS)
         else:
             raise FileNotFoundError

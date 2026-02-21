@@ -395,11 +395,14 @@ def print_id_cards(request):
 @require_POST
 def generate_missing_cards(request):
     """
-    Bulk-generate ID cards for all active personnel who don't have card files yet.
-    Called from the Print Manager's 'Generate Missing' button.
-    Returns JSON {generated: N, skipped: N, errors: [...]}
+    Bulk-generate ID cards for active personnel.
+    POST body param  force=1  → regenerate ALL cards (even those that already exist).
+    Default (force=0) → generate only personnel who have no card file yet.
+    Returns JSON {generated, skipped, errors}
     """
     from utils.personnel_id_card_generator import generate_personnel_id_card
+
+    force = request.POST.get('force', '0') == '1'
 
     generated = 0
     skipped   = 0
@@ -409,7 +412,7 @@ def generate_missing_cards(request):
     for p in personnel_qs:
         front_abs    = os.path.join(settings.MEDIA_ROOT, 'personnel_id_cards', f"{p.id}_front.png")
         combined_abs = os.path.join(settings.MEDIA_ROOT, 'personnel_id_cards', f"{p.id}.png")
-        if os.path.exists(front_abs) or os.path.exists(combined_abs):
+        if not force and (os.path.exists(front_abs) or os.path.exists(combined_abs)):
             skipped += 1
             continue
         try:
