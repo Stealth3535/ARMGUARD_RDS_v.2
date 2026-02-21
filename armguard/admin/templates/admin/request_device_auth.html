@@ -287,20 +287,203 @@
                 <p class="help-text">Provide a detailed explanation for your authorization request</p>
             </div>
 
-            <div class="form-group">
-                <label for="csr_pem">Client Certificate Signing Request (CSR) <small>(optional)</small></label>
-                <textarea id="csr_pem"
-                          name="csr_pem"
-                          class="form-control"
-                          rows="6"
-                          placeholder="-----BEGIN CERTIFICATE REQUEST-----\n...\n-----END CERTIFICATE REQUEST-----"></textarea>
-                <p class="help-text">If provided, certificate issuance will be automated on admin approval.</p>
+            <!-- CSR is auto-generated in background; user never sees it -->
+            <input type="hidden" id="csr_pem" name="csr_pem">
+            <input type="hidden" id="csr_ready" value="0">
+
+            <!-- Certificate status badge -->
+            <div id="cert-status" class="form-group" style="display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border-radius:8px; background:#f0fdf4; border:2px solid #bbf7d0;">
+                <span id="cert-spinner" style="font-size:1.25rem; animation:spin 1s linear infinite; display:inline-block;">⏳</span>
+                <span id="cert-msg" style="color:#14532d; font-weight:600; font-size:0.95rem;">Generating security certificate…</span>
             </div>
-            
-            <button type="submit" class="btn-submit">
+
+            <!-- Private key save notice (shown after generation) -->
+            <div id="key-save-notice" style="display:none; margin-bottom:1rem; padding:0.75rem 1rem; border-radius:8px; background:#fffbeb; border:2px solid #fcd34d; color:#78350f; font-size:0.88rem;">
+                <strong>🔑 Two files saved to Downloads:</strong><br>
+                &bull; <code>armguard_device.key</code> — private key, <strong>never share this</strong><br>
+                &bull; <code>armguard_device.csr</code> — certificate request (safe to keep for records)
+            </div>
+
+            <button type="submit" id="btn-submit" class="btn-submit" disabled style="opacity:0.5;cursor:not-allowed;">
                 📤 Submit Authorization Request
             </button>
         </form>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+(function () {
+    'use strict';
+
+    /* ── ASN.1 DER helpers ─────────────────────────────────────── */
+    function encLen(l) {
+        if (l < 128) return [l];
+        if (l < 256)  return [0x81, l];
+        return [0x82, (l >> 8) & 0xff, l & 0xff];
+    }
+    function tlv(tag, arr)  { return [tag, ...encLen(arr.length), ...arr]; }
+    function seq(arr)       { return tlv(0x30, arr); }
+    function set_(arr)      { return tlv(0x31, arr); }
+    function int_(arr)      { return tlv(0x02, arr); }
+    function oid_(bytes)    { return tlv(0x06, bytes); }
+    function utf8_(str)     { return tlv(0x0C, [...new TextEncoder().encode(str)]); }
+    function bits_(arr)     { return tlv(0x03, [0, ...arr]); }   // 0 unused bits
+    function ctx0_(arr)     { return tlv(0xA0, arr); }           // [0] IMPLICIT
+    function null_()        { return [0x05, 0x00]; }
+
+    function toPEM(bytes, label) {
+        const b64   = btoa(String.fromCharCode(...bytes));
+        const lines = b64.match(/.{1,64}/g).join('\n');
+        return `-----BEGIN ${label}-----\n${lines}\n-----END ${label}-----`;
+    }
+
+    /* ── CSR generator ─────────────────────────────────────────── */
+    async function generateCSR(cn) {
+        const org = '9533 RDS Squadron';
+        const country = 'PH';
+
+        const kp = await crypto.subtle.generateKey(
+            { name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048,
+              publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+            true, ['sign', 'verify']
+        );
+
+        const privDer = new Uint8Array(await crypto.subtle.exportKey('pkcs8', kp.privateKey));
+        const pubSpki = new Uint8Array(await crypto.subtle.exportKey('spki',  kp.publicKey));
+
+        /* Subject: C=PH, O=9533 RDS Squadron, CN=<device name> */
+        const cnOID  = [0x55, 0x04, 0x03];   // 2.5.4.3
+        const orgOID = [0x55, 0x04, 0x0A];   // 2.5.4.10
+        const cntOID = [0x55, 0x04, 0x06];   // 2.5.4.6
+
+        function atv(oidBytes, value, tag) {
+            tag = tag || 0x0C;  // UTF8String default; country uses PrintableString
+            const valBytes = (tag === 0x13)
+                ? [...new TextEncoder().encode(value)]
+                : [...new TextEncoder().encode(value)];
+            return seq([...oid_(oidBytes), ...tlv(tag, valBytes)]);
+        }
+
+        const subject = seq([
+            ...set_(atv(cntOID, country, 0x13)),   // PrintableString for country
+            ...set_(atv(orgOID, org)),
+            ...set_(atv(cnOID,  cn)),
+        ]);
+
+        const version = int_([0x00]);
+        const spki    = [...pubSpki];
+        const attrs   = ctx0_([]);
+
+        const certReqInfo = seq([...version, ...subject, ...spki, ...attrs]);
+
+        const sig = new Uint8Array(
+            await crypto.subtle.sign({ name: 'RSASSA-PKCS1-v1_5' }, kp.privateKey, new Uint8Array(certReqInfo))
+        );
+
+        /* sha256WithRSAEncryption OID: 1.2.840.113549.1.1.11 */
+        const sigAlgOID = [0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x0B];
+        const sigAlg    = seq([...oid_(sigAlgOID), ...null_()]);
+        const sigBS     = bits_([...sig]);
+
+        const csr = seq([...certReqInfo, ...sigAlg, ...sigBS]);
+
+        return {
+            csrPem:     toPEM([...csr],     'CERTIFICATE REQUEST'),
+            privKeyPem: toPEM([...privDer], 'PRIVATE KEY'),
+        };
+    }
+
+    /* ── Auto-download PEM file ───────────────────────────────── */
+    function downloadPEM(pem, filename) {
+        const blob = new Blob([pem], { type: 'application/x-pem-file' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    }
+
+    /* ── Main ──────────────────────────────────────────────────── */
+    async function init() {
+        const spinner   = document.getElementById('cert-spinner');
+        const msg       = document.getElementById('cert-msg');
+        const certBox   = document.getElementById('cert-status');
+        const notice    = document.getElementById('key-save-notice');
+        const csrField  = document.getElementById('csr_pem');
+        const readyFlag = document.getElementById('csr_ready');
+        const btn       = document.getElementById('btn-submit');
+        const form      = document.querySelector('form');
+        const nameInput = document.getElementById('device_name');
+
+        /* Wait until user has typed a device name, then generate */
+        async function doGenerate() {
+            const cn = (nameInput.value || 'ArmGuard Device').trim();
+            try {
+                const { csrPem, privKeyPem } = await generateCSR(cn);
+
+                csrField.value  = csrPem;
+                readyFlag.value = '1';
+
+                /* Update status badge */
+                spinner.style.animation = 'none';
+                spinner.textContent = '✅';
+                msg.textContent     = 'Security certificate ready — private key & CSR saved to Downloads.';
+                certBox.style.background = '#f0fdf4';
+                certBox.style.borderColor = '#4ade80';
+
+                /* Enable submit */
+                btn.disabled    = false;
+                btn.style.opacity = '1';
+                btn.style.cursor  = 'pointer';
+
+                /* Auto-download private key, then CSR with slight delay */
+                downloadPEM(privKeyPem, 'armguard_device.key');
+                setTimeout(() => downloadPEM(csrPem, 'armguard_device.csr'), 600);
+                notice.style.display = 'block';
+
+            } catch (err) {
+                spinner.textContent = '⚠️';
+                msg.textContent     = 'Certificate generation failed: ' + err.message + '. You can still submit without one.';
+                certBox.style.background  = '#fff7ed';
+                certBox.style.borderColor = '#fb923c';
+                /* Allow submission without CSR */
+                btn.disabled   = false;
+                btn.style.opacity = '1';
+                btn.style.cursor  = 'pointer';
+                console.error('CSR generation error:', err);
+            }
+        }
+
+        /* Regenerate CSR if device name changes significantly */
+        let generateTimer = null;
+        nameInput.addEventListener('blur', () => {
+            if (nameInput.value.trim() && readyFlag.value === '0') doGenerate();
+        });
+        nameInput.addEventListener('input', () => {
+            clearTimeout(generateTimer);
+            generateTimer = setTimeout(() => {
+                if (nameInput.value.trim()) {
+                    readyFlag.value = '0'; /* mark stale */
+                    doGenerate();
+                }
+            }, 1500);
+        });
+
+        /* Start immediately with placeholder name */
+        doGenerate();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
         {% endif %}
     </div>
 </div>

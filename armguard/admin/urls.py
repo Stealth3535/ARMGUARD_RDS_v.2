@@ -50,6 +50,7 @@ urlpatterns = [
     path('device/requests/<int:request_id>/delete/', views.delete_device_request, name='delete_device_request'),
     path('device/requests/<int:request_id>/approve/', views.approve_device_request, name='approve_device_request'),
     path('device/requests/<int:request_id>/reject/', views.reject_device_request, name='reject_device_request'),
+    path('device/requests/<int:request_id>/attach-csr/', views.attach_csr_to_device, name='attach_csr_to_device'),
     path('device/requests/<int:request_id>/certificate/', views.download_device_certificate, name='download_device_certificate'),
     
     # Audit Logs

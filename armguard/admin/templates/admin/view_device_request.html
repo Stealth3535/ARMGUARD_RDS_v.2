@@ -25,6 +25,105 @@
         <div><strong>Reason:</strong> {{ auth_request.reason }}</div>
     </div>
 
+    {% if auth_request.status == 'approved' and not auth_request.csr_pem %}
+    <!-- ── Generate & Attach Certificate panel ─────────────────── -->
+    <div id="csr-panel" style="margin:1.25rem 0; padding:1.25rem; border-radius:10px; background:#f0fdf4; border:2px solid #bbf7d0;">
+        <h3 style="margin:0 0 0.5rem; color:#14532d; font-size:1rem;">🔐 Attach Client Certificate</h3>
+        <p style="margin:0 0 1rem; color:#166534; font-size:0.9rem;">No certificate was submitted with this request. Generate one now — your private key will be saved locally and the CSR will be attached to this device record.</p>
+
+        <div id="csr-status" style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.75rem;">
+            <span id="csr-spinner" style="font-size:1.2rem; animation:spin 1s linear infinite; display:inline-block;">⏳</span>
+            <span id="csr-msg" style="font-size:0.9rem; color:#14532d; font-weight:600;">Generating certificate in background…</span>
+        </div>
+
+        <div id="csr-key-notice" style="display:none; margin-bottom:0.75rem; padding:0.6rem 0.8rem; border-radius:7px; background:#fffbeb; border:1px solid #fcd34d; color:#78350f; font-size:0.85rem;">
+            🔑 <strong>Two files saved to Downloads:</strong>
+            <code>armguard_device.key</code> (keep secret) &amp; <code>armguard_device.csr</code> (record copy)
+        </div>
+
+        <form id="csr-form" method="post" action="{% url 'armguard_admin:attach_csr_to_device' auth_request.id %}">
+            {% csrf_token %}
+            <input type="hidden" id="hidden-csr-pem" name="csr_pem">
+            <button type="submit" id="csr-attach-btn" disabled
+                    style="padding:0.65rem 1.4rem; border:none; border-radius:8px; background:#16a34a; color:#fff; font-weight:700; font-size:0.95rem; cursor:not-allowed; opacity:0.5;">
+                📎 Attach Certificate to Device
+            </button>
+        </form>
+    </div>
+
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    <script>
+    (function () {
+        'use strict';
+        function encLen(l){return l<128?[l]:l<256?[0x81,l]:[0x82,(l>>8)&0xff,l&0xff];}
+        function tlv(t,a){return[t,...encLen(a.length),...a];}
+        function seq(a){return tlv(0x30,a);}
+        function set_(a){return tlv(0x31,a);}
+        function oid_(b){return tlv(0x06,b);}
+        function bits_(a){return tlv(0x03,[0,...a]);}
+        function ctx0_(a){return tlv(0xA0,a);}
+        function null_(){return[0x05,0x00];}
+        function int_(a){return tlv(0x02,a);}
+        function toPEM(bytes,label){
+            const b64=btoa(String.fromCharCode(...bytes));
+            return `-----BEGIN ${label}-----\n${b64.match(/.{1,64}/g).join('\n')}\n-----END ${label}-----`;
+        }
+        function downloadPEM(pem,filename){
+            const a=Object.assign(document.createElement('a'),{
+                href:URL.createObjectURL(new Blob([pem],{type:'application/x-pem-file'})),
+                download:filename});
+            document.body.appendChild(a);a.click();
+            setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+        }
+        async function generateCSR(cn){
+            const kp=await crypto.subtle.generateKey(
+                {name:'RSASSA-PKCS1-v1_5',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},
+                true,['sign','verify']);
+            const privDer=new Uint8Array(await crypto.subtle.exportKey('pkcs8',kp.privateKey));
+            const pubSpki=new Uint8Array(await crypto.subtle.exportKey('spki',kp.publicKey));
+            function atv(oidBytes,val,tag){
+                tag=tag||0x0C;
+                return seq([...oid_(oidBytes),...tlv(tag,[...new TextEncoder().encode(val)])]);
+            }
+            const subject=seq([
+                ...set_(atv([0x55,0x04,0x06],'PH',0x13)),
+                ...set_(atv([0x55,0x04,0x0A],'9533 RDS Squadron')),
+                ...set_(atv([0x55,0x04,0x03],cn)),
+            ]);
+            const certReqInfo=seq([...int_([0x00]),...subject,...pubSpki,...ctx0_([])]);
+            const sig=new Uint8Array(await crypto.subtle.sign({name:'RSASSA-PKCS1-v1_5'},kp.privateKey,new Uint8Array(certReqInfo)));
+            const sigAlg=seq([...oid_([0x2A,0x86,0x48,0x86,0xF7,0x0D,0x01,0x01,0x0B]),...null_()]);
+            const csr=seq([...certReqInfo,...sigAlg,...bits_([...sig])]);
+            return{csrPem:toPEM([...csr],'CERTIFICATE REQUEST'),privKeyPem:toPEM([...privDer],'PRIVATE KEY')};
+        }
+        async function init(){
+            const spinner=document.getElementById('csr-spinner');
+            const msg=document.getElementById('csr-msg');
+            const panel=document.getElementById('csr-status');
+            const notice=document.getElementById('csr-key-notice');
+            const hiddenCsr=document.getElementById('hidden-csr-pem');
+            const btn=document.getElementById('csr-attach-btn');
+            const cn='{{ auth_request.device_name|escapejs }}'||'ArmGuard Device';
+            try{
+                const{csrPem,privKeyPem}=await generateCSR(cn);
+                hiddenCsr.value=csrPem;
+                spinner.style.animation='none';spinner.textContent='✅';
+                msg.textContent='Certificate ready — private key & CSR saved to Downloads.';
+                downloadPEM(privKeyPem,'armguard_device.key');
+                setTimeout(()=>downloadPEM(csrPem,'armguard_device.csr'),600);
+                notice.style.display='block';
+                btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';
+            }catch(e){
+                spinner.textContent='⚠️';
+                msg.textContent='Generation failed: '+e.message;
+                msg.style.color='#b45309';
+            }
+        }
+        document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init):init();
+    })();
+    </script>
+    {% endif %}
+
     <div style="display:flex; gap:0.75rem; flex-wrap: wrap;">
         <a href="{% url 'armguard_admin:manage_device_requests' %}" style="padding:0.7rem 1rem; border:1px solid #d1d5db; border-radius:8px; text-decoration:none; color:#374151;">Back</a>
         {% if auth_request.status == 'approved' %}

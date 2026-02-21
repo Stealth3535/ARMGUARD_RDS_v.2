@@ -1008,7 +1008,7 @@ def request_device_authorization(request):
         if not reason or not device_name:
             messages.error(request, 'Please provide both device name and reason.')
         elif csr_pem and 'BEGIN CERTIFICATE REQUEST' not in csr_pem:
-            messages.error(request, 'CSR must be a valid PEM block starting with BEGIN CERTIFICATE REQUEST.')
+            messages.error(request, 'The auto-generated security certificate is invalid. Please reload the page and try again.')
         else:
             try:
                 if stale_approved_request:
@@ -1049,9 +1049,9 @@ def request_device_authorization(request):
                 return attach_device_cookie(redirect('armguard_admin:request_device_authorization'))
             
             if csr_pem:
-                messages.success(request, 'Device authorization request with CSR submitted successfully. Certificate will be issued automatically upon approval.')
+                messages.success(request, 'Device authorization request submitted successfully. A client certificate will be issued automatically upon admin approval.')
             else:
-                messages.success(request, 'Device authorization request submitted successfully. You can upload CSR for automated certificate issuance.')
+                messages.success(request, 'Device authorization request submitted. No certificate was attached — contact admin if mTLS access is required.')
             return attach_all_cookies(redirect('armguard_admin:dashboard'))
     
     context = {
@@ -1256,6 +1256,27 @@ def delete_device_request(request, request_id):
 
     messages.success(request, f'Device request "{request_label}" deleted successfully.')
     return redirect('armguard_admin:manage_device_requests')
+
+
+@login_required
+@user_passes_test(is_superuser)
+@require_POST
+def attach_csr_to_device(request, request_id):
+    """Attach an auto-generated CSR to an already-approved device request."""
+    from .models import DeviceAuthorizationRequest
+
+    auth_request = get_object_or_404(DeviceAuthorizationRequest, id=request_id, status='approved')
+    csr_pem = request.POST.get('csr_pem', '').strip()
+
+    if not csr_pem or 'BEGIN CERTIFICATE REQUEST' not in csr_pem:
+        messages.error(request, 'Invalid CSR — must be a PEM block starting with BEGIN CERTIFICATE REQUEST.')
+        return redirect('armguard_admin:view_device_request', request_id=request_id)
+
+    auth_request.csr_pem = csr_pem
+    auth_request.save(update_fields=['csr_pem'])
+    messages.success(request, f'Certificate request attached to "{auth_request.device_name}". '
+                               'It will be signed on next admin certificate issuance.')
+    return redirect('armguard_admin:view_device_request', request_id=request_id)
 
 
 @login_required
