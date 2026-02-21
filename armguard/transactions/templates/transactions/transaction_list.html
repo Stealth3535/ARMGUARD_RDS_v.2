@@ -378,87 +378,129 @@
     }
 
     /* ── Scan preview cards ── */
-    .px-preview-card {
-        border-radius: 10px;
+    /* Personnel ID card – exact match of existing profile card */
+    .px-id-card {
+        width: 220px;
+        border-radius: 14px;
         overflow: hidden;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.14);
-        background: #fff;
         border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
-    /* Personnel card */
-    .px-ph-header {
-        background: #1e3a5f;
-        color: #fff;
-        text-align: center;
-        padding: 0.45rem 0.5rem;
-        font-weight: 700;
-        font-size: 0.78rem;
-        letter-spacing: 1.5px;
+    .px-id-top {
+        width: 100%;
+        background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+        padding: 0.7rem 0 0.5rem 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .px-id-logo {
+        font-size: 0.65rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        color: rgba(255,255,255,0.75);
         text-transform: uppercase;
     }
-    .px-ph-body {
-        display: flex;
-        gap: 0.65rem;
-        padding: 0.65rem;
-        align-items: flex-start;
+    .px-id-photo {
+        width: 100px;
+        height: 110px;
+        border-radius: 8px;
+        object-fit: cover;
+        border: 3px solid rgba(255,255,255,0.9);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
-    .px-ph-photo-wrap {
-        width: 72px;
-        height: 82px;
-        flex-shrink: 0;
-        border-radius: 6px;
-        overflow: hidden;
-        background: #e5e7eb;
+    .px-id-no-photo {
+        width: 100px;
+        height: 110px;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.15);
         display: flex;
         align-items: center;
         justify-content: center;
+        color: rgba(255,255,255,0.7);
+        font-size: 0.72rem;
+        text-align: center;
+        border: 3px solid rgba(255,255,255,0.5);
     }
-    .px-ph-photo { width:100%; height:100%; object-fit:cover; }
-    .px-ph-photo-placeholder { font-size: 2rem; color: #9ca3af; }
-    .px-ph-info { flex:1; min-width:0; }
-    .px-ph-name {
-        font-size: 0.8rem;
+    .px-id-body {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.75rem 1rem 0.8rem 1rem;
+        gap: 0.3rem;
+        text-align: center;
+    }
+    .px-id-name {
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: #111827;
+        margin: 0;
+        line-height: 1.25;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    .px-id-role {
+        font-size: 0.74rem;
+        color: #6b7280;
+        margin: 0;
+    }
+    .px-id-badges {
+        display: flex;
+        gap: 0.35rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 0.2rem;
+    }
+    .px-id-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.18rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
         font-weight: 700;
         text-transform: uppercase;
-        color: #111827;
-        line-height: 1.25;
-        margin-bottom: 0.2rem;
+        letter-spacing: 0.04em;
     }
-    .px-ph-rank {
-        font-size: 0.72rem;
-        color: #4b5563;
-        margin-bottom: 0.12rem;
-    }
-    .px-ph-classification {
-        font-size: 0.67rem;
-        color: #6b7280;
-        margin-bottom: 0.35rem;
-    }
-    .px-ph-badges { display:flex; gap:0.3rem; flex-wrap:wrap; }
-    .px-badge-green {
-        background: #16a34a; color: #fff;
-        font-size: 0.6rem; font-weight: 700;
-        padding: 0.13rem 0.4rem; border-radius: 3px; text-transform: uppercase;
-    }
-    .px-badge-red {
-        background: #dc2626; color: #fff;
-        font-size: 0.6rem; font-weight: 700;
-        padding: 0.13rem 0.4rem; border-radius: 3px; text-transform: uppercase;
-    }
-    .px-badge-gray {
-        background: #6b7280; color: #fff;
-        font-size: 0.6rem; font-weight: 700;
-        padding: 0.13rem 0.4rem; border-radius: 3px; text-transform: uppercase;
-    }
-    .px-ph-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        padding: 0.55rem 0.65rem;
-        border-top: 1px solid #e5e7eb;
+    .px-id-badge.officer   { background: #dbeafe; color: #1e40af; }
+    .px-id-badge.enlisted  { background: #dcfce7; color: #166534; }
+    .px-id-badge.superuser { background: #fef3c7; color: #92400e; }
+    .px-id-badge.active    { background: #dcfce7; color: #166534; }
+    .px-id-badge.inactive  { background: #fee2e2; color: #991b1b; }
+    .px-id-footer {
+        width: 100%;
+        height: 52px;
+        min-height: 52px;
+        border-top: 1px solid #f3f4f6;
         background: #f9fafb;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.1rem;
+        flex-shrink: 0;
     }
-    .px-ph-id-section { flex:1; }
+    .px-id-id-label {
+        font-size: 0.62rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #9ca3af;
+    }
+    .px-id-id-value {
+        font-family: monospace;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #374151;
+        letter-spacing: 0.04em;
+    }
+    /* Item card */
     .px-label {
         font-size: 0.58rem;
         font-weight: 700;
@@ -466,14 +508,6 @@
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
-    .px-ph-id {
-        font-family: monospace;
-        font-size: 0.73rem;
-        color: #111827;
-        font-weight: 600;
-        word-break: break-all;
-    }
-    .px-ph-qr-section { margin-left:0.4rem; }
     .px-qr-img {
         width: 64px; height: 64px;
         border-radius: 4px;
@@ -491,7 +525,13 @@
         font-size: 0.62rem;
         color: #9ca3af;
     }
-    /* Item card */
+    .px-preview-card {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.14);
+        background: #fff;
+        border: 1px solid #e5e7eb;
+    }
     .px-item-card { padding: 0.7rem 0.75rem; }
     .px-item-header {
         display: flex;
@@ -941,32 +981,24 @@
     <!-- ── Scan Preview Panel ── -->
     <div class="tx-preview-right" id="scanPreviewPanel">
 
-        <!-- Personnel Preview Card -->
-        <div id="personnelPreviewCard" class="px-preview-card" style="display:none;">
-            <div class="px-ph-header">🛡 ARMGUARD RDS</div>
-            <div class="px-ph-body">
-                <div class="px-ph-photo-wrap">
-                    <img id="pxPhoto" src="" alt="" class="px-ph-photo" style="display:none;">
-                    <div id="pxPhotoPlaceholder" class="px-ph-photo-placeholder">👤</div>
-                </div>
-                <div class="px-ph-info">
-                    <div class="px-ph-name" id="pxName">---</div>
-                    <div class="px-ph-rank" id="pxRank">---</div>
-                    <div class="px-ph-classification" id="pxClassification"></div>
-                    <div class="px-ph-badges">
-                        <span id="pxStatusBadge" class="px-badge-green">ACTIVE</span>
-                    </div>
+        <!-- Personnel Preview Card (matches existing profile ID card) -->
+        <div id="personnelPreviewCard" class="px-id-card" style="display:none;">
+            <div class="px-id-top">
+                <span class="px-id-logo">ARMGUARD RDS</span>
+                <img id="pxPhoto" src="" alt="" class="px-id-photo" style="display:none;">
+                <div id="pxPhotoPlaceholder" class="px-id-no-photo">No Photo</div>
+            </div>
+            <div class="px-id-body">
+                <p class="px-id-name" id="pxName">---</p>
+                <p class="px-id-role" id="pxRole">---</p>
+                <div class="px-id-badges">
+                    <span id="pxClassBadge" class="px-id-badge officer">Officer</span>
+                    <span id="pxStatusBadge" class="px-id-badge active">Active</span>
                 </div>
             </div>
-            <div class="px-ph-footer">
-                <div class="px-ph-id-section">
-                    <div class="px-label">Personnel ID</div>
-                    <div class="px-ph-id" id="pxPersonnelId">---</div>
-                </div>
-                <div class="px-ph-qr-section">
-                    <img id="pxPersonnelQr" src="" alt="QR" class="px-qr-img" style="display:none;">
-                    <div id="pxPersonnelQrPH" class="px-qr-placeholder">QR</div>
-                </div>
+            <div class="px-id-footer">
+                <span class="px-id-id-label">Personnel ID</span>
+                <span class="px-id-id-value" id="pxPersonnelId">---</span>
             </div>
         </div>
 
@@ -1579,20 +1611,46 @@ document.addEventListener('keydown', function(e) {
 
 // ---- Preview card helpers ----
 function showPersonnelCard(data) {
+    // Name
     const parts = [data.firstname];
     if (data.middle_initial) parts.push(data.middle_initial + '.');
     parts.push(data.surname);
     document.getElementById('pxName').textContent = parts.join(' ').toUpperCase();
-    document.getElementById('pxRank').textContent = data.rank || '---';
-    document.getElementById('pxClassification').textContent = data.classification || '';
-    document.getElementById('pxPersonnelId').textContent = data.serial || data.id || '---';
 
+    // Role line: "rank · group"  (mirrors the profile card's role line)
+    const rankPart = data.rank || '';
+    const groupPart = data.group || '';
+    const roleParts = [rankPart, groupPart].filter(Boolean);
+    document.getElementById('pxRole').textContent = roleParts.join(' · ');
+
+    // Personnel ID (uses the system id field, e.g. PO-154068180226)
+    document.getElementById('pxPersonnelId').textContent = data.id || '---';
+
+    // Classification badge
+    const classBadge = document.getElementById('pxClassBadge');
+    const cls = (data.classification || '').toUpperCase();
+    if (cls === 'OFFICER') {
+        classBadge.textContent = 'Officer';
+        classBadge.className = 'px-id-badge officer';
+    } else if (cls === 'SUPERUSER') {
+        classBadge.textContent = 'Superuser';
+        classBadge.className = 'px-id-badge superuser';
+    } else {
+        classBadge.textContent = 'Enlisted';
+        classBadge.className = 'px-id-badge enlisted';
+    }
+
+    // Status badge
     const statusBadge = document.getElementById('pxStatusBadge');
-    const status = (data.status || 'active').toUpperCase();
+    const status = (data.status || 'Active');
     statusBadge.textContent = status;
-    statusBadge.className = (status === 'ACTIVE')   ? 'px-badge-green' :
-                            (status === 'INACTIVE') ? 'px-badge-gray' : 'px-badge-red';
+    if (status === 'Active') {
+        statusBadge.className = 'px-id-badge active';
+    } else {
+        statusBadge.className = 'px-id-badge inactive';
+    }
 
+    // Photo
     const photo = document.getElementById('pxPhoto');
     const photoPH = document.getElementById('pxPhotoPlaceholder');
     if (data.picture_url) {
@@ -1604,18 +1662,7 @@ function showPersonnelCard(data) {
         photoPH.style.display = 'flex';
     }
 
-    const qrImg = document.getElementById('pxPersonnelQr');
-    const qrPH  = document.getElementById('pxPersonnelQrPH');
-    if (data.qr_image_url) {
-        qrImg.src = data.qr_image_url;
-        qrImg.style.display = 'block';
-        qrPH.style.display  = 'none';
-    } else {
-        qrImg.style.display = 'none';
-        qrPH.style.display  = 'flex';
-    }
-
-    document.getElementById('personnelPreviewCard').style.display = 'block';
+    document.getElementById('personnelPreviewCard').style.display = 'flex';
 }
 
 function clearPersonnelCard() {
