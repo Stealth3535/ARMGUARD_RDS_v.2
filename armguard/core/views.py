@@ -31,7 +31,6 @@ def dashboard(request):
     maintenance_items = Item.objects.filter(status='Maintenance').count()
     
     # Per-type breakdown for each status
-    item_types = ['M14', 'M16', 'M4', 'Glock', '.45']
     def type_breakdown(status):
         qs = Item.objects.filter(status=status).values('item_type').annotate(count=Count('id'))
         return {row['item_type']: row['count'] for row in qs}
@@ -42,9 +41,8 @@ def dashboard(request):
     issued_by_type      = type_breakdown('Issued')
     maintenance_by_type = type_breakdown('Maintenance')
     total_by_type       = type_total()
-    all_item_types = sorted(
-        set(item_types) | set(available_by_type) | set(issued_by_type) | set(maintenance_by_type) | set(total_by_type)
-    )
+    # Use only types that actually exist in the DB to avoid phantom/duplicate entries
+    all_item_types = sorted(Item.objects.values_list('item_type', flat=True).distinct())
     type_rows = [
         {
             'type': t,
