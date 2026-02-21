@@ -358,20 +358,12 @@
                     <span class="info-label">Last Updated</span>
                     <span class="info-value">{{ item.updated_at|date:"d/m/y H:i" }}</span>
                 </div>
+                <div class="info-row">
+                    <span class="info-label">Item ID</span>
+                    <span class="info-value" style="font-family:monospace;font-size:0.82rem;">{{ item.qr_code }}</span>
+                </div>
             </div><!-- end info-rows -->
 
-            <!-- QR strip -->
-            <div class="qr-strip">
-                {% if qr_code_obj and qr_code_obj.qr_image %}
-                <img src="{{ qr_code_obj.qr_image.url }}?v={{ qr_code_obj.updated_at|date:'U' }}" alt="QR">
-                {% else %}
-                <div class="no-qr"><i class="fas fa-qrcode"></i><br>No QR</div>
-                {% endif %}
-                <div>
-                    <div class="info-label">QR Code</div>
-                    <div style="font-family:monospace;font-size:0.75rem;color:#374151;word-break:break-all;">{{ item.qr_code }}</div>
-                </div>
-            </div>
     </div><!-- end info card -->
 
     </div><!-- end profile-row -->
