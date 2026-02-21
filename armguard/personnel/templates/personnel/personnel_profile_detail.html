@@ -286,7 +286,9 @@
         {% else %}
         <div class="no-photo">No Photo</div>
         {% endif %}
-        <span style="font-family:monospace;font-size:0.78rem;color:#6b7280;display:block;width:160px;font-weight:700;text-align:justify;text-align-last:justify;white-space:nowrap;">{{ personnel.id }}</span>
+        <svg width="160" height="18" style="display:block;">
+            <text textLength="160" lengthAdjust="spacing" font-family="monospace" font-weight="700" font-size="13" fill="#6b7280" y="14">{{ personnel.id }}</text>
+        </svg>
     </div>
 
     <div class="profile-meta">
