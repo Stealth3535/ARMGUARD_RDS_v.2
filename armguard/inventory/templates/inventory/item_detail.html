@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ item.item_type }} {{ item.serial }} - Item Detail{% endblock %}
+{% block title %}{{ item.item_type }} - Item Detail{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'inventory/inventory.css' %}">
@@ -242,7 +242,7 @@
     <nav class="breadcrumb">
         <a href="{% url 'dashboard' %}"><i class="fas fa-home"></i> Dashboard</a> / 
         <a href="{% url 'inventory:item_list' %}"><i class="fas fa-boxes-stacked"></i> Inventory</a> / 
-        <strong>{{ item.item_type }} - {{ item.serial }}</strong>
+        <strong>{{ item.item_type }}</strong>
     </nav>
 
     <!-- Enhanced Page Header -->
@@ -255,7 +255,7 @@
                     {% else %}
                         <i class="fas fa-bullseye"></i>
                     {% endif %}
-                    {{ item.item_type }} - {{ item.serial }}
+                    {{ item.item_type }}
                 </h1>
                 <div class="item-id">{{ item.id }}</div>
             </div>
