@@ -136,37 +136,6 @@
         min-width: 0;
     }
 
-    .tx-stat-icon {
-        width: 46px;
-        height: 46px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        flex-shrink: 0;
-        transition: transform 0.3s ease;
-    }
-
-    .tx-stat-card.available .tx-stat-icon {
-        background: linear-gradient(135deg, #d1fae5, #a7f3d0);
-        color: #065f46;
-    }
-
-    .tx-stat-card.issued .tx-stat-icon {
-        background: linear-gradient(135deg, #fef3c7, #fde68a);
-        color: #92400e;
-    }
-
-    .tx-stat-card.total .tx-stat-icon {
-        background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
-        color: #3730a3;
-    }
-
-    .tx-stat-card:hover .tx-stat-icon {
-        transform: scale(1.1) rotate(5deg);
-    }
-
     .tx-stat-breakdown,
     .tx-mode-breakdown {
         font-size: 0.88rem;
@@ -605,7 +574,6 @@
                             <div>.45: <strong id="availableTypeP45">{{ inventory_counts.by_status_type.Available.P45 }}</strong></div>
                         </div>
                     </div>
-                    <div class="tx-stat-icon"><i class="fas fa-check-circle"></i></div>
                 </div>
             </div>
 
@@ -625,7 +593,6 @@
                             <div>.45: <strong id="issuedTypeP45">{{ inventory_counts.by_status_type.Issued.P45 }}</strong></div>
                         </div>
                     </div>
-                    <div class="tx-stat-icon"><i class="fas fa-hand-paper"></i></div>
                 </div>
             </div>
 
@@ -645,7 +612,6 @@
                             <div>.45: <strong>{{ inventory_counts.by_status_type.Total.P45 }}</strong></div>
                         </div>
                     </div>
-                    <div class="tx-stat-icon"><i class="fas fa-chart-bar"></i></div>
                 </div>
             </div>
 
