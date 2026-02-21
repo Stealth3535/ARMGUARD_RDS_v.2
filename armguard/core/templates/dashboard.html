@@ -237,15 +237,6 @@
         </table>
     </div>
     
-    <!-- Items by Type -->
-    <div class="items-by-type">
-        <h2>Inventory by Type</h2>
-        <ul>
-            {% for item in items_by_type %}
-            <li>{{ item.item_type }}: {{ item.count }}</li>
-            {% endfor %}
-        </ul>
-    </div>
 </div>
 
 {% endblock %}
