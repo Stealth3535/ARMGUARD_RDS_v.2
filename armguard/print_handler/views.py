@@ -152,13 +152,20 @@ def print_item_tags_view(request):
     else:
         items_qs = Item.objects.none()
 
+    try:
+        stack = min(max(int(request.GET.get('stack', 1)), 1), 3)
+    except (ValueError, TypeError):
+        stack = 1
+
     tags = []
     for item in items_qs:
         tag_abs = os.path.join(settings.MEDIA_ROOT, 'item_id_tags', f"{item.id}.png")
         if os.path.exists(tag_abs):
-            tags.append({'item': item, 'tag_url': _item_tag_img_url(request, item.id)})
+            entry = {'item': item, 'tag_url': _item_tag_img_url(request, item.id)}
+            for _ in range(stack):
+                tags.append(entry)
 
-    return render(request, 'print_handler/print_item_tags_printview.html', {'tags': tags})
+    return render(request, 'print_handler/print_item_tags_printview.html', {'tags': tags, 'stack': stack})
 
 
 @login_required

@@ -187,6 +187,11 @@
         <button class="btn btn-secondary btn-sm" onclick="printAll()">
             <i class="fas fa-print"></i> Print All
         </button>
+        <select id="stackCount" class="form-control" style="width:auto; display:inline-block; padding:0.3rem 0.6rem; font-size:0.85rem; font-weight:600;" title="Copies per item">
+            <option value="1">1×</option>
+            <option value="2">2×</option>
+            <option value="3">3×</option>
+        </select>
 
         <div class="toolbar-right">
             <button class="btn btn-sm" style="background:#fef9c3; border:1px solid #fbbf24; color:#92400e; font-weight:600;"
@@ -262,8 +267,9 @@
                     Regen
                 </button>
                 {% if entry.has_tag %}
-                <a href="{% url 'print_handler:print_item_tags_view' %}?ids={{ entry.item.id }}"
-                   class="btn btn-primary btn-sm" target="_blank" title="Print this tag">
+                <a href="{% url 'print_handler:print_item_tags_view' %}?ids={{ entry.item.id }}&stack=1"
+                   class="btn btn-primary btn-sm" target="_blank" title="Print this tag"
+                   onclick="this.href='{% url 'print_handler:print_item_tags_view' %}?ids={{ entry.item.id }}&stack='+getStack(); return true;">
                     <i class="fas fa-print"></i> Print
                 </a>
                 {% endif %}
@@ -301,13 +307,16 @@ function clearAll() {
     updateCount();
 }
 
+function getStack() {
+    return document.getElementById('stackCount').value || '1';
+}
 function printSelected() {
     const ids = [...document.querySelectorAll('.tag-checkbox:checked')].map(c => c.value);
     if (!ids.length) { alert('Select at least one item.'); return; }
-    window.open(PRINT_URL + '?ids=' + ids.join(','), '_blank');
+    window.open(PRINT_URL + '?ids=' + ids.join(',') + '&stack=' + getStack(), '_blank');
 }
 function printAll() {
-    window.open(PRINT_URL + '?all=1', '_blank');
+    window.open(PRINT_URL + '?all=1&stack=' + getStack(), '_blank');
 }
 
 function _setBusy(btn, busy) {

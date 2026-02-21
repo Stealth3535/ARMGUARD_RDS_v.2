@@ -127,7 +127,7 @@
 <!-- Print toolbar (hidden on print) -->
 <div class="no-print">
     <h2><i class="fas fa-tags"></i> Item Tags Print View — {{ tags|length }} tag{{ tags|length|pluralize }}</h2>
-    <span class="info">A4 · {{ tags|length }} item{{ tags|length|pluralize }} · 90 × 45 mm per tag</span>
+    <span class="info">A4 · {{ tags|length }} tag{{ tags|length|pluralize }}{% if stack and stack > 1 %} ({{ stack }}× per item){% endif %} · 90 × 31 mm each</span>
     <button onclick="window.print()">🖨️ Print</button>
     <a href="{% url 'print_handler:print_item_tags' %}" class="back-link">← Back to Manager</a>
 </div>
