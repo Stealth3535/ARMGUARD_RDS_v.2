@@ -48,14 +48,44 @@
         border-radius: 12px;
         padding: 0.95rem 1rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border-top: 4px solid #cbd5e1;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: fadeInUp 0.6s ease-out;
+        animation-fill-mode: both;
     }
 
-    .tx-stat-card.available { border-top-color: #10b981; }
-    .tx-stat-card.issued { border-top-color: #f59e0b; }
-    .tx-stat-card.total { border-top-color: #667eea; }
-    .tx-stat-card.defcon { border-top-color: #dc2626; }
-    .tx-stat-card.normal { border-top-color: #2563eb; }
+    .tx-stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--card-color, #cbd5e1);
+        border-radius: 12px 12px 0 0;
+    }
+
+    .tx-stat-card:nth-child(1) { animation-delay: 0.1s; }
+    .tx-stat-card:nth-child(2) { animation-delay: 0.2s; }
+    .tx-stat-card:nth-child(3) { animation-delay: 0.3s; }
+    .tx-stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+    .tx-stat-card.available { --card-color: #10b981; }
+    .tx-stat-card.issued    { --card-color: #f59e0b; }
+    .tx-stat-card.total     { --card-color: #667eea; }
+    .tx-stat-card.defcon    { --card-color: #dc2626; }
+    .tx-stat-card.normal    { --card-color: #2563eb; }
+
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translate3d(0, 40px, 0); }
+        to   { opacity: 1; transform: translate3d(0, 0, 0); }
+    }
+
+    @keyframes countUp {
+        from { opacity: 0; transform: scale(0.8); }
+        to   { opacity: 1; transform: scale(1); }
+    }
 
     .tx-stat-title {
         font-size: 0.82rem;
@@ -68,9 +98,9 @@
 
     .tx-stat-head {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.1rem;
         margin-bottom: 0.2rem;
     }
 
@@ -78,20 +108,63 @@
         font-size: 2rem;
         line-height: 1;
         font-weight: 800;
-        color: var(--stat-color, #111827);
+        background: linear-gradient(135deg, var(--card-color, #111827) 0%, #374151 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: countUp 0.8s ease-out;
+        animation-delay: 0.5s;
+        animation-fill-mode: both;
         margin-bottom: 0;
     }
-
-    .tx-stat-card.available { --stat-color: #10b981; }
-    .tx-stat-card.issued { --stat-color: #f59e0b; }
-    .tx-stat-card.total { --stat-color: #667eea; }
-    .tx-stat-card.defcon { --stat-color: #dc2626; }
-    .tx-stat-card.normal { --stat-color: #2563eb; }
 
     .tx-stat-note {
         font-size: 0.88rem;
         color: #059669;
         margin-bottom: 0.25rem;
+    }
+
+    .tx-stat-content {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+
+    .tx-stat-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .tx-stat-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+        transition: transform 0.3s ease;
+    }
+
+    .tx-stat-card.available .tx-stat-icon {
+        background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+        color: #065f46;
+    }
+
+    .tx-stat-card.issued .tx-stat-icon {
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        color: #92400e;
+    }
+
+    .tx-stat-card.total .tx-stat-icon {
+        background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+        color: #3730a3;
+    }
+
+    .tx-stat-card:hover .tx-stat-icon {
+        transform: scale(1.1) rotate(5deg);
     }
 
     .tx-stat-breakdown,
@@ -517,47 +590,62 @@
     <span id="totalTransactionsCount" style="display:none;">{{ transaction_mode_counts.total_transactions }}</span>
     <div class="tx-dashboard-grid">
             <div class="tx-stat-card available">
-                <div class="tx-stat-head">
-                    <div class="tx-stat-title">Available Items</div>
-                    <div class="tx-stat-value" id="availableItemsCount">{{ inventory_counts.available }}</div>
-                </div>
-                <div class="tx-stat-note">Ready for deployment</div>
-                <div class="tx-stat-breakdown">
-                    <div>M14: <strong id="availableTypeM14">{{ inventory_counts.by_status_type.Available.M14 }}</strong></div>
-                    <div>M16: <strong id="availableTypeM16">{{ inventory_counts.by_status_type.Available.M16 }}</strong></div>
-                    <div>M4: <strong id="availableTypeM4">{{ inventory_counts.by_status_type.Available.M4 }}</strong></div>
-                    <div>Glock: <strong id="availableTypeGLOCK">{{ inventory_counts.by_status_type.Available.GLOCK }}</strong></div>
-                    <div>.45: <strong id="availableTypeP45">{{ inventory_counts.by_status_type.Available.P45 }}</strong></div>
+                <div class="tx-stat-content">
+                    <div class="tx-stat-info">
+                        <div class="tx-stat-head">
+                            <div class="tx-stat-title">Available Items</div>
+                            <div class="tx-stat-value" id="availableItemsCount" data-target="{{ inventory_counts.available }}">0</div>
+                        </div>
+                        <div class="tx-stat-note"><i class="fas fa-arrow-up"></i> Ready for deployment</div>
+                        <div class="tx-stat-breakdown">
+                            <div>M14: <strong id="availableTypeM14">{{ inventory_counts.by_status_type.Available.M14 }}</strong></div>
+                            <div>M16: <strong id="availableTypeM16">{{ inventory_counts.by_status_type.Available.M16 }}</strong></div>
+                            <div>M4: <strong id="availableTypeM4">{{ inventory_counts.by_status_type.Available.M4 }}</strong></div>
+                            <div>Glock: <strong id="availableTypeGLOCK">{{ inventory_counts.by_status_type.Available.GLOCK }}</strong></div>
+                            <div>.45: <strong id="availableTypeP45">{{ inventory_counts.by_status_type.Available.P45 }}</strong></div>
+                        </div>
+                    </div>
+                    <div class="tx-stat-icon"><i class="fas fa-check-circle"></i></div>
                 </div>
             </div>
 
             <div class="tx-stat-card issued">
-                <div class="tx-stat-head">
-                    <div class="tx-stat-title">Currently Issued</div>
-                    <div class="tx-stat-value" id="issuedItemsCount">{{ inventory_counts.issued }}</div>
-                </div>
-                <div class="tx-stat-note">In field operations</div>
-                <div class="tx-stat-breakdown">
-                    <div>M14: <strong id="issuedTypeM14">{{ inventory_counts.by_status_type.Issued.M14 }}</strong></div>
-                    <div>M16: <strong id="issuedTypeM16">{{ inventory_counts.by_status_type.Issued.M16 }}</strong></div>
-                    <div>M4: <strong id="issuedTypeM4">{{ inventory_counts.by_status_type.Issued.M4 }}</strong></div>
-                    <div>Glock: <strong id="issuedTypeGLOCK">{{ inventory_counts.by_status_type.Issued.GLOCK }}</strong></div>
-                    <div>.45: <strong id="issuedTypeP45">{{ inventory_counts.by_status_type.Issued.P45 }}</strong></div>
+                <div class="tx-stat-content">
+                    <div class="tx-stat-info">
+                        <div class="tx-stat-head">
+                            <div class="tx-stat-title">Currently Issued</div>
+                            <div class="tx-stat-value" id="issuedItemsCount" data-target="{{ inventory_counts.issued }}">0</div>
+                        </div>
+                        <div class="tx-stat-note"><i class="fas fa-arrow-right"></i> In field operations</div>
+                        <div class="tx-stat-breakdown">
+                            <div>M14: <strong id="issuedTypeM14">{{ inventory_counts.by_status_type.Issued.M14 }}</strong></div>
+                            <div>M16: <strong id="issuedTypeM16">{{ inventory_counts.by_status_type.Issued.M16 }}</strong></div>
+                            <div>M4: <strong id="issuedTypeM4">{{ inventory_counts.by_status_type.Issued.M4 }}</strong></div>
+                            <div>Glock: <strong id="issuedTypeGLOCK">{{ inventory_counts.by_status_type.Issued.GLOCK }}</strong></div>
+                            <div>.45: <strong id="issuedTypeP45">{{ inventory_counts.by_status_type.Issued.P45 }}</strong></div>
+                        </div>
+                    </div>
+                    <div class="tx-stat-icon"><i class="fas fa-hand-paper"></i></div>
                 </div>
             </div>
 
             <div class="tx-stat-card total">
-                <div class="tx-stat-head">
-                    <div class="tx-stat-title">Total Inventory</div>
-                    <div class="tx-stat-value" id="totalInventoryCount">{{ inventory_counts.total }}</div>
-                </div>
-                <div class="tx-stat-note">Complete arsenal</div>
-                <div class="tx-stat-breakdown">
-                    <div>M14: <strong>{{ inventory_counts.by_status_type.Total.M14 }}</strong></div>
-                    <div>M16: <strong>{{ inventory_counts.by_status_type.Total.M16 }}</strong></div>
-                    <div>M4: <strong>{{ inventory_counts.by_status_type.Total.M4 }}</strong></div>
-                    <div>Glock: <strong>{{ inventory_counts.by_status_type.Total.GLOCK }}</strong></div>
-                    <div>.45: <strong>{{ inventory_counts.by_status_type.Total.P45 }}</strong></div>
+                <div class="tx-stat-content">
+                    <div class="tx-stat-info">
+                        <div class="tx-stat-head">
+                            <div class="tx-stat-title">Total Inventory</div>
+                            <div class="tx-stat-value" id="totalInventoryCount" data-target="{{ inventory_counts.total }}">0</div>
+                        </div>
+                        <div class="tx-stat-note"><i class="fas fa-database"></i> Complete arsenal</div>
+                        <div class="tx-stat-breakdown">
+                            <div>M14: <strong>{{ inventory_counts.by_status_type.Total.M14 }}</strong></div>
+                            <div>M16: <strong>{{ inventory_counts.by_status_type.Total.M16 }}</strong></div>
+                            <div>M4: <strong>{{ inventory_counts.by_status_type.Total.M4 }}</strong></div>
+                            <div>Glock: <strong>{{ inventory_counts.by_status_type.Total.GLOCK }}</strong></div>
+                            <div>.45: <strong>{{ inventory_counts.by_status_type.Total.P45 }}</strong></div>
+                        </div>
+                    </div>
+                    <div class="tx-stat-icon"><i class="fas fa-chart-bar"></i></div>
                 </div>
             </div>
 
@@ -809,6 +897,43 @@
 {% block extra_js %}
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
+// ── Stat card counter animation (matches inventory page behaviour) ─────────
+function animateCounter(elementId, targetValue, duration = 700) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const startTime = performance.now();
+    const startValue = 0;
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // ease-out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(startValue + (targetValue - startValue) * eased);
+        el.textContent = String(current);
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        } else {
+            el.textContent = String(targetValue);
+            // small pulse on completion
+            el.style.transform = 'scale(1.05)';
+            setTimeout(() => { el.style.transform = ''; }, 150);
+        }
+    }
+    requestAnimationFrame(update);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    ['availableItemsCount', 'issuedItemsCount', 'totalInventoryCount'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            const target = parseInt(el.dataset.target || '0', 10);
+            // slight delay so the fadeInUp + countUp CSS animations play first
+            setTimeout(() => animateCounter(id, target, 700), 600);
+        }
+    });
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 let currentQrTarget = null;
 
 function openQrScanner(targetInputId) {
