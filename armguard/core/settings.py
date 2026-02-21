@@ -625,6 +625,11 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
 
+# Device Authorization Toggle
+# Set to False in .env (DEVICE_AUTH_ENABLED=False) to disable device auth globally,
+# or use the Admin → Settings → Device Authorization toggle button at runtime.
+DEVICE_AUTH_ENABLED = config('DEVICE_AUTH_ENABLED', default=True, cast=bool)
+
 # Date and Time Formats (Military Time)
 DATE_FORMAT = 'd/m/y'
 DATETIME_FORMAT = 'd/m/y H:i:s'

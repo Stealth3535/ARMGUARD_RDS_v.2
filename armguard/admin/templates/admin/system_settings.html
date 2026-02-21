@@ -116,9 +116,52 @@
             <strong style="color: #92400e;">⚠️ {{ pending_device_requests }} Pending Authorization Request{{ pending_device_requests|pluralize }}</strong>
         </div>
         {% endif %}
+
+        <!-- Enable / Disable toggle -->
+        <div style="margin-bottom:1rem; padding:1rem; border-radius:8px; {% if device_auth_enabled %}background:#dcfce7;border:1px solid #16a34a;{% else %}background:#fee2e2;border:1px solid #dc2626;{% endif %}">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+                <span style="font-size:1.5rem;">{% if device_auth_enabled %}🔐{% else %}🔓{% endif %}</span>
+                <div>
+                    <strong style="font-size:1rem;{% if device_auth_enabled %}color:#14532d;{% else %}color:#7f1d1d;{% endif %}">
+                        Device Authorization is currently
+                        {% if device_auth_enabled %}
+                            <span style="color:#16a34a;">ENABLED</span>
+                        {% else %}
+                            <span style="color:#dc2626;">DISABLED</span>
+                        {% endif %}
+                    </strong>
+                    <p style="margin:0.25rem 0 0;font-size:0.85rem;color:#555;">
+                        {% if device_auth_enabled %}
+                            All users must have their device approved before accessing the system.
+                        {% else %}
+                            ⚠️ All devices are currently allowed access without authorization checks.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            <form method="post" action="{% url 'armguard_admin:toggle_device_auth' %}" style="margin-top:0.75rem;">
+                {% csrf_token %}
+                {% if device_auth_enabled %}
+                    <input type="hidden" name="action" value="disable">
+                    <button type="submit"
+                        onclick="return confirm('Disable device authorization? All devices will have unrestricted access until you re-enable it.')"
+                        style="padding:0.5rem 1.25rem;background:#dc2626;color:white;border:none;border-radius:6px;font-weight:600;cursor:pointer;">
+                        🔓 Disable Device Authorization
+                    </button>
+                {% else %}
+                    <input type="hidden" name="action" value="enable">
+                    <button type="submit"
+                        onclick="return confirm('Enable device authorization? Users will need their devices approved before accessing the system.')"
+                        style="padding:0.5rem 1.25rem;background:#16a34a;color:white;border:none;border-radius:6px;font-weight:600;cursor:pointer;">
+                        🔐 Enable Device Authorization
+                    </button>
+                {% endif %}
+            </form>
+        </div>
+
         <p>Manage device authorization for sensitive operations:</p>
         <div style="margin-top: 1rem;">
-            <a href="{% url 'armguard_admin:manage_device_requests' %}" 
+            <a href="{% url 'armguard_admin:manage_device_requests' %}"
                style="display: inline-block; padding: 0.75rem 1.5rem; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">
                 📋 Manage Device Requests
                 {% if pending_device_requests > 0 %}

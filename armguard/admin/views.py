@@ -699,12 +699,14 @@ def system_settings(request):
     pending_device_requests = DeviceAuthorizationRequest.objects.filter(
         status='pending'
     ).count() if request.user.is_superuser else 0
-    
+
+    from core.device.toggle import is_device_auth_enabled
     context = {
         'form': form,
         'debug_mode': settings.DEBUG,
         'database_engine': settings.DATABASES['default']['ENGINE'],
         'pending_device_requests': pending_device_requests,
+        'device_auth_enabled': is_device_auth_enabled(),
     }
     return render(request, 'admin/system_settings.html', context)
 
@@ -1113,6 +1115,39 @@ def manage_device_requests(request):
         'rejected_count': rejected_count,
     }
     return render(request, 'admin/manage_device_requests.html', context)
+
+
+@login_required
+@user_passes_test(is_superuser)
+def toggle_device_auth(request):
+    """
+    POST-only view: enable or disable the device authorization system globally.
+    Superuser only.
+    """
+    if request.method != 'POST':
+        return redirect('armguard_admin:system_settings')
+
+    from core.device.toggle import set_device_auth_enabled, is_device_auth_enabled
+    action = request.POST.get('action', '')
+
+    if action == 'disable':
+        set_device_auth_enabled(False)
+        messages.warning(
+            request,
+            '⚠️ Device Authorization has been DISABLED. '
+            'All devices can access the system freely until re-enabled.'
+        )
+    elif action == 'enable':
+        set_device_auth_enabled(True)
+        messages.success(
+            request,
+            '🔐 Device Authorization has been ENABLED. '
+            'Devices must be authorized to access the system.'
+        )
+    else:
+        messages.error(request, 'Invalid action.')
+
+    return redirect('armguard_admin:system_settings')
 
 
 @login_required

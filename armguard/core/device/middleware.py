@@ -17,6 +17,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
 from .service import device_service
+from .toggle import is_device_auth_enabled
 
 logger = logging.getLogger('armguard.device.middleware')
 
@@ -36,6 +37,12 @@ class DeviceAuthMiddleware(MiddlewareMixin):
     """
 
     def process_request(self, request):
+        # Global on/off switch — controlled via Admin Settings or flag file
+        if not is_device_auth_enabled():
+            from .service import AuthDecision
+            request.device_decision = AuthDecision(allowed=True, reason='device_auth_disabled')
+            return None
+
         decision = device_service.authorize_request(request)
 
         # Attach for downstream use (views, templates, logging)

@@ -44,6 +44,7 @@ urlpatterns = [
     
     # Device Authorization
     path('device/request-authorization/', views.request_device_authorization, name='request_device_authorization'),
+    path('device/toggle-auth/', views.toggle_device_auth, name='toggle_device_auth'),
     path('device/requests/', views.manage_device_requests, name='manage_device_requests'),
     path('device/requests/<int:request_id>/view/', views.view_device_request, name='view_device_request'),
     path('device/requests/<int:request_id>/edit/', views.edit_approved_device_request, name='edit_device_request'),
