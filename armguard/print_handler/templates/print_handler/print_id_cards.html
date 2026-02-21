@@ -345,14 +345,20 @@ function regenCard(pid, slug) {
         method: 'POST',
         headers: { 'X-CSRFToken': CSRF_TOKEN, 'Content-Type': 'application/json' }
     })
-    .then(r => r.json())
+    .then(r => {
+        const ct = r.headers.get('Content-Type') || '';
+        if (!ct.includes('application/json')) {
+            return r.text().then(t => { throw new Error('Server returned HTTP ' + r.status + ' (not JSON). Check server logs.'); });
+        }
+        return r.json();
+    })
     .then(data => {
         if (data.success) {
             // Update thumbnail
             const thumbContainer = document.getElementById('thumb-' + slug);
-            if (thumbContainer.tagName === 'IMG') {
+            if (thumbContainer && thumbContainer.tagName === 'IMG') {
                 thumbContainer.src = data.thumb_url + '?t=' + Date.now();
-            } else {
+            } else if (thumbContainer) {
                 // Replace placeholder div with an image link
                 const link = document.createElement('a');
                 link.href = data.thumb_url;
@@ -375,7 +381,7 @@ function regenCard(pid, slug) {
             alert('Error: ' + (data.error || 'Unknown error'));
         }
     })
-    .catch(err => alert('Request failed: ' + err))
+    .catch(err => alert('Regenerate failed: ' + err))
     .finally(() => {
         btn.disabled = false;
         iconEl.style.display = 'inline';
@@ -397,14 +403,28 @@ function regenMissing() {
         method: 'POST',
         headers: { 'X-CSRFToken': CSRF_TOKEN }
     })
-    .then(r => r.json())
+    .then(r => {
+        const ct = r.headers.get('Content-Type') || '';
+        if (!ct.includes('application/json')) {
+            return r.text().then(t => {
+                throw new Error(
+                    'Server returned HTTP ' + r.status + ' instead of JSON.\n' +
+                    'Make sure the server has the latest code (git pull + restart).'
+                );
+            });
+        }
+        return r.json();
+    })
     .then(data => {
         if (data.success) {
-            const msg = `Done — ${data.generated} generated, ${data.skipped} already existed.`
-                      + (data.errors.length ? `\n${data.errors.length} error(s).` : '');
+            let msg = `Done — ${data.generated} generated, ${data.skipped} already existed.`;
+            if (data.errors && data.errors.length) {
+                msg += `\n\n${data.errors.length} error(s):\n`
+                     + data.errors.map(e => `• ${e.id}: ${e.error}`).join('\n');
+            }
             btn.innerHTML = `<i class="fas fa-check"></i> Done (${data.generated} generated)`;
             alert(msg);
-            // Reload so all thumbnails and badges refresh from the server
+            // Reload so all thumbnails and badges refresh from server
             setTimeout(() => location.reload(), 500);
         } else {
             alert('Error generating cards.');
@@ -413,7 +433,7 @@ function regenMissing() {
         }
     })
     .catch(err => {
-        alert('Request failed: ' + err);
+        alert(err.message || ('Request failed: ' + err));
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-sync-alt"></i> Generate Missing';
     });
