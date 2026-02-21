@@ -13,6 +13,13 @@
     .breadcrumb-nav a { color: #6b7280; text-decoration: none; }
     .breadcrumb-nav a:hover { color: #1b5ad1; }
 
+    /* ── Top bar: breadcrumb + actions on same line ── */
+    .top-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.9rem;
+    }
+    .top-bar .breadcrumb-nav { margin-bottom: 0; }
+
     /* ── Profile row ── */
     .profile-row { display: flex; gap: 1.2rem; align-items: flex-start; margin-bottom: 1rem; }
 
@@ -240,15 +247,14 @@
 {% block content %}
 <div class="item-detail-container">
 
-    <!-- Breadcrumb -->
-    <div class="breadcrumb-nav">
-        <a href="{% url 'dashboard' %}">Dashboard</a> /
-        <a href="{% url 'inventory:item_list' %}">Inventory</a> /
-        <strong>{{ item.item_type }}</strong>
-    </div>
-
-    <!-- Action buttons -->
-    <div class="item-actions">
+    <!-- Top bar: breadcrumb left, actions right -->
+    <div class="top-bar">
+        <div class="breadcrumb-nav">
+            <a href="{% url 'dashboard' %}">Dashboard</a> /
+            <a href="{% url 'inventory:item_list' %}">Inventory</a> /
+            <strong>{{ item.item_type }}</strong>
+        </div>
+        <div class="item-actions" style="margin-bottom:0;">
         <a href="{% url 'inventory:item_list' %}" class="btn-action"><i class="fas fa-arrow-left"></i> Back</a>
         {% if is_admin %}
         <a href="{% url 'armguard_admin:edit_item' item.id %}" class="btn-action btn-edit"><i class="fas fa-edit"></i> Edit</a>
@@ -271,7 +277,8 @@
             {% endif %}
         </form>
         {% endif %}
-    </div>
+        </div><!-- end item-actions -->
+    </div><!-- end top-bar -->
 
     <!-- Profile row: tag card (left) + info card (right) -->
     <div class="profile-row" style="margin-bottom:1rem;">
