@@ -160,7 +160,14 @@ def personnel_registration(request):
                     reference_id=personnel.id,
                     data_content=f"Personnel: {personnel.firstname} {personnel.surname}\nRank: {personnel.rank}\nSerial: {personnel.serial}\nID: {personnel.id}"
                 )
-            
+
+            # Generate ID card PNG (front + back) saved to core/media/personnel_id_cards/
+            try:
+                from personnel.id_card_generator import generate_personnel_id_card
+                generate_personnel_id_card(personnel)
+            except Exception:
+                logger.exception("ID card generation failed for personnel %s — registration still succeeded.", personnel.id)
+
             return redirect('armguard_admin:personnel_registration_success', pk=personnel.id)
         else:
             messages.error(request, 'Please correct the errors below.')
