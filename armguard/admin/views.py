@@ -644,14 +644,34 @@ def register_item(request):
                     item._existing_qr = existing_qr
                     item.save()
 
-                    # Always create a QRCodeImage record so the item tag and QR Codes
-                    # page work correctly (M4 factory QR encodes the item ID itself)
+                    # Always create/ensure a QRCodeImage record AND its physical file
                     from qr_manager.models import QRCodeImage
-                    QRCodeImage.all_objects.get_or_create(
+                    import os as _os
+                    qr_obj, created = QRCodeImage.all_objects.get_or_create(
                         qr_type=QRCodeImage.TYPE_ITEM,
                         reference_id=item.id,
-                        defaults={'qr_data': item.id}
+                        defaults={'qr_data': item.id, 'is_active': True}
                     )
+                    if not created:
+                        # Record existed — make sure the physical file is actually there
+                        file_missing = (
+                            not qr_obj.qr_image or
+                            not _os.path.exists(
+                                _os.path.join(settings.MEDIA_ROOT, qr_obj.qr_image.name)
+                            )
+                        )
+                        if file_missing:
+                            if qr_obj.qr_image:
+                                qr_obj.qr_image.delete(save=False)
+                            qr_obj.qr_image = None
+                            qr_obj.qr_data = item.id
+                            qr_obj.is_active = True
+                            qr_obj.generate_qr_code()
+                            qr_obj.save()
+                        elif not qr_obj.is_active:
+                            qr_obj.is_active = True
+                            qr_obj.deleted_at = None
+                            qr_obj.save()
 
                     # Generate item tag PNG
                     try:
@@ -680,11 +700,32 @@ def register_item(request):
 
                     # Save QRCodeImage record so item tag generator and QR Codes page work
                     from qr_manager.models import QRCodeImage
-                    QRCodeImage.all_objects.get_or_create(
+                    import os as _os
+                    qr_obj, created = QRCodeImage.all_objects.get_or_create(
                         qr_type=QRCodeImage.TYPE_ITEM,
                         reference_id=item.id,
-                        defaults={'qr_data': item_data}
+                        defaults={'qr_data': item_data, 'is_active': True}
                     )
+                    if not created:
+                        # Record existed — make sure the physical file is actually there
+                        file_missing = (
+                            not qr_obj.qr_image or
+                            not _os.path.exists(
+                                _os.path.join(settings.MEDIA_ROOT, qr_obj.qr_image.name)
+                            )
+                        )
+                        if file_missing:
+                            if qr_obj.qr_image:
+                                qr_obj.qr_image.delete(save=False)
+                            qr_obj.qr_image = None
+                            qr_obj.qr_data = item_data
+                            qr_obj.is_active = True
+                            qr_obj.generate_qr_code()
+                            qr_obj.save()
+                        elif not qr_obj.is_active:
+                            qr_obj.is_active = True
+                            qr_obj.deleted_at = None
+                            qr_obj.save()
 
                     # Generate item tag PNG
                     try:

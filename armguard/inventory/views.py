@@ -1,6 +1,7 @@
 """
 Inventory Views
 """
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -77,23 +78,29 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
                 qr_type=QRCodeImage.TYPE_ITEM,
                 reference_id=self.object.id
             )
-            # Auto-heal: if the image filename stem contains dots it won't serve
-            # correctly — delete the old file and regenerate with the sanitized name.
-            if qr_code_obj and qr_code_obj.qr_image:
+            # Auto-heal: regenerate if file is missing OR filename stem has dots
+            needs_regen = False
+            if not qr_code_obj.qr_image:
+                needs_regen = True
+            else:
                 stem = os.path.splitext(os.path.basename(qr_code_obj.qr_image.name))[0]
-                if '.' in stem:
-                    try:
+                full_path = os.path.join(settings.MEDIA_ROOT, qr_code_obj.qr_image.name)
+                if '.' in stem or not os.path.exists(full_path):
+                    needs_regen = True
+            if needs_regen:
+                try:
+                    if qr_code_obj.qr_image:
                         qr_code_obj.qr_image.delete(save=False)
-                        qr_code_obj.qr_image = None
-                        qr_code_obj.generate_qr_code()
-                        qr_code_obj.save()
-                        logger.info('Auto-healed dotted QR filename for %s → %s',
-                                    self.object.id, qr_code_obj.qr_image.name)
-                    except Exception as e:
-                        logger.error('Failed to auto-heal QR filename for %s: %s',
-                                     self.object.id, e)
+                    qr_code_obj.qr_image = None
+                    qr_code_obj.generate_qr_code()
+                    qr_code_obj.save()
+                    logger.info('Auto-healed QR for %s → %s',
+                                self.object.id, qr_code_obj.qr_image.name)
+                except Exception as e:
+                    logger.error('Failed to auto-heal QR for %s: %s',
+                                 self.object.id, e)
         except QRCodeImage.DoesNotExist:
-            # No active record — create/reactivate and generate QR image on the fly
+            # No active record — find inactive or create fresh
             try:
                 qr_code_obj, created = QRCodeImage.all_objects.get_or_create(
                     qr_type=QRCodeImage.TYPE_ITEM,
@@ -103,19 +110,20 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
                 if not qr_code_obj.is_active:
                     qr_code_obj.is_active = True
                     qr_code_obj.deleted_at = None
-                    qr_code_obj.save()
-                if created or not qr_code_obj.qr_image:
-                    qr_code_obj.generate_qr_code()
-                    qr_code_obj.save()
-                    logger.info('Auto-created missing QR for %s', self.object.id)
-                # If existing record has dotted filename, heal it too
-                elif qr_code_obj.qr_image:
-                    stem = os.path.splitext(os.path.basename(qr_code_obj.qr_image.name))[0]
-                    if '.' in stem:
+                # Check file exists
+                file_missing = (
+                    not qr_code_obj.qr_image or
+                    not os.path.exists(
+                        os.path.join(settings.MEDIA_ROOT, qr_code_obj.qr_image.name)
+                    )
+                )
+                if file_missing:
+                    if qr_code_obj.qr_image:
                         qr_code_obj.qr_image.delete(save=False)
-                        qr_code_obj.qr_image = None
-                        qr_code_obj.generate_qr_code()
-                        qr_code_obj.save()
+                    qr_code_obj.qr_image = None
+                    qr_code_obj.generate_qr_code()
+                qr_code_obj.save()
+                logger.info('Auto-created/healed QR for %s', self.object.id)
             except Exception as e:
                 logger.error('Failed to auto-create/heal QR for %s: %s', self.object.id, e)
                 qr_code_obj = None

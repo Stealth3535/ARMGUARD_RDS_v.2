@@ -142,3 +142,16 @@ def delete_item_stencil_on_item_delete(sender, instance, **kwargs):
     if instance.stencil_picture:
         instance.stencil_picture.delete(save=False)
 
+
+@receiver(post_delete, sender=Item)
+def delete_item_qr_on_item_delete(sender, instance, **kwargs):
+    """Delete the QRCodeImage record (and its file) when an Item is deleted."""
+    try:
+        from qr_manager.models import QRCodeImage
+        qr = QRCodeImage.all_objects.get(qr_type=QRCodeImage.TYPE_ITEM, reference_id=instance.id)
+        if qr.qr_image:
+            qr.qr_image.delete(save=False)
+        qr.delete()
+    except Exception:
+        pass
+
