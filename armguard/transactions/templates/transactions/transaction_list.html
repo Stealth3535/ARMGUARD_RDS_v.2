@@ -1617,7 +1617,7 @@ document.addEventListener('keydown', function(e) {
 function showPersonnelCard(data) {
     // Name: rank + fullname
     const nameParts = [data.firstname];
-    if (data.middle_initial) nameParts.push(data.middle_initial + '.');
+    if (data.middle_initial) nameParts.push(data.middle_initial);
     nameParts.push(data.surname);
     const rankPrefix = data.rank ? data.rank + ' ' : '';
     document.getElementById('pxName').textContent = (rankPrefix + nameParts.join(' ')).toUpperCase();
@@ -1715,7 +1715,7 @@ personnelInput.addEventListener('blur', async function() {
             const data = await response.json();
 
             const action = actionSelect.value; // 'withdraw' or 'return'
-            const fullName = `${data.firstname} ${data.middle_initial ? data.middle_initial + '.' : ''} ${data.surname}`;
+            const fullName = `${data.firstname} ${data.middle_initial ? data.middle_initial : ''} ${data.surname}`;
 
             if (data.has_issued_firearm && action === 'withdraw') {
                 // Trying to withdraw but already has a firearm — error

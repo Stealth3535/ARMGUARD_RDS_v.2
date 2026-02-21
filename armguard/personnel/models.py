@@ -321,7 +321,7 @@ class Personnel(models.Model):
     def get_full_name(self):
         """Return full name with middle initial"""
         if self.middle_initial:
-            return f"{self.firstname} {self.middle_initial}. {self.surname}"
+            return f"{self.firstname} {self.middle_initial} {self.surname}"
         return f"{self.firstname} {self.surname}"
     
     def is_officer(self):

@@ -54,7 +54,7 @@ def print_qr_codes(request):
         for qr in QRCodeImage.objects.filter(reference_id__in=personnel_dict.keys(), qr_type='personnel', is_active=True).exclude(qr_image=''):
             person = personnel_dict.get(qr.reference_id)
             if person:
-                mi = f" {person['middle_initial']}." if person['middle_initial'] else ""
+                mi = f" {person['middle_initial']}" if person['middle_initial'] else ""
                 qr.name = f"{person['rank']} {person['firstname']}{mi} {person['surname']}"
                 personnel_qrcodes.append(qr)
     
