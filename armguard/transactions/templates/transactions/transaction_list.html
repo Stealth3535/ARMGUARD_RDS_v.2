@@ -2214,14 +2214,14 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// Auto-dismiss Django messages after 10 seconds
+// Auto-dismiss Django messages after 3 seconds
 document.addEventListener('DOMContentLoaded', function() {
     const alerts = document.querySelectorAll('.alert');
     alerts.forEach(alert => {
         setTimeout(() => {
             const bsAlert = new bootstrap.Alert(alert);
             bsAlert.close();
-        }, 10000);
+        }, 3000);
     });
 });
 </script>
