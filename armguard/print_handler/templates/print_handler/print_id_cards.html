@@ -295,8 +295,9 @@
 
 {% block extra_js %}
 <script>
-const REGEN_URL_BASE = "{% url 'print_handler:regenerate_id_card' personnel_id='PLACEHOLDER' %}".replace('PLACEHOLDER', '');
-const PRINT_VIEW_URL = "{% url 'print_handler:print_id_cards_view' %}";
+const REGEN_URL_BASE       = "{% url 'print_handler:regenerate_id_card' personnel_id='PLACEHOLDER' %}".replace('PLACEHOLDER', '');
+const PRINT_VIEW_URL       = "{% url 'print_handler:print_id_cards_view' %}";
+const GEN_MISSING_URL      = "{% url 'print_handler:generate_missing_cards' %}";
 const CSRF_TOKEN = '{{ csrf_token }}';
 
 // ---- Select All ----
@@ -386,65 +387,36 @@ function regenCard(pid, slug) {
 function regenMissing() {
     const missing = [...document.querySelectorAll('.card-wrapper[data-has-card="0"]')];
     if (!missing.length) { alert('No missing cards — all personnel already have ID cards!'); return; }
-    if (!confirm(`Generate ID cards for ${missing.length} personnel without cards?`)) return;
+    if (!confirm(`Generate ID cards for ${missing.length} personnel without cards?\n\nThis will run on the server and may take a moment.`)) return;
 
     const btn = document.getElementById('btn-regen-missing');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating on server…';
 
-    let done = 0;
-    const total = missing.length;
-
-    function next(i) {
-        if (i >= missing.length) {
-            btn.innerHTML = `<i class="fas fa-check"></i> Done (${done}/${total})`;
-            setTimeout(() => {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-sync-alt"></i> Generate Missing';
-            }, 3000);
-            return;
+    fetch(GEN_MISSING_URL, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF_TOKEN }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const msg = `Done — ${data.generated} generated, ${data.skipped} already existed.`
+                      + (data.errors.length ? `\n${data.errors.length} error(s).` : '');
+            btn.innerHTML = `<i class="fas fa-check"></i> Done (${data.generated} generated)`;
+            alert(msg);
+            // Reload so all thumbnails and badges refresh from the server
+            setTimeout(() => location.reload(), 500);
+        } else {
+            alert('Error generating cards.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Generate Missing';
         }
-        const wrapper = missing[i];
-        const pid     = wrapper.dataset.pid;
-        const slug    = pid.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-
-        fetch(REGEN_URL_BASE + pid + '/', {
-            method: 'POST',
-            headers: { 'X-CSRFToken': CSRF_TOKEN }
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                done++;
-                wrapper.dataset.hasCard = '1';
-                // Swap placeholder
-                const thumbEl = document.getElementById('thumb-' + slug);
-                if (thumbEl && thumbEl.tagName !== 'IMG') {
-                    const link = document.createElement('a');
-                    link.href = data.thumb_url;
-                    link.target = '_blank';
-                    const img = document.createElement('img');
-                    img.src = data.thumb_url;
-                    img.className = 'id-card-thumb';
-                    img.id = 'thumb-' + slug;
-                    link.appendChild(img);
-                    thumbEl.parentNode.replaceChild(link, thumbEl);
-                }
-                const statusEl = document.getElementById('status-' + slug);
-                if (statusEl) {
-                    statusEl.className = 'status-badge badge-ok';
-                    statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Generated';
-                    statusEl.id = '';
-                }
-            }
-        })
-        .catch(() => {})
-        .finally(() => {
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${i+1}/${total}…`;
-            next(i + 1);
-        });
-    }
-    next(0);
+    })
+    .catch(err => {
+        alert('Request failed: ' + err);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Generate Missing';
+    });
 }
 </script>
 {% endblock %}

@@ -393,6 +393,37 @@ def print_id_cards(request):
 @login_required
 @user_passes_test(is_admin_or_armorer)
 @require_POST
+def generate_missing_cards(request):
+    """
+    Bulk-generate ID cards for all active personnel who don't have card files yet.
+    Called from the Print Manager's 'Generate Missing' button.
+    Returns JSON {generated: N, skipped: N, errors: [...]}
+    """
+    from utils.personnel_id_card_generator import generate_personnel_id_card
+
+    generated = 0
+    skipped   = 0
+    errors    = []
+
+    personnel_qs = Personnel.objects.filter(deleted_at__isnull=True)
+    for p in personnel_qs:
+        front_abs    = os.path.join(settings.MEDIA_ROOT, 'personnel_id_cards', f"{p.id}_front.png")
+        combined_abs = os.path.join(settings.MEDIA_ROOT, 'personnel_id_cards', f"{p.id}.png")
+        if os.path.exists(front_abs) or os.path.exists(combined_abs):
+            skipped += 1
+            continue
+        try:
+            generate_personnel_id_card(p)
+            generated += 1
+        except Exception as exc:
+            errors.append({'id': p.id, 'name': str(p), 'error': str(exc)})
+
+    return JsonResponse({'success': True, 'generated': generated, 'skipped': skipped, 'errors': errors})
+
+
+@login_required
+@user_passes_test(is_admin_or_armorer)
+@require_POST
 def regenerate_id_card(request, personnel_id):
     """Regenerate the ID card PNG for a single personnel (AJAX POST)."""
     try:
