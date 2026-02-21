@@ -89,6 +89,29 @@ def print_item_tags(request):
     return render(request, 'print_handler/print_item_tags.html', context)
 
 
+def _ensure_qr_record(item):
+    """
+    Ensure a QRCodeImage record exists for the item.
+    For M4 (factory QR): qr_data = item.id  (the factory QR string itself).
+    For all items:        qr_data = item.id  (item ID is the canonical scan value).
+    Creates the record and generates the PNG if missing.
+    """
+    from qr_manager.models import QRCodeImage
+    qr, created = QRCodeImage.all_objects.get_or_create(
+        qr_type=QRCodeImage.TYPE_ITEM,
+        reference_id=item.id,
+        defaults={'qr_data': item.id}
+    )
+    if not qr.is_active:
+        qr.is_active = True
+        qr.deleted_at = None
+        qr.save(update_fields=['is_active', 'deleted_at'])
+    if not qr.qr_image:
+        qr.generate_qr_code()
+        qr.save()
+    return qr
+
+
 @login_required
 @user_passes_test(is_admin_or_armorer)
 @require_POST
@@ -111,6 +134,7 @@ def generate_item_tags(request):
             skipped += 1
             continue
         try:
+            _ensure_qr_record(item)
             generate_item_tag(item)
             generated += 1
         except Exception as exc:
@@ -130,6 +154,7 @@ def regenerate_item_tag(request, item_id):
         return JsonResponse({'success': False, 'error': 'Item not found'}, status=404)
     try:
         from utils.item_tag_generator import generate_item_tag
+        _ensure_qr_record(item)
         generate_item_tag(item)
         thumb_url = _item_tag_img_url(request, item_id)
         return JsonResponse({'success': True, 'thumb_url': thumb_url})

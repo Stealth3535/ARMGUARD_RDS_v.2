@@ -643,7 +643,23 @@ def register_item(request):
                     # Use existing QR code as primary key
                     item._existing_qr = existing_qr
                     item.save()
-                    
+
+                    # Always create a QRCodeImage record so the item tag and QR Codes
+                    # page work correctly (M4 factory QR encodes the item ID itself)
+                    from qr_manager.models import QRCodeImage
+                    QRCodeImage.all_objects.get_or_create(
+                        qr_type=QRCodeImage.TYPE_ITEM,
+                        reference_id=item.id,
+                        defaults={'qr_data': item.id}
+                    )
+
+                    # Generate item tag PNG
+                    try:
+                        from utils.item_tag_generator import generate_item_tag
+                        generate_item_tag(item)
+                    except Exception:
+                        logger.exception("Item tag generation failed for %s", item.id)
+
                     messages.success(request, f'Item "{item}" registered successfully using existing QR code!')
                     return render(request, 'admin/register_item.html', {
                         'form': ItemRegistrationForm(),
@@ -654,14 +670,29 @@ def register_item(request):
                 else:
                     # Generate new ID and QR code
                     item.save()
-                    
+
                     # Generate QR code using standard generator for consistent gray-on-black styling
                     from utils.qr_generator import generate_qr_code_to_buffer
                     item_data = f"ITEM:{item.id}:{item.item_type}:{item.serial}"
-                    
+
                     buffer = generate_qr_code_to_buffer(item_data, size=600)
                     qr_code = base64.b64encode(buffer.getvalue()).decode()
-                    
+
+                    # Save QRCodeImage record so item tag generator and QR Codes page work
+                    from qr_manager.models import QRCodeImage
+                    QRCodeImage.all_objects.get_or_create(
+                        qr_type=QRCodeImage.TYPE_ITEM,
+                        reference_id=item.id,
+                        defaults={'qr_data': item_data}
+                    )
+
+                    # Generate item tag PNG
+                    try:
+                        from utils.item_tag_generator import generate_item_tag
+                        generate_item_tag(item)
+                    except Exception:
+                        logger.exception("Item tag generation failed for %s", item.id)
+
                     messages.success(request, f'Item "{item}" registered successfully with QR code!')
                     return render(request, 'admin/register_item.html', {
                         'form': ItemRegistrationForm(),
