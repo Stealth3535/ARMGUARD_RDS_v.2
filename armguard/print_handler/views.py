@@ -4,7 +4,10 @@ Print Handler Views - Super Simple
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.http import require_POST
+import os
+from django.conf import settings
 from qr_manager.models import QRCodeImage
 from transactions.models import Transaction
 from personnel.models import Personnel
@@ -254,3 +257,127 @@ def print_transaction_pdf(request, transaction_id):
         'transaction': transaction,
         'pdf_url': pdf_url
     })
+
+
+# ---------------------------------------------------------------------------
+# Personnel ID Card Print Manager
+# ---------------------------------------------------------------------------
+
+@login_required
+@user_passes_test(is_admin_or_armorer)
+def print_id_cards(request):
+    """
+    Personnel ID Card Print Manager.
+    Lists all active personnel, shows their ID card thumbnail,
+    and allows single/bulk printing and card regeneration.
+    """
+    search_q = request.GET.get('q', '').strip()
+
+    personnel_qs = Personnel.objects.filter(deleted_at__isnull=True).order_by('surname', 'firstname')
+    if search_q:
+        from django.db.models import Q as DQ
+        personnel_qs = personnel_qs.filter(
+            DQ(surname__icontains=search_q) |
+            DQ(firstname__icontains=search_q) |
+            DQ(id__icontains=search_q) |
+            DQ(rank__icontains=search_q)
+        )
+
+    id_cards_dir = os.path.join(settings.MEDIA_ROOT, 'personnel_id_cards')
+    media_url = settings.MEDIA_URL.rstrip('/')
+
+    personnel_cards = []
+    for p in personnel_qs:
+        front_rel = f"personnel_id_cards/{p.id}_front.png"
+        combined_rel = f"personnel_id_cards/{p.id}.png"
+        front_abs = os.path.join(settings.MEDIA_ROOT, front_rel)
+        combined_abs = os.path.join(settings.MEDIA_ROOT, combined_rel)
+
+        has_card = os.path.exists(front_abs) or os.path.exists(combined_abs)
+        if os.path.exists(front_abs):
+            thumb_url = f"{media_url}/{front_rel}"
+        elif os.path.exists(combined_abs):
+            thumb_url = f"{media_url}/{combined_rel}"
+        else:
+            thumb_url = None
+
+        personnel_cards.append({
+            'personnel': p,
+            'has_card': has_card,
+            'thumb_url': thumb_url,
+        })
+
+    total = len(personnel_cards)
+    with_card = sum(1 for c in personnel_cards if c['has_card'])
+
+    context = {
+        'personnel_cards': personnel_cards,
+        'search_q': search_q,
+        'total': total,
+        'with_card': with_card,
+        'without_card': total - with_card,
+    }
+    return render(request, 'print_handler/print_id_cards.html', context)
+
+
+@login_required
+@user_passes_test(is_admin_or_armorer)
+@require_POST
+def regenerate_id_card(request, personnel_id):
+    """Regenerate the ID card PNG for a single personnel (AJAX POST)."""
+    try:
+        personnel = Personnel.objects.get(id=personnel_id)
+    except Personnel.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Personnel not found'}, status=404)
+
+    try:
+        from utils.personnel_id_card_generator import generate_personnel_id_card
+        paths = generate_personnel_id_card(personnel)
+        media_url = settings.MEDIA_URL.rstrip('/')
+        front_url = f"{media_url}/{paths['front']}" if paths.get('front') else None
+        return JsonResponse({'success': True, 'thumb_url': front_url or f"{media_url}/{paths.get('combined', '')}"})
+    except Exception as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=500)
+
+
+@login_required
+@user_passes_test(is_admin_or_armorer)
+def print_id_cards_view(request):
+    """
+    Print-ready page for selected (or all) personnel ID cards.
+    Accepts ?ids=PO-xxx,PE-xxx,... or ?all=1
+    """
+    media_url = settings.MEDIA_URL.rstrip('/')
+    ids_param = request.GET.get('ids', '')
+    show_all = request.GET.get('all', '')
+
+    if show_all:
+        personnel_qs = Personnel.objects.filter(deleted_at__isnull=True).order_by('surname', 'firstname')
+    elif ids_param:
+        id_list = [i.strip() for i in ids_param.split(',') if i.strip()]
+        personnel_qs = Personnel.objects.filter(id__in=id_list, deleted_at__isnull=True)
+    else:
+        personnel_qs = Personnel.objects.none()
+
+    cards = []
+    for p in personnel_qs:
+        front_rel = f"personnel_id_cards/{p.id}_front.png"
+        back_rel = f"personnel_id_cards/{p.id}_back.png"
+        combined_rel = f"personnel_id_cards/{p.id}.png"
+        front_abs = os.path.join(settings.MEDIA_ROOT, front_rel)
+        back_abs = os.path.join(settings.MEDIA_ROOT, back_rel)
+        combined_abs = os.path.join(settings.MEDIA_ROOT, combined_rel)
+
+        if os.path.exists(front_abs):
+            front_url = f"{media_url}/{front_rel}"
+        elif os.path.exists(combined_abs):
+            front_url = f"{media_url}/{combined_rel}"
+        else:
+            front_url = None
+
+        back_url = f"{media_url}/{back_rel}" if os.path.exists(back_abs) else None
+
+        if front_url:
+            cards.append({'personnel': p, 'front_url': front_url, 'back_url': back_url})
+
+    return render(request, 'print_handler/print_id_cards_printview.html', {'cards': cards})
