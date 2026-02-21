@@ -286,146 +286,6 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         margin-bottom: 30px;
     }
-
-    .transaction-form-body {
-        display: flex;
-        gap: 2rem;
-        align-items: flex-start;
-    }
-
-    .transaction-form-fields {
-        flex: 0 0 auto;
-    }
-
-    .personnel-card-panel {
-        flex: 1;
-        min-width: 220px;
-        max-width: 300px;
-        display: none;
-        align-self: flex-start;
-    }
-
-    .personnel-card-panel.visible {
-        display: block;
-    }
-
-    .personnel-id-card {
-        background: linear-gradient(135deg, #1a3a5c 0%, #1e5631 100%);
-        border-radius: 14px;
-        padding: 1.4rem 1.5rem;
-        color: #fff;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.22);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .personnel-id-card::before {
-        content: '';
-        position: absolute;
-        top: -30px; right: -30px;
-        width: 120px; height: 120px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.07);
-    }
-
-    .personnel-id-card::after {
-        content: '';
-        position: absolute;
-        bottom: -20px; left: -20px;
-        width: 90px; height: 90px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.05);
-    }
-
-    .personnel-id-card-header {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.72rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: rgba(255,255,255,0.65);
-        margin-bottom: 0.9rem;
-    }
-
-    .personnel-id-card-header i {
-        font-size: 0.85rem;
-    }
-
-    .personnel-card-verified-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
-        background: rgba(16,185,129,0.25);
-        border: 1px solid rgba(16,185,129,0.5);
-        border-radius: 999px;
-        padding: 0.15rem 0.5rem;
-        font-size: 0.7rem;
-        color: #6ee7b7;
-        margin-left: auto;
-    }
-
-    .personnel-card-name {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #fff;
-        margin-bottom: 0.2rem;
-        line-height: 1.2;
-    }
-
-    .personnel-card-rank {
-        font-size: 0.82rem;
-        color: rgba(255,255,255,0.7);
-        margin-bottom: 0.9rem;
-    }
-
-    .personnel-card-divider {
-        border: none;
-        border-top: 1px solid rgba(255,255,255,0.15);
-        margin: 0.75rem 0;
-    }
-
-    .personnel-card-field {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.8rem;
-        color: rgba(255,255,255,0.6);
-        margin-bottom: 0.3rem;
-    }
-
-    .personnel-card-field strong {
-        color: #fff;
-        font-weight: 600;
-    }
-
-    .personnel-card-error {
-        background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
-        border-radius: 14px;
-        padding: 1.2rem 1.5rem;
-        color: #fff;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.18);
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        font-size: 0.92rem;
-    }
-
-    .input-with-status {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .input-status-icon {
-        font-size: 1rem;
-        width: 20px;
-        text-align: center;
-        flex-shrink: 0;
-    }
-
-    .input-status-icon.success { color: #10b981; }
-    .input-status-icon.error   { color: #dc2626; }
     
     .form-row {
         display: grid;
@@ -824,100 +684,63 @@
         <h3>📝 Create Transaction</h3>
         <form id="transactionForm" onsubmit="return false;">
             {% csrf_token %}
-            <div class="transaction-form-body">
-                <!-- Left: form fields -->
-                <div class="transaction-form-fields">
-
-                <!-- Personnel Input -->
-                <div class="form-row">
-                    <label for="personnelInput">Personnel ID:</label>
-                    <div class="input-with-status">
-                        <span id="personnelStatusIcon" class="input-status-icon"></span>
-                        <input type="text" id="personnelInput" class="form-control" placeholder="Scan or enter Personnel ID" autocomplete="off">
-                    </div>
+            
+            <!-- Personnel Input -->
+            <div class="form-row">
+                <label for="personnelInput">Personnel ID:</label>
+                <div>
+                    <input type="text" id="personnelInput" class="form-control" placeholder="Scan or enter Personnel ID" autocomplete="off">
+                    <div id="personnelInfo" class="info-text"></div>
                 </div>
-                <div id="personnelInfo" class="info-text" style="display:none;"></div>
+            </div>
 
-                <!-- Item Input -->
-                <div class="form-row">
-                    <label for="itemInput">Item ID:</label>
-                    <div>
-                        <input type="text" id="itemInput" class="form-control" placeholder="Scan or enter Item ID" autocomplete="off">
-                        <div id="itemInfo" class="info-text"></div>
-                    </div>
+            <!-- Item Input -->
+            <div class="form-row">
+                <label for="itemInput">Item ID:</label>
+                <div>
+                    <input type="text" id="itemInput" class="form-control" placeholder="Scan or enter Item ID" autocomplete="off">
+                    <div id="itemInfo" class="info-text"></div>
                 </div>
+            </div>
 
-                <!-- Duty Type (Normal Mode Only) -->
-                <div class="form-row" id="dutyTypeRow">
-                    <label for="dutyType">Duty Type:</label>
-                    <select id="dutyType" class="form-control">
-                        <option value="">Select Duty Type</option>
-                        <option value="Duty Sentinel">Duty Sentinel</option>
-                        <option value="Duty Security">Duty Security</option>
-                        <option value="Vigil">Vigil</option>
-                        <option value="Guard Duty">Guard Duty</option>
-                    </select>
-                </div>
+            <!-- Duty Type (Normal Mode Only) -->
+            <div class="form-row" id="dutyTypeRow">
+                <label for="dutyType">Duty Type:</label>
+                <select id="dutyType" class="form-control">
+                    <option value="">Select Duty Type</option>
+                    <option value="Duty Sentinel">Duty Sentinel</option>
+                    <option value="Duty Security">Duty Security</option>
+                    <option value="Vigil">Vigil</option>
+                    <option value="Guard Duty">Guard Duty</option>
+                </select>
+            </div>
 
-                <!-- Mags -->
-                <div class="form-row" id="magsRow">
-                    <label for="mags">Mags:</label>
-                    <input type="number" id="mags" class="form-control" placeholder="Number of mags" min="0">
-                </div>
+            <!-- Mags -->
+            <div class="form-row" id="magsRow">
+                <label for="mags">Mags:</label>
+                <input type="number" id="mags" class="form-control" placeholder="Number of mags" min="0">
+            </div>
 
-                <!-- Rounds -->
-                <div class="form-row" id="roundsRow">
-                    <label for="rounds">Rounds of Ammo:</label>
-                    <input type="number" id="rounds" class="form-control" placeholder="Rounds of ammo" min="0">
-                </div>
+            <!-- Rounds -->
+            <div class="form-row" id="roundsRow">
+                <label for="rounds">Rounds of Ammo:</label>
+                <input type="number" id="rounds" class="form-control" placeholder="Rounds of ammo" min="0">
+            </div>
 
-                <!-- Notes -->
-                <div class="form-row">
-                    <label for="notes">Notes:</label>
-                    <textarea id="notes" class="form-control" placeholder="Optional notes..." rows="3"></textarea>
-                </div>
+            <!-- Notes -->
+            <div class="form-row">
+                <label for="notes">Notes:</label>
+                <textarea id="notes" class="form-control" placeholder="Optional notes..." rows="3"></textarea>
+            </div>
 
-                <!-- Scan Buttons -->
-                <div class="scan-buttons">
-                    <button type="button" class="btn btn-secondary" onclick="openQrScanner('personnelInput')">📷 Scan Personnel</button>
-                    <button type="button" class="btn btn-secondary" onclick="openQrScanner('itemInput')">📷 Scan Item</button>
-                </div>
+            <!-- Scan Buttons -->
+            <div class="scan-buttons">
+                <button type="button" class="btn btn-secondary" onclick="openQrScanner('personnelInput')">📷 Scan Personnel</button>
+                <button type="button" class="btn btn-secondary" onclick="openQrScanner('itemInput')">📷 Scan Item</button>
+            </div>
 
-                <!-- Submit Button -->
-                <button type="button" class="btn-submit-transaction" onclick="handleManualSubmit()">✅ Submit Transaction</button>
-
-                </div><!-- end .transaction-form-fields -->
-
-                <!-- Right: Personnel ID card -->
-                <div class="personnel-card-panel" id="personnelCardPanel">
-                    <div class="personnel-id-card" id="personnelIdCard">
-                        <div class="personnel-id-card-header">
-                            <i class="fas fa-id-card"></i> Personnel ID
-                            <span class="personnel-card-verified-badge"><i class="fas fa-check"></i> Verified</span>
-                        </div>
-                        <div class="personnel-card-name" id="cardFullName">—</div>
-                        <div class="personnel-card-rank" id="cardRank">—</div>
-                        <hr class="personnel-card-divider">
-                        <div class="personnel-card-field">
-                            <span>Serial No.</span>
-                            <strong id="cardSerial">—</strong>
-                        </div>
-                        <div class="personnel-card-field">
-                            <span>Classification</span>
-                            <strong id="cardClassification">—</strong>
-                        </div>
-                        <div class="personnel-card-field">
-                            <span>Status</span>
-                            <strong id="cardStatus" style="color:#6ee7b7;">Ready</strong>
-                        </div>
-                    </div>
-                    <div class="personnel-card-error" id="personnelCardError" style="display:none;">
-                        <i class="fas fa-exclamation-circle" style="font-size:1.4rem;color:#fca5a5;flex-shrink:0;"></i>
-                        <span id="personnelCardErrorMsg">Personnel not found</span>
-                    </div>
-                </div>
-
-            </div><!-- end .transaction-form-body -->
+            <!-- Submit Button -->
+            <button type="button" class="btn-submit-transaction" onclick="handleManualSubmit()">✅ Submit Transaction</button>
         </form>
     </div>
     {% else %}
@@ -1507,53 +1330,11 @@ document.addEventListener('keydown', function(e) {
 // Personnel validation
 const personnelInput = document.getElementById('personnelInput');
 const personnelInfo = document.getElementById('personnelInfo');
-const personnelStatusIcon = document.getElementById('personnelStatusIcon');
-const personnelCardPanel = document.getElementById('personnelCardPanel');
-const personnelIdCard = document.getElementById('personnelIdCard');
-const personnelCardError = document.getElementById('personnelCardError');
-
-function resetPersonnelCard() {
-    personnelStatusIcon.textContent = '';
-    personnelStatusIcon.className = 'input-status-icon';
-    personnelCardPanel.classList.remove('visible');
-    personnelIdCard.style.display = '';
-    personnelCardError.style.display = 'none';
-}
-
-function showPersonnelCard(data) {
-    document.getElementById('cardFullName').textContent =
-        `${data.firstname}${data.middle_initial ? ' ' + data.middle_initial + '.' : ''} ${data.surname}`;
-    document.getElementById('cardRank').textContent = data.rank || '—';
-    document.getElementById('cardSerial').textContent = data.serial || '—';
-    document.getElementById('cardClassification').textContent = data.classification || '—';
-    document.getElementById('cardStatus').textContent = 'Ready';
-    document.getElementById('cardStatus').style.color = '#6ee7b7';
-    personnelIdCard.style.display = '';
-    personnelCardError.style.display = 'none';
-    personnelCardPanel.classList.add('visible');
-    personnelStatusIcon.textContent = '✓';
-    personnelStatusIcon.className = 'input-status-icon success';
-}
-
-function showPersonnelCardError(msg, isWarning) {
-    document.getElementById('personnelCardErrorMsg').textContent = msg;
-    personnelIdCard.style.display = 'none';
-    personnelCardError.style.display = 'flex';
-    personnelCardPanel.classList.add('visible');
-    personnelStatusIcon.textContent = '✗';
-    personnelStatusIcon.className = 'input-status-icon error';
-    if (isWarning) {
-        // already-has-firearm: show card but mark status
-        document.getElementById('cardStatus').textContent = 'Has Issued Firearm';
-        document.getElementById('cardStatus').style.color = '#fca5a5';
-    }
-}
 
 personnelInput.addEventListener('blur', async function() {
     const personnelId = this.value.trim();
     if (!personnelId) {
         personnelValidated = false;
-        resetPersonnelCard();
         personnelInfo.style.display = 'none';
         return;
     }
@@ -1567,11 +1348,7 @@ personnelInput.addEventListener('blur', async function() {
                 personnelValidated = false;
                 personnelInfo.className = 'info-text error';
                 personnelInfo.textContent = '✗ Personnel already has an issued firearm';
-                showPersonnelCard(data);
-                document.getElementById('cardStatus').textContent = 'Has Issued Firearm';
-                document.getElementById('cardStatus').style.color = '#fca5a5';
-                personnelStatusIcon.textContent = '✗';
-                personnelStatusIcon.className = 'input-status-icon error';
+                personnelInfo.style.display = 'block';
                 showNotification('Personnel already has and issued firearm', 'error');
                 return;
             }
@@ -1579,7 +1356,7 @@ personnelInput.addEventListener('blur', async function() {
             personnelValidated = true;
             personnelInfo.className = 'info-text success';
             personnelInfo.textContent = `✓ ${data.firstname} ${data.middle_initial ? data.middle_initial + '.' : ''} ${data.surname} - ${data.rank}`;
-            showPersonnelCard(data);
+            personnelInfo.style.display = 'block';
             
             // Show automatic notification for successful personnel scan
             showNotification(`Personnel scanned: ${data.firstname} ${data.surname} - ${data.rank}`, 'success');
@@ -1597,13 +1374,13 @@ personnelInput.addEventListener('blur', async function() {
             personnelValidated = false;
             personnelInfo.className = 'info-text error';
             personnelInfo.textContent = '✗ Personnel not found';
-            showPersonnelCardError('Personnel not found');
+            personnelInfo.style.display = 'block';
         }
     } catch (error) {
         personnelValidated = false;
         personnelInfo.className = 'info-text error';
         personnelInfo.textContent = '✗ Error validating personnel';
-        showPersonnelCardError('Error validating personnel');
+        personnelInfo.style.display = 'block';
     }
 });
 
