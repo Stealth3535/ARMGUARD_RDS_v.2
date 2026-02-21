@@ -51,22 +51,27 @@ class Command(BaseCommand):
             if not qr.qr_image:
                 needs_regen = True
                 reason = 'NO IMAGE FIELD'
+                self.stdout.write(self.style.WARNING(f'  [NO IMAGE] {qr.reference_id}'))
             else:
                 stem = os.path.splitext(os.path.basename(qr.qr_image.name))[0]
+                full_path = os.path.join(settings.MEDIA_ROOT, qr.qr_image.name)
+                file_ok = os.path.exists(full_path)
+                # Always print every record so we can see exactly what the server has
+                status = 'OK     ' if file_ok else 'MISSING'
+                self.stdout.write(
+                    f'  [{status}] {qr.reference_id}  file: {qr.qr_image.name}'
+                )
                 if '.' in stem:
                     needs_regen = True
-                    reason = f'DOTTED STEM ({qr.qr_image.name})'
-                elif not _file_exists(qr):
+                    reason = f'DOTTED STEM'
+                elif not file_ok:
                     needs_regen = True
-                    reason = f'FILE MISSING ({qr.qr_image.name})'
+                    reason = f'FILE MISSING'
 
             if not needs_regen:
                 skipped += 1
                 continue
 
-            self.stdout.write(
-                self.style.WARNING(f'  {reason}: {qr.reference_id}')
-            )
             if dry_run:
                 fixed += 1
                 continue
