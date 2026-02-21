@@ -68,104 +68,71 @@
         padding: 0;
     }
     
-    .stat-card {
-        background: white;
+    .tx-stat-card {
+        background: #fff;
         border-radius: 12px;
-        padding: 1rem 1.1rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 0.95rem 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         position: relative;
         overflow: hidden;
-        opacity: 0;
-        transform: translateY(20px);
     }
-    
-    .stat-card::before {
+    .tx-stat-card::before {
         content: '';
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
+        top: 0; left: 0; right: 0;
         height: 4px;
-        background: var(--card-color);
-        border-radius: 16px 16px 0 0;
+        background: var(--card-color, #cbd5e1);
+        border-radius: 12px 12px 0 0;
     }
-    
-    .stat-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    .tx-stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.12);
     }
-    
-    .stat-card.available { --card-color: #10b981; }
-    .stat-card.issued { --card-color: #f59e0b; }
-    .stat-card.maintenance { --card-color: #dc2626; }
-    .stat-card.total { --card-color: #667eea; }
-    
-    .stat-content {
-        display: contents;
+    .tx-stat-card.available { --card-color: #10b981; }
+    .tx-stat-card.issued    { --card-color: #f59e0b; }
+    .tx-stat-card.maintenance { --card-color: #dc2626; }
+    .tx-stat-card.total     { --card-color: #667eea; }
+    .tx-stat-title {
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
+        font-weight: 700;
+        margin-bottom: 0;
     }
-    
-    .stat-info {
-        display: contents;
-    }
-
-    .stat-head {
+    .tx-stat-head {
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
         gap: 0.5rem;
         margin-bottom: 0.15rem;
     }
-    
-    .stat-value {
+    .tx-stat-value {
         font-size: 2.6rem;
-        font-weight: 900;
-        color: var(--card-color);
-        margin-bottom: 0;
         line-height: 1;
+        font-weight: 900;
+        color: var(--card-color, #111827);
     }
-    
-    .stat-label {
+    .tx-stat-note {
         font-size: 0.82rem;
-        color: #6b7280;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        color: var(--card-color, #059669);
+        margin-bottom: 0.3rem;
         font-weight: 600;
-        margin-bottom: 0;
     }
-    
-    .stat-change {
-        font-size: 0.82rem;
-        color: var(--card-color);
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
-    
-    .stat-change.negative {
-        color: var(--card-color);
-    }
-
-    .stat-breakdown {
-        margin-top: 0.35rem;
+    .tx-stat-breakdown {
+        font-size: 0.88rem;
+        color: #374151;
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.1rem 0.55rem;
-        font-size: 0.73rem;
-        color: #4b5563;
+        gap: 0.1rem 0.5rem;
     }
-
-    .stat-breakdown-line {
+    .tx-stat-breakdown div {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 0.35rem;
         line-height: 1.2;
     }
-
-    .stat-breakdown-line strong {
+    .tx-stat-breakdown strong {
         color: #111827;
         font-weight: 700;
     }
@@ -479,11 +446,10 @@
             gap: 1rem;
         }
         
-        .stat-card {
+        .tx-stat-card {
             padding: 0.9rem;
         }
-        
-        .stat-value {
+        .tx-stat-value {
             font-size: 1.65rem;
         }
         
@@ -515,20 +481,15 @@
         }
     }
     
-    .stat-card {
-        animation: fadeInUp 0.6s ease-out;
-        animation-fill-mode: both;
+    .tx-stat-card {
+        animation: fadeInUp 0.6s ease-out both;
     }
-    
-    .stat-card:nth-child(1) { animation-delay: 0.1s; }
-    .stat-card:nth-child(2) { animation-delay: 0.2s; }
-    .stat-card:nth-child(3) { animation-delay: 0.3s; }
-    .stat-card:nth-child(4) { animation-delay: 0.4s; }
-    
-    .stat-value {
-        animation: countUp 0.8s ease-out;
-        animation-delay: 0.5s;
-        animation-fill-mode: both;
+    .tx-stat-card:nth-child(1) { animation-delay: 0.1s; }
+    .tx-stat-card:nth-child(2) { animation-delay: 0.2s; }
+    .tx-stat-card:nth-child(3) { animation-delay: 0.3s; }
+    .tx-stat-card:nth-child(4) { animation-delay: 0.4s; }
+    .tx-stat-value {
+        animation: countUp 0.8s ease-out 0.5s both;
     }
 </style>
 {% endblock %}
@@ -546,52 +507,40 @@
 
     <!-- Enhanced Statistics Dashboard -->
     <div class="stats-container">
-        <div class="stat-card available">
-            <div class="stat-head">
-                <div class="stat-label">Available Items</div>
-                <div class="stat-value" id="availableCount">0</div>
+        <div class="tx-stat-card available">
+            <div class="tx-stat-head">
+                <div class="tx-stat-title">Available Items</div>
+                <div class="tx-stat-value" id="availableCount">0</div>
             </div>
-            <div class="stat-change">
-                <i class="fas fa-arrow-up"></i>
-                Ready for deployment
-            </div>
-            <div class="stat-breakdown" id="availableTypeBreakdown"></div>
+            <div class="tx-stat-note"><i class="fas fa-arrow-up"></i> Ready for deployment</div>
+            <div class="tx-stat-breakdown" id="availableTypeBreakdown"></div>
         </div>
         
-        <div class="stat-card issued">
-            <div class="stat-head">
-                <div class="stat-label">Currently Issued</div>
-                <div class="stat-value" id="issuedCount">0</div>
+        <div class="tx-stat-card issued">
+            <div class="tx-stat-head">
+                <div class="tx-stat-title">Currently Issued</div>
+                <div class="tx-stat-value" id="issuedCount">0</div>
             </div>
-            <div class="stat-change">
-                <i class="fas fa-user-check"></i>
-                In field operations
-            </div>
-            <div class="stat-breakdown" id="issuedTypeBreakdown"></div>
+            <div class="tx-stat-note"><i class="fas fa-user-check"></i> In field operations</div>
+            <div class="tx-stat-breakdown" id="issuedTypeBreakdown"></div>
         </div>
         
-        <div class="stat-card maintenance">
-            <div class="stat-head">
-                <div class="stat-label">Under Maintenance</div>
-                <div class="stat-value" id="maintenanceCount">0</div>
+        <div class="tx-stat-card maintenance">
+            <div class="tx-stat-head">
+                <div class="tx-stat-title">Under Maintenance</div>
+                <div class="tx-stat-value" id="maintenanceCount">0</div>
             </div>
-            <div class="stat-change negative">
-                <i class="fas fa-exclamation-triangle"></i>
-                Requires attention
-            </div>
-            <div class="stat-breakdown" id="maintenanceTypeBreakdown"></div>
+            <div class="tx-stat-note"><i class="fas fa-exclamation-triangle"></i> Requires attention</div>
+            <div class="tx-stat-breakdown" id="maintenanceTypeBreakdown"></div>
         </div>
         
-        <div class="stat-card total">
-            <div class="stat-head">
-                <div class="stat-label">Total Inventory</div>
-                <div class="stat-value" id="totalCount">{{ items|length|default:0 }}</div>
+        <div class="tx-stat-card total">
+            <div class="tx-stat-head">
+                <div class="tx-stat-title">Total Inventory</div>
+                <div class="tx-stat-value" id="totalCount">{{ items|length|default:0 }}</div>
             </div>
-            <div class="stat-change">
-                <i class="fas fa-database"></i>
-                Complete arsenal
-            </div>
-            <div class="stat-breakdown" id="totalTypeBreakdown"></div>
+            <div class="tx-stat-note"><i class="fas fa-database"></i> Complete arsenal</div>
+            <div class="tx-stat-breakdown" id="totalTypeBreakdown"></div>
         </div>
     </div>
 
@@ -888,7 +837,7 @@ function renderTypeBreakdown(elementId, counts, typeOrder, typeLabels) {
     if (!container) return;
 
     container.innerHTML = typeOrder
-        .map(type => `<div class="stat-breakdown-line"><span>${typeLabels[type]}:</span><strong>${counts[type] || 0}</strong></div>`)
+        .map(type => `<div><span>${typeLabels[type]}:</span><strong>${counts[type] || 0}</strong></div>`)
         .join('');
 }
 
