@@ -157,6 +157,58 @@
 
     /* ── Status change ── */
     .status-btns { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+
+    /* ── Physical item tag card ── */
+    .item-tag-card {
+        width: 220px; min-width: 220px;
+        background: #fff;
+        border-radius: 12px;
+        border: 1.5px solid #e5e7eb;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+        padding: 1rem;
+        display: flex; flex-direction: column; gap: 0.6rem;
+        align-self: flex-start;
+    }
+    .tag-top-row {
+        display: flex; align-items: flex-start;
+        justify-content: space-between; gap: 0.4rem;
+    }
+    .tag-number {
+        font-size: 3.2rem; font-weight: 900; line-height: 1;
+        color: #111827; letter-spacing: -0.02em; flex: 1;
+    }
+    .tag-number.no-num {
+        font-size: 2rem; color: #d1d5db; letter-spacing: 0.04em;
+    }
+    .tag-qr-img {
+        width: 76px; height: 76px; border-radius: 6px;
+        border: 1px solid #e5e7eb; object-fit: contain; flex-shrink: 0;
+    }
+    .tag-no-qr {
+        width: 76px; height: 76px; background: #f3f4f6; border-radius: 6px;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        flex-direction: column; gap: 0.2rem;
+        color: #9ca3af; font-size: 0.65rem; text-align: center;
+        border: 1px dashed #d1d5db;
+    }
+    .tag-type-row {
+        display: flex; align-items: baseline; gap: 0.4rem;
+        padding: 0.25rem 0; border-top: 1px solid #f3f4f6;
+    }
+    .tag-type {
+        font-size: 1.15rem; font-weight: 900; color: #d97706;
+    }
+    .tag-serial {
+        font-family: monospace; font-size: 0.72rem; color: #374151;
+        word-break: break-all;
+    }
+    .tag-stencil-wrap {
+        border-top: 1px solid #f3f4f6; padding-top: 0.4rem;
+    }
+    .tag-stencil {
+        width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;
+        object-fit: contain; max-height: 88px; background: #f9fafb; display: block;
+    }
 </style>
 {% endblock %}
 
@@ -196,8 +248,39 @@
         {% endif %}
     </div>
 
-    <!-- Info Card (full width) -->
-    <div class="info-card" style="margin-bottom:1rem;">
+    <!-- Profile row: tag card (left) + info card (right) -->
+    <div class="profile-row" style="margin-bottom:1rem;">
+
+    <!-- Physical item tag card -->
+    <div class="item-tag-card">
+        <!-- Row 1: item number + QR -->
+        <div class="tag-top-row">
+            <div class="tag-number{% if not item.item_number %} no-num{% endif %}">
+                {% if item.item_number %}{{ item.item_number|stringformat:"04d" }}{% else %}----{% endif %}
+            </div>
+            {% if qr_code_obj and qr_code_obj.qr_image %}
+            <img src="{{ qr_code_obj.qr_image.url }}?v={{ qr_code_obj.updated_at|date:'U' }}" alt="QR" class="tag-qr-img">
+            {% else %}
+            <div class="tag-no-qr"><i class="fas fa-qrcode" style="font-size:1.4rem;"></i><span>No QR</span></div>
+            {% endif %}
+        </div>
+        <!-- Row 2: item type + serial -->
+        <div class="tag-type-row">
+            <span class="tag-type">{{ item.item_type }}</span>
+            <span class="tag-serial">{{ item.serial }}</span>
+        </div>
+        <!-- Row 3: stencil photo -->
+        {% if item.stencil_picture %}
+        <div class="tag-stencil-wrap">
+            <a href="{{ item.stencil_picture.url }}" target="_blank">
+                <img src="{{ item.stencil_picture.url }}" alt="Stencil" class="tag-stencil">
+            </a>
+        </div>
+        {% endif %}
+    </div><!-- end item-tag-card -->
+
+    <!-- Info Card (right) -->
+    <div class="info-card">
             <p class="info-card-title"><i class="fas fa-info-circle" style="margin-right:0.35rem;"></i>Item Information</p>
             <div class="info-rows">
                 <div class="info-row">
@@ -234,17 +317,7 @@
                     <span class="info-label">Last Updated</span>
                     <span class="info-value">{{ item.updated_at|date:"d/m/y H:i" }}</span>
                 </div>
-                {% if item.stencil_picture %}
-                <div class="info-row">
-                    <span class="info-label">Stencil</span>
-                    <span class="info-value">
-                        <a href="{{ item.stencil_picture.url }}" target="_blank">
-                            <img src="{{ item.stencil_picture.url }}" alt="Stencil" class="stencil-thumb">
-                        </a>
-                    </span>
-                </div>
-                {% endif %}
-            </div>
+            </div><!-- end info-rows -->
 
             <!-- QR strip -->
             <div class="qr-strip">
@@ -259,6 +332,8 @@
                 </div>
             </div>
     </div><!-- end info card -->
+
+    </div><!-- end profile-row -->
 
     <!-- Transaction History -->
     <div class="tx-card">
