@@ -1544,7 +1544,40 @@ function applyTransactionMode(mode, persist = true) {
     setDefconLockLayout();
 }
 
+function clearFormFields() {
+    // Clear all transaction form inputs when the mode changes
+    const pInput = document.getElementById('personnelInput');
+    const iInput = document.getElementById('itemInput');
+    if (pInput) pInput.value = '';
+    if (iInput) iInput.value = '';
+
+    const notesEl = document.getElementById('notes');
+    const magsEl  = document.getElementById('mags');
+    const roundsEl = document.getElementById('rounds');
+    if (notesEl)  notesEl.value  = '';
+    if (magsEl)   magsEl.value   = '';
+    if (roundsEl) roundsEl.value = '';
+
+    const dutyTypeEl = document.getElementById('dutyType');
+    if (dutyTypeEl) dutyTypeEl.selectedIndex = 0;
+
+    const pInfo = document.getElementById('personnelInfo');
+    const iInfo = document.getElementById('itemInfo');
+    if (pInfo) { pInfo.textContent = ''; pInfo.style.display = 'none'; }
+    if (iInfo) { iInfo.textContent = ''; iInfo.style.display = 'none'; }
+
+    const pCard = document.getElementById('personnelPreviewCard');
+    const iCard = document.getElementById('itemPreviewCard');
+    if (pCard) pCard.style.display = 'none';
+    if (iCard) iCard.style.display = 'none';
+
+    personnelValidated = false;
+    itemValidated = false;
+    currentPersonnelData = null;
+}
+
 modeSelect.addEventListener('change', function() {
+    clearFormFields();
     applyTransactionMode(this.value, true);
 });
 
