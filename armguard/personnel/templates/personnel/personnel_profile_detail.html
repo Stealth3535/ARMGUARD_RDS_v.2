@@ -419,14 +419,7 @@
                 {% else %}
                 <div style="width:155px;height:155px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.8rem;">No QR Code</div>
                 {% endif %}
-                <p style="font-family:monospace;font-size:0.68rem;color:#6b7280;text-align:center;word-break:break-all;margin:0;">{{ personnel.qr_code }}</p>
-                {% if qr_code_obj %}
-                <a href="{% url 'print_handler:print_single_qr' qr_code_obj.id %}" class="btn-print" target="_blank" onclick="event.stopPropagation();">
-                    <i class="fas fa-print"></i> Print QR
-                </a>
-                {% else %}
-                <button class="btn-print" disabled style="opacity:0.5;cursor:default;"><i class="fas fa-print"></i> Print QR</button>
-                {% endif %}
+
             </div>
             <div class="id-card-footer">
                 <span class="id-card-id-label">Personnel ID</span>
