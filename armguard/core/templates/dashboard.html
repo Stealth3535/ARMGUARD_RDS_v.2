@@ -175,7 +175,7 @@
             <p class="inv-stat-value">{{ available_items }}</p>
             <p class="inv-stat-sub"><i class="fas fa-arrow-up"></i> Ready for deployment</p>
             <div class="inv-breakdown">
-                {% for t, c in available_by_type.items %}<span>{{ t }}:</span><strong>{{ c }}</strong>{% endfor %}
+                {% for row in type_rows %}<span>{{ row.type }}:</span><strong>{{ row.available }}</strong>{% endfor %}
             </div>
         </div>
 
@@ -184,7 +184,7 @@
             <p class="inv-stat-value">{{ issued_items }}</p>
             <p class="inv-stat-sub"><i class="fas fa-user-check"></i> In field operations</p>
             <div class="inv-breakdown">
-                {% for t, c in issued_by_type.items %}<span>{{ t }}:</span><strong>{{ c }}</strong>{% endfor %}
+                {% for row in type_rows %}<span>{{ row.type }}:</span><strong>{{ row.issued }}</strong>{% endfor %}
             </div>
         </div>
 
@@ -193,7 +193,7 @@
             <p class="inv-stat-value">{{ maintenance_items }}</p>
             <p class="inv-stat-sub"><i class="fas fa-exclamation-triangle"></i> Requires attention</p>
             <div class="inv-breakdown">
-                {% for t, c in maintenance_by_type.items %}<span>{{ t }}:</span><strong>{{ c }}</strong>{% endfor %}
+                {% for row in type_rows %}<span>{{ row.type }}:</span><strong>{{ row.maintenance }}</strong>{% endfor %}
             </div>
         </div>
 
@@ -202,7 +202,7 @@
             <p class="inv-stat-value">{{ total_items }}</p>
             <p class="inv-stat-sub"><i class="fas fa-database"></i> Complete arsenal</p>
             <div class="inv-breakdown">
-                {% for t, c in total_by_type.items %}<span>{{ t }}:</span><strong>{{ c }}</strong>{% endfor %}
+                {% for row in type_rows %}<span>{{ row.type }}:</span><strong>{{ row.total }}</strong>{% endfor %}
             </div>
         </div>
 

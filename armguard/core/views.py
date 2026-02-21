@@ -42,7 +42,19 @@ def dashboard(request):
     issued_by_type      = type_breakdown('Issued')
     maintenance_by_type = type_breakdown('Maintenance')
     total_by_type       = type_total()
-    all_item_types = sorted(set(available_by_type) | set(issued_by_type) | set(maintenance_by_type) | set(total_by_type))
+    all_item_types = sorted(
+        set(item_types) | set(available_by_type) | set(issued_by_type) | set(maintenance_by_type) | set(total_by_type)
+    )
+    type_rows = [
+        {
+            'type': t,
+            'available': available_by_type.get(t, 0),
+            'issued': issued_by_type.get(t, 0),
+            'maintenance': maintenance_by_type.get(t, 0),
+            'total': total_by_type.get(t, 0),
+        }
+        for t in all_item_types
+    ]
     
     # Items by type
     items_by_type = Item.objects.values('item_type').annotate(count=Count('id'))
@@ -65,6 +77,7 @@ def dashboard(request):
         'maintenance_items': maintenance_items,
         'items_by_type': items_by_type,
         'all_item_types': all_item_types,
+        'type_rows': type_rows,
         'available_by_type': available_by_type,
         'issued_by_type': issued_by_type,
         'maintenance_by_type': maintenance_by_type,
