@@ -1280,12 +1280,8 @@ let suppressPersonnelAutoTab = false;
 let currentPersonnelData = null; // stores last successfully looked-up personnel
 
 function focusAfterItemScan() {
-    const notesInput = document.getElementById('notes');
-    if (notesInput) {
-        notesInput.focus();
-        return;
-    }
-
+    // Focus the submit button, NOT the Notes field, so that over-scan
+    // characters don't bleed into Notes. User can still click Notes manually.
     const submitButton = document.querySelector('.btn-submit-transaction');
     if (submitButton) {
         submitButton.focus();
@@ -1430,6 +1426,8 @@ function fillScannedField(parsedScan) {
     }
 
     if (parsedScan.type === 'item') {
+        // Ignore duplicate scans when item is already validated
+        if (itemValidated) return;
         itemInput.value = parsedScan.value;
         itemInput.dispatchEvent(new Event('blur'));
         showNotification(`Scanned item ID: ${parsedScan.value}`, 'info');
@@ -1582,7 +1580,17 @@ document.addEventListener('keydown', function(e) {
     if (e.key.length !== 1) return;
 
     const now = Date.now();
-    if (scannerCapture.lastKeyTime && (now - scannerCapture.lastKeyTime) > scannerCapture.timeoutMs) {
+    const timeSinceLastKey = scannerCapture.lastKeyTime ? (now - scannerCapture.lastKeyTime) : 999;
+
+    // If focus is not on a scanner-designated input and keystrokes are rapid-fire
+    // (scanner fires < 50ms between chars), block chars from leaking into e.g. Notes.
+    const onScanField = (document.activeElement === personnelInput ||
+                         document.activeElement === itemInput);
+    if (!onScanField && timeSinceLastKey < 50) {
+        e.preventDefault();
+    }
+
+    if (timeSinceLastKey > scannerCapture.timeoutMs) {
         scannerCapture.buffer = '';
     }
 
