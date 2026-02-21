@@ -92,6 +92,8 @@ def get_personnel_from_qr(qr_data):
                 'serial': personnel.serial,
                 'group': personnel.group,
                 'status': personnel.status,
+                'classification': personnel.classification,
+                'picture_url': personnel.picture.url if personnel.picture else '',
             },
             'error': None
         }
@@ -126,6 +128,7 @@ def get_item_from_qr(qr_data):
                 'status': item.status,
                 'condition': item.condition,
                 'description': item.description or '',
+                'item_number': item.item_number,
             },
             'error': None
         }
@@ -163,6 +166,8 @@ def get_personnel_by_id(personnel_id):
                 'serial': personnel.serial,
                 'group': personnel.group,
                 'status': personnel.status,
+                'classification': personnel.classification,
+                'picture_url': personnel.picture.url if personnel.picture else '',
             },
             'error': None
         }
@@ -197,6 +202,7 @@ def get_item_by_id(item_id):
                 'status': item.status,
                 'condition': item.condition,
                 'description': item.description or '',
+                'item_number': item.item_number,
             },
             'error': None
         }

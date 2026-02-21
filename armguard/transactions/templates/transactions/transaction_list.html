@@ -349,6 +349,198 @@
         background: #218838;
     }
 
+    /* ── Two-column form + preview layout ── */
+    .tx-form-layout {
+        display: flex;
+        gap: 1.5rem;
+        align-items: flex-start;
+    }
+    .tx-form-left {
+        flex: 1;
+        min-width: 0;
+    }
+    .tx-form-left .form-row {
+        grid-template-columns: 160px 1fr;
+    }
+    .container.defcon-lock .tx-form-left .form-row {
+        grid-template-columns: 140px 1fr;
+    }
+    .tx-preview-right {
+        width: 290px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    @media (max-width: 900px) {
+        .tx-form-layout { flex-direction: column; }
+        .tx-preview-right { width: 100%; }
+    }
+
+    /* ── Scan preview cards ── */
+    .px-preview-card {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.14);
+        background: #fff;
+        border: 1px solid #e5e7eb;
+    }
+    /* Personnel card */
+    .px-ph-header {
+        background: #1e3a5f;
+        color: #fff;
+        text-align: center;
+        padding: 0.45rem 0.5rem;
+        font-weight: 700;
+        font-size: 0.78rem;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+    }
+    .px-ph-body {
+        display: flex;
+        gap: 0.65rem;
+        padding: 0.65rem;
+        align-items: flex-start;
+    }
+    .px-ph-photo-wrap {
+        width: 72px;
+        height: 82px;
+        flex-shrink: 0;
+        border-radius: 6px;
+        overflow: hidden;
+        background: #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .px-ph-photo { width:100%; height:100%; object-fit:cover; }
+    .px-ph-photo-placeholder { font-size: 2rem; color: #9ca3af; }
+    .px-ph-info { flex:1; min-width:0; }
+    .px-ph-name {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #111827;
+        line-height: 1.25;
+        margin-bottom: 0.2rem;
+    }
+    .px-ph-rank {
+        font-size: 0.72rem;
+        color: #4b5563;
+        margin-bottom: 0.12rem;
+    }
+    .px-ph-classification {
+        font-size: 0.67rem;
+        color: #6b7280;
+        margin-bottom: 0.35rem;
+    }
+    .px-ph-badges { display:flex; gap:0.3rem; flex-wrap:wrap; }
+    .px-badge-green {
+        background: #16a34a; color: #fff;
+        font-size: 0.6rem; font-weight: 700;
+        padding: 0.13rem 0.4rem; border-radius: 3px; text-transform: uppercase;
+    }
+    .px-badge-red {
+        background: #dc2626; color: #fff;
+        font-size: 0.6rem; font-weight: 700;
+        padding: 0.13rem 0.4rem; border-radius: 3px; text-transform: uppercase;
+    }
+    .px-badge-gray {
+        background: #6b7280; color: #fff;
+        font-size: 0.6rem; font-weight: 700;
+        padding: 0.13rem 0.4rem; border-radius: 3px; text-transform: uppercase;
+    }
+    .px-ph-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding: 0.55rem 0.65rem;
+        border-top: 1px solid #e5e7eb;
+        background: #f9fafb;
+    }
+    .px-ph-id-section { flex:1; }
+    .px-label {
+        font-size: 0.58rem;
+        font-weight: 700;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .px-ph-id {
+        font-family: monospace;
+        font-size: 0.73rem;
+        color: #111827;
+        font-weight: 600;
+        word-break: break-all;
+    }
+    .px-ph-qr-section { margin-left:0.4rem; }
+    .px-qr-img {
+        width: 64px; height: 64px;
+        border-radius: 4px;
+        border: 1px solid #e5e7eb;
+        display: block;
+    }
+    .px-qr-placeholder {
+        width: 64px; height: 64px;
+        background: #f3f4f6;
+        border: 1px dashed #d1d5db;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.62rem;
+        color: #9ca3af;
+    }
+    /* Item card */
+    .px-item-card { padding: 0.7rem 0.75rem; }
+    .px-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 0.4rem;
+    }
+    .px-item-type-label {
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: #111827;
+        font-family: 'Arial Black', monospace;
+        text-transform: uppercase;
+    }
+    .px-item-num {
+        font-size: 0.7rem;
+        color: #6b7280;
+        font-family: monospace;
+    }
+    .px-item-body {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    .px-item-info { flex:1; }
+    .px-item-serial {
+        font-family: monospace;
+        font-size: 0.78rem;
+        color: #111827;
+        font-weight: 600;
+        margin-bottom: 0.15rem;
+    }
+    .px-item-qr-section { flex-shrink:0; }
+    .px-item-status-badge {
+        display: inline-block;
+        font-size: 0.6rem;
+        font-weight: 700;
+        padding: 0.13rem 0.45rem;
+        border-radius: 3px;
+        text-transform: uppercase;
+        margin-top: 0.25rem;
+    }
+    .px-item-status-available { background:#d1fae5; color:#065f46; }
+    .px-item-status-issued    { background:#fee2e2; color:#991b1b; }
+    .px-item-status-other     { background:#f3f4f6; color:#374151; }
+
     body.defcon-lock {
         overflow: hidden;
         height: 100vh;
@@ -681,6 +873,8 @@
     <!-- Transaction Form (Inline) -->
     {% if can_create_transaction %}
     <div class="transaction-form">
+    <div class="tx-form-layout">
+    <div class="tx-form-left">
         <h3>📝 Create Transaction</h3>
         <form id="transactionForm" onsubmit="return false;">
             {% csrf_token %}
@@ -742,6 +936,62 @@
             <!-- Submit Button -->
             <button type="button" class="btn-submit-transaction" onclick="handleManualSubmit()">✅ Submit Transaction</button>
         </form>
+    </div><!-- end tx-form-left -->
+
+    <!-- ── Scan Preview Panel ── -->
+    <div class="tx-preview-right" id="scanPreviewPanel">
+
+        <!-- Personnel Preview Card -->
+        <div id="personnelPreviewCard" class="px-preview-card" style="display:none;">
+            <div class="px-ph-header">🛡 ARMGUARD RDS</div>
+            <div class="px-ph-body">
+                <div class="px-ph-photo-wrap">
+                    <img id="pxPhoto" src="" alt="" class="px-ph-photo" style="display:none;">
+                    <div id="pxPhotoPlaceholder" class="px-ph-photo-placeholder">👤</div>
+                </div>
+                <div class="px-ph-info">
+                    <div class="px-ph-name" id="pxName">---</div>
+                    <div class="px-ph-rank" id="pxRank">---</div>
+                    <div class="px-ph-classification" id="pxClassification"></div>
+                    <div class="px-ph-badges">
+                        <span id="pxStatusBadge" class="px-badge-green">ACTIVE</span>
+                    </div>
+                </div>
+            </div>
+            <div class="px-ph-footer">
+                <div class="px-ph-id-section">
+                    <div class="px-label">Personnel ID</div>
+                    <div class="px-ph-id" id="pxPersonnelId">---</div>
+                </div>
+                <div class="px-ph-qr-section">
+                    <img id="pxPersonnelQr" src="" alt="QR" class="px-qr-img" style="display:none;">
+                    <div id="pxPersonnelQrPH" class="px-qr-placeholder">QR</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item Preview Card -->
+        <div id="itemPreviewCard" class="px-preview-card px-item-card" style="display:none;">
+            <div class="px-item-header">
+                <span class="px-item-type-label" id="pxItemType">---</span>
+                <span class="px-item-num" id="pxItemNum"></span>
+            </div>
+            <div class="px-item-body">
+                <div class="px-item-info">
+                    <div class="px-label">Serial No.</div>
+                    <div class="px-item-serial" id="pxItemSerial">---</div>
+                    <div class="px-label" style="margin-top:0.45rem;">Status</div>
+                    <span class="px-item-status-badge" id="pxItemStatus">---</span>
+                </div>
+                <div class="px-item-qr-section">
+                    <img id="pxItemQr" src="" alt="QR" class="px-qr-img" style="display:none;">
+                    <div id="pxItemQrPH" class="px-qr-placeholder">QR</div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- end tx-preview-right -->
+    </div><!-- end tx-form-layout -->
     </div>
     {% else %}
     <div class="alert alert-info" style="padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; background-color: #d1ecf1; border: 1px solid #bee5eb;">
@@ -1327,6 +1577,84 @@ document.addEventListener('keydown', function(e) {
     }, scannerCapture.timeoutMs);
 });
 
+// ---- Preview card helpers ----
+function showPersonnelCard(data) {
+    const parts = [data.firstname];
+    if (data.middle_initial) parts.push(data.middle_initial + '.');
+    parts.push(data.surname);
+    document.getElementById('pxName').textContent = parts.join(' ').toUpperCase();
+    document.getElementById('pxRank').textContent = data.rank || '---';
+    document.getElementById('pxClassification').textContent = data.classification || '';
+    document.getElementById('pxPersonnelId').textContent = data.serial || data.id || '---';
+
+    const statusBadge = document.getElementById('pxStatusBadge');
+    const status = (data.status || 'active').toUpperCase();
+    statusBadge.textContent = status;
+    statusBadge.className = (status === 'ACTIVE')   ? 'px-badge-green' :
+                            (status === 'INACTIVE') ? 'px-badge-gray' : 'px-badge-red';
+
+    const photo = document.getElementById('pxPhoto');
+    const photoPH = document.getElementById('pxPhotoPlaceholder');
+    if (data.picture_url) {
+        photo.src = data.picture_url;
+        photo.style.display = 'block';
+        photoPH.style.display = 'none';
+    } else {
+        photo.style.display = 'none';
+        photoPH.style.display = 'flex';
+    }
+
+    const qrImg = document.getElementById('pxPersonnelQr');
+    const qrPH  = document.getElementById('pxPersonnelQrPH');
+    if (data.qr_image_url) {
+        qrImg.src = data.qr_image_url;
+        qrImg.style.display = 'block';
+        qrPH.style.display  = 'none';
+    } else {
+        qrImg.style.display = 'none';
+        qrPH.style.display  = 'flex';
+    }
+
+    document.getElementById('personnelPreviewCard').style.display = 'block';
+}
+
+function clearPersonnelCard() {
+    document.getElementById('personnelPreviewCard').style.display = 'none';
+}
+
+function showItemCard(data) {
+    document.getElementById('pxItemType').textContent = data.item_type || '---';
+    const numText = data.item_number ? '#' + String(data.item_number).padStart(4, '0') : '';
+    document.getElementById('pxItemNum').textContent = numText;
+    document.getElementById('pxItemSerial').textContent = data.serial || '---';
+
+    const statusEl = document.getElementById('pxItemStatus');
+    const status = data.status || '---';
+    statusEl.textContent = status;
+    statusEl.className = 'px-item-status-badge';
+    if      (status === 'Available') statusEl.classList.add('px-item-status-available');
+    else if (status === 'Issued')    statusEl.classList.add('px-item-status-issued');
+    else                             statusEl.classList.add('px-item-status-other');
+
+    const qrImg = document.getElementById('pxItemQr');
+    const qrPH  = document.getElementById('pxItemQrPH');
+    if (data.qr_image_url) {
+        qrImg.src = data.qr_image_url;
+        qrImg.style.display = 'block';
+        qrPH.style.display  = 'none';
+    } else {
+        qrImg.style.display = 'none';
+        qrPH.style.display  = 'flex';
+    }
+
+    document.getElementById('itemPreviewCard').style.display = 'block';
+}
+
+function clearItemCard() {
+    document.getElementById('itemPreviewCard').style.display = 'none';
+}
+// ---- End preview card helpers ----
+
 // Personnel validation
 const personnelInput = document.getElementById('personnelInput');
 const personnelInfo = document.getElementById('personnelInfo');
@@ -1336,6 +1664,7 @@ personnelInput.addEventListener('blur', async function() {
     if (!personnelId) {
         personnelValidated = false;
         personnelInfo.style.display = 'none';
+        clearPersonnelCard();
         return;
     }
 
@@ -1350,6 +1679,7 @@ personnelInput.addEventListener('blur', async function() {
                 personnelInfo.textContent = '✗ Personnel already has an issued firearm';
                 personnelInfo.style.display = 'block';
                 showNotification('Personnel already has and issued firearm', 'error');
+                showPersonnelCard(data);
                 return;
             }
 
@@ -1360,6 +1690,7 @@ personnelInput.addEventListener('blur', async function() {
             
             // Show automatic notification for successful personnel scan
             showNotification(`Personnel scanned: ${data.firstname} ${data.surname} - ${data.rank}`, 'success');
+            showPersonnelCard(data);
 
             // Move directly to Item ID input after successful personnel validation
             if (suppressPersonnelAutoTab) {
@@ -1375,12 +1706,14 @@ personnelInput.addEventListener('blur', async function() {
             personnelInfo.className = 'info-text error';
             personnelInfo.textContent = '✗ Personnel not found';
             personnelInfo.style.display = 'block';
+            clearPersonnelCard();
         }
     } catch (error) {
         personnelValidated = false;
         personnelInfo.className = 'info-text error';
         personnelInfo.textContent = '✗ Error validating personnel';
         personnelInfo.style.display = 'block';
+        clearPersonnelCard();
     }
 });
 
@@ -1394,6 +1727,7 @@ itemInput.addEventListener('blur', async function() {
     if (!itemId) {
         itemValidated = false;
         itemInfo.style.display = 'none';
+        clearItemCard();
         return;
     }
 
@@ -1449,26 +1783,31 @@ itemInput.addEventListener('blur', async function() {
             }
             
             itemInfo.style.display = 'block';
+            showItemCard(data);
         } else {
             itemValidated = false;
             itemInfo.className = 'info-text error';
             itemInfo.textContent = '✗ Item not found';
             itemInfo.style.display = 'block';
+            clearItemCard();
         }
     } catch (error) {
         itemValidated = false;
         itemInfo.className = 'info-text error';
         itemInfo.textContent = '✗ Error validating item';
         itemInfo.style.display = 'block';
+        clearItemCard();
     }
 });
 
 personnelInput.addEventListener('input', function() {
     personnelValidated = false;
+    if (!this.value.trim()) clearPersonnelCard();
 });
 
 itemInput.addEventListener('input', function() {
     itemValidated = false;
+    if (!this.value.trim()) clearItemCard();
 });
 
 // Prevent any automatic form submission

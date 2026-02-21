@@ -67,6 +67,14 @@ def get_personnel(request, personnel_id):
                 result['data']['issued_item_serial'] = active_item_tx.item.serial
                 result['data']['issued_item_type'] = active_item_tx.item.item_type
 
+        # Augment with QR image URL
+        try:
+            qr_obj = QRCodeImage.objects.get(qr_type='personnel', reference_id=resolved_personnel_id)
+            if qr_obj.qr_image:
+                result['data']['qr_image_url'] = request.build_absolute_uri(qr_obj.qr_image.url)
+        except QRCodeImage.DoesNotExist:
+            pass
+
         return JsonResponse(result['data'])
     elif result['success'] and result['type'] != 'personnel':
         return JsonResponse({'error': f'QR code is for {result["type"]}, not personnel'}, status=400)
@@ -92,7 +100,16 @@ def get_item(request, item_id):
         if duty_type:
             autofill = get_transaction_autofill_data(result['data']['item_type'], duty_type)
             result['data']['autofill'] = autofill
-        
+
+        # Augment with QR image URL
+        item_id_resolved = result['data']['id']
+        try:
+            qr_obj = QRCodeImage.objects.get(qr_type='item', reference_id=item_id_resolved)
+            if qr_obj.qr_image:
+                result['data']['qr_image_url'] = request.build_absolute_uri(qr_obj.qr_image.url)
+        except QRCodeImage.DoesNotExist:
+            pass
+
         return JsonResponse(result['data'])
     elif result['success'] and result['type'] != 'item':
         return JsonResponse({'error': f'QR code is for {result["type"]}, not item'}, status=400)
