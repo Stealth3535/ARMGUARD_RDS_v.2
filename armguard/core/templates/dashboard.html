@@ -46,13 +46,34 @@
 .inv-stat-card.issued       { --icard-color: #f59e0b; }
 .inv-stat-card.maintenance  { --icard-color: #ef4444; }
 .inv-stat-card.total        { --icard-color: #667eea; }
+/* two-column inner layout */
+.inv-card-body {
+    display: flex;
+    align-items: stretch;
+    gap: 0.75rem;
+}
+.inv-card-left {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+.inv-card-right {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 0.5rem;
+    border-left: 2px solid #f3f4f6;
+}
 .inv-stat-label {
     font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.06em; color: #6b7280; margin: 0 0 0.1rem;
 }
 .inv-stat-value {
-    font-size: 2.2rem; font-weight: 900; line-height: 1;
-    color: var(--icard-color); margin: 0 0 0.25rem;
+    font-size: 2.8rem; font-weight: 900; line-height: 1;
+    color: var(--icard-color);
+    min-width: 2.5rem;
+    text-align: center;
 }
 .inv-stat-sub {
     font-size: 0.75rem; color: #6b7280; margin: 0 0 0.4rem;
@@ -61,7 +82,7 @@
 .inv-breakdown {
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 0.1rem 0.75rem; font-size: 0.8rem; color: #374151;
-    border-top: 1px solid #f3f4f6; padding-top: 0.4rem; margin-top: 0.2rem;
+    border-top: 1px solid #f3f4f6; padding-top: 0.4rem; margin-top: auto;
 }
 .inv-breakdown span { color: #9ca3af; font-size: 0.75rem; }
 .inv-breakdown strong { font-weight: 700; color: #111827; }
@@ -171,38 +192,62 @@
     <div class="inv-stats-grid">
 
         <div class="inv-stat-card available">
-            <p class="inv-stat-label">Available Items</p>
-            <p class="inv-stat-value">{{ available_items }}</p>
-            <p class="inv-stat-sub"><i class="fas fa-arrow-up"></i> Ready for deployment</p>
-            <div class="inv-breakdown">
-                {% for row in type_rows %}<span>{{ row.type }}:</span><strong>{{ row.available }}</strong>{% endfor %}
+            <div class="inv-card-body">
+                <div class="inv-card-left">
+                    <p class="inv-stat-label">Available Items</p>
+                    <p class="inv-stat-sub"><i class="fas fa-arrow-up"></i> Ready for deployment</p>
+                    <div class="inv-breakdown">
+                        {% for row in type_rows %}<span>{{ row.type }}:</span><strong>{{ row.available }}</strong>{% endfor %}
+                    </div>
+                </div>
+                <div class="inv-card-right">
+                    <span class="inv-stat-value">{{ available_items }}</span>
+                </div>
             </div>
         </div>
 
         <div class="inv-stat-card issued">
-            <p class="inv-stat-label">Currently Issued</p>
-            <p class="inv-stat-value">{{ issued_items }}</p>
-            <p class="inv-stat-sub"><i class="fas fa-user-check"></i> In field operations</p>
-            <div class="inv-breakdown">
-                {% for row in type_rows %}<span>{{ row.type }}:</span><strong>{{ row.issued }}</strong>{% endfor %}
+            <div class="inv-card-body">
+                <div class="inv-card-left">
+                    <p class="inv-stat-label">Currently Issued</p>
+                    <p class="inv-stat-sub"><i class="fas fa-user-check"></i> In field operations</p>
+                    <div class="inv-breakdown">
+                        {% for row in type_rows %}<span>{{ row.type }}:</span><strong>{{ row.issued }}</strong>{% endfor %}
+                    </div>
+                </div>
+                <div class="inv-card-right">
+                    <span class="inv-stat-value">{{ issued_items }}</span>
+                </div>
             </div>
         </div>
 
         <div class="inv-stat-card maintenance">
-            <p class="inv-stat-label">Under Maintenance</p>
-            <p class="inv-stat-value">{{ maintenance_items }}</p>
-            <p class="inv-stat-sub"><i class="fas fa-exclamation-triangle"></i> Requires attention</p>
-            <div class="inv-breakdown">
-                {% for row in type_rows %}<span>{{ row.type }}:</span><strong>{{ row.maintenance }}</strong>{% endfor %}
+            <div class="inv-card-body">
+                <div class="inv-card-left">
+                    <p class="inv-stat-label">Under Maintenance</p>
+                    <p class="inv-stat-sub"><i class="fas fa-exclamation-triangle"></i> Requires attention</p>
+                    <div class="inv-breakdown">
+                        {% for row in type_rows %}<span>{{ row.type }}:</span><strong>{{ row.maintenance }}</strong>{% endfor %}
+                    </div>
+                </div>
+                <div class="inv-card-right">
+                    <span class="inv-stat-value">{{ maintenance_items }}</span>
+                </div>
             </div>
         </div>
 
         <div class="inv-stat-card total">
-            <p class="inv-stat-label">Total Inventory</p>
-            <p class="inv-stat-value">{{ total_items }}</p>
-            <p class="inv-stat-sub"><i class="fas fa-database"></i> Complete arsenal</p>
-            <div class="inv-breakdown">
-                {% for row in type_rows %}<span>{{ row.type }}:</span><strong>{{ row.total }}</strong>{% endfor %}
+            <div class="inv-card-body">
+                <div class="inv-card-left">
+                    <p class="inv-stat-label">Total Inventory</p>
+                    <p class="inv-stat-sub"><i class="fas fa-database"></i> Complete arsenal</p>
+                    <div class="inv-breakdown">
+                        {% for row in type_rows %}<span>{{ row.type }}:</span><strong>{{ row.total }}</strong>{% endfor %}
+                    </div>
+                </div>
+                <div class="inv-card-right">
+                    <span class="inv-stat-value">{{ total_items }}</span>
+                </div>
             </div>
         </div>
 
