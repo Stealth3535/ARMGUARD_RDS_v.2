@@ -820,7 +820,7 @@ EOF
     }
     
     location /media/ {
-        alias ${PROJECT_DIR}/media/;
+        alias ${PROJECT_DIR}/core/media/;
     }
     
     location / {
@@ -880,7 +880,7 @@ EOF
     }
     
     location /media/ {
-        alias ${PROJECT_DIR}/media/;
+        alias ${PROJECT_DIR}/core/media/;
     }
     
     # Block transaction URLs on WAN for security
@@ -959,7 +959,7 @@ EOF
     
     # Media files
     location /media/ {
-        alias ${PROJECT_DIR}/media/;
+        alias ${PROJECT_DIR}/core/media/;
         expires 7d;
         add_header Cache-Control "public";
     }
