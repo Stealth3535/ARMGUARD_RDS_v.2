@@ -21,8 +21,8 @@
 }
 
 .qr-card img {
-    width: 1cm;
-    height: 1cm;
+    width: 76px;
+    height: 76px;
     object-fit: contain;
 }
 
@@ -39,12 +39,12 @@
     }
 
     .qr-card img {
-        width: 28px !important;
-        height: 28px !important;
-        max-width: 28px !important;
-        max-height: 28px !important;
-        min-width: 28px !important;
-        min-height: 28px !important;
+        width: 2cm !important;
+        height: 2cm !important;
+        max-width: 2cm !important;
+        max-height: 2cm !important;
+        min-width: 2cm !important;
+        min-height: 2cm !important;
         object-fit: contain !important;
         padding: 0 !important;
         margin: 1px !important;

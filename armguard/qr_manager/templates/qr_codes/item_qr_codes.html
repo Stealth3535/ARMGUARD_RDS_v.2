@@ -100,9 +100,9 @@
         <div class="card qr-card" data-search="{{ item.item_type|lower }} {{ item.serial|lower }}" style="padding: 0.6rem 0.8rem; text-align: left;">
             <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
                 {% if item.qr_code_obj and item.qr_code_obj.qr_image %}
-                <img src="{{ item.qr_code_obj.qr_image.url }}?v={{ item.qr_code_obj.updated_at|date:'U' }}" alt="QR" style="width: 64px; height: 64px; border-radius: 6px; flex-shrink: 0;">
+                <img src="{{ item.qr_code_obj.qr_image.url }}?v={{ item.qr_code_obj.updated_at|date:'U' }}" alt="QR" style="width: 76px; height: 76px; border-radius: 6px; flex-shrink: 0;">
                 {% else %}
-                <div style="width: 64px; height: 64px; background: #f0f0f0; border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #999;">No QR</div>
+                <div style="width: 76px; height: 76px; background: #f0f0f0; border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #999;">No QR</div>
                 {% endif %}
                 <div style="flex: 1; min-width: 0;">
                     <div style="font-weight: 600; font-size: 0.85rem;">{{ item.item_type }}</div>

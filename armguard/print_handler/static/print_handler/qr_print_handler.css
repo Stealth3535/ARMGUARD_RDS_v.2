@@ -39,8 +39,8 @@
 }
 
 .qr-image img {
-    width: 1cm;
-    height: 1cm;
+    width: 76px;
+    height: 76px;
     object-fit: contain;
     border: 1px solid #ddd;
     padding: 2px;
@@ -95,14 +95,14 @@
         padding: 0;
     }
 
-    /* QR Code exact print size - 1cm x 1cm (28px) */
+    /* QR Code exact print size - 2cm x 2cm */
     .qr-image img {
-        width: 28px !important;
-        height: 28px !important;
-        max-width: 28px !important;
-        max-height: 28px !important;
-        min-width: 28px !important;
-        min-height: 28px !important;
+        width: 2cm !important;
+        height: 2cm !important;
+        max-width: 2cm !important;
+        max-height: 2cm !important;
+        min-width: 2cm !important;
+        min-height: 2cm !important;
         padding: 0 !important;
         margin: 1px !important;
         object-fit: contain !important;
@@ -131,10 +131,10 @@
 
     /* Global QR image override for all QR codes */
     img[src*="qr_codes"] {
-        width: 28px !important;
-        height: 28px !important;
-        max-width: 28px !important;
-        max-height: 28px !important;
+        width: 2cm !important;
+        height: 2cm !important;
+        max-width: 2cm !important;
+        max-height: 2cm !important;
     }
 }
 
