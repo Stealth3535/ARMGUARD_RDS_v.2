@@ -98,7 +98,7 @@ else:
 # Static and Media Files
 # Use environment variables first, fallback to sensible defaults based on BASE_DIR
 STATIC_ROOT = config('STATIC_ROOT', default=str(BASE_DIR / 'staticfiles'))
-MEDIA_ROOT = config('MEDIA_ROOT', default=str(BASE_DIR / 'media'))
+MEDIA_ROOT = config('MEDIA_ROOT', default=str(BASE_DIR / 'core' / 'media'))
 STATIC_URL = config('STATIC_URL', default='/static/')
 MEDIA_URL = config('MEDIA_URL', default='/media/')
 
