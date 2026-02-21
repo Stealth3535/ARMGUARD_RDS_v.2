@@ -379,13 +379,7 @@
             <div class="id-card-body">
                 <p class="profile-name">{{ personnel.get_full_name }}</p>
                 <p class="profile-role">
-                    {% if personnel.user %}
-                        {% if personnel.user.is_superuser %}Superuser
-                        {% elif personnel.user.userprofile.is_armorer %}Armorer
-                        {% elif personnel.user.groups.all|length > 0 and personnel.user.groups.all.0.name == 'Admin' %}Administrator
-                        {% else %}Personnel{% endif %}
-                    {% else %}Personnel{% endif %}
-                    &nbsp;·&nbsp; {{ personnel.rank }}{% if personnel.classification != 'SUPERUSER' %} &nbsp;·&nbsp; {{ personnel.group }}{% endif %}
+                    {{ personnel.rank }}{% if personnel.classification != 'SUPERUSER' %} &nbsp;·&nbsp; {{ personnel.group }}{% endif %}
                 </p>
                 <div class="profile-badges">
                     {% if personnel.classification == 'OFFICER' %}
