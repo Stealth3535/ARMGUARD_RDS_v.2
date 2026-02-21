@@ -24,19 +24,66 @@
     .breadcrumb-nav a { color: #6b7280; text-decoration: none; }
     .breadcrumb-nav a:hover { color: #111827; }
 
-    /* ID Card */
-    .profile-header {
-        display: inline-flex;
-        flex-direction: column;
-        align-items: center;
-        background: #fff;
-        border-radius: 14px;
-        padding: 0;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.10);
-        margin-bottom: 1.1rem;
+    /* Flip Card */
+    .id-card-scene {
         width: 220px;
+        height: 430px;
+        perspective: 900px;
+        margin-bottom: 1.1rem;
+        display: inline-block;
+        cursor: pointer;
+    }
+
+    .id-card-scene .flip-hint {
+        display: block;
+        text-align: center;
+        font-size: 0.7rem;
+        color: #9ca3af;
+        margin-top: 0.4rem;
+        letter-spacing: 0.03em;
+    }
+
+    .id-card-flipper {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        transform-style: preserve-3d;
+        transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .id-card-scene.flipped .id-card-flipper {
+        transform: rotateY(180deg);
+    }
+
+    .id-card-face {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        border-radius: 14px;
         overflow: hidden;
         border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .id-card-face.back {
+        transform: rotateY(180deg);
+    }
+
+    .id-card-back-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        gap: 0.65rem;
+        width: 100%;
     }
 
     .id-card-top {
@@ -314,52 +361,82 @@
     <strong>{{ personnel.get_full_name }}</strong>
 </div>
 
-<!-- Profile ID Card -->
-<div class="profile-header">
-    <!-- Top: blue band + photo -->
-    <div class="id-card-top">
-        <span class="id-card-logo">ARMGUARD RDS</span>
-        {% if personnel.picture %}
-        <img src="{{ personnel.picture.url }}" alt="{{ personnel.get_full_name }}" class="profile-photo">
-        {% else %}
-        <div class="no-photo">No Photo</div>
-        {% endif %}
-    </div>
+<!-- Flip ID Card -->
+<div class="id-card-scene" id="idCard" onclick="this.classList.toggle('flipped')" title="Click to flip">
+    <div class="id-card-flipper">
 
-    <!-- Body: name, role, badges -->
-    <div class="id-card-body">
-        <p class="profile-name">{{ personnel.get_full_name }}</p>
-        <p class="profile-role">
-            {% if personnel.user %}
-                {% if personnel.user.is_superuser %}Superuser
-                {% elif personnel.user.userprofile.is_armorer %}Armorer
-                {% elif personnel.user.groups.all|length > 0 and personnel.user.groups.all.0.name == 'Admin' %}Administrator
-                {% else %}Personnel{% endif %}
-            {% else %}Personnel{% endif %}
-            &nbsp;·&nbsp; {{ personnel.rank }}{% if personnel.classification != 'SUPERUSER' %} &nbsp;·&nbsp; {{ personnel.group }}{% endif %}
-        </p>
-        <div class="profile-badges">
-            {% if personnel.classification == 'OFFICER' %}
-            <span class="badge-pill badge-officer"><i class="fas fa-star"></i> Officer</span>
-            {% elif personnel.classification == 'SUPERUSER' %}
-            <span class="badge-pill badge-superuser"><i class="fas fa-shield-alt"></i> Superuser</span>
-            {% else %}
-            <span class="badge-pill badge-enlisted"><i class="fas fa-user"></i> Enlisted</span>
-            {% endif %}
-            {% if personnel.status == 'Active' %}
-            <span class="badge-pill badge-active"><i class="fas fa-circle" style="font-size:0.5rem;"></i> Active</span>
-            {% else %}
-            <span class="badge-pill badge-inactive"><i class="fas fa-circle" style="font-size:0.5rem;"></i> {{ personnel.status }}</span>
-            {% endif %}
+        <!-- FRONT -->
+        <div class="id-card-face front">
+            <div class="id-card-top">
+                <span class="id-card-logo">ARMGUARD RDS</span>
+                {% if personnel.picture %}
+                <img src="{{ personnel.picture.url }}" alt="{{ personnel.get_full_name }}" class="profile-photo">
+                {% else %}
+                <div class="no-photo">No Photo</div>
+                {% endif %}
+            </div>
+            <div class="id-card-body">
+                <p class="profile-name">{{ personnel.get_full_name }}</p>
+                <p class="profile-role">
+                    {% if personnel.user %}
+                        {% if personnel.user.is_superuser %}Superuser
+                        {% elif personnel.user.userprofile.is_armorer %}Armorer
+                        {% elif personnel.user.groups.all|length > 0 and personnel.user.groups.all.0.name == 'Admin' %}Administrator
+                        {% else %}Personnel{% endif %}
+                    {% else %}Personnel{% endif %}
+                    &nbsp;·&nbsp; {{ personnel.rank }}{% if personnel.classification != 'SUPERUSER' %} &nbsp;·&nbsp; {{ personnel.group }}{% endif %}
+                </p>
+                <div class="profile-badges">
+                    {% if personnel.classification == 'OFFICER' %}
+                    <span class="badge-pill badge-officer"><i class="fas fa-star"></i> Officer</span>
+                    {% elif personnel.classification == 'SUPERUSER' %}
+                    <span class="badge-pill badge-superuser"><i class="fas fa-shield-alt"></i> Superuser</span>
+                    {% else %}
+                    <span class="badge-pill badge-enlisted"><i class="fas fa-user"></i> Enlisted</span>
+                    {% endif %}
+                    {% if personnel.status == 'Active' %}
+                    <span class="badge-pill badge-active"><i class="fas fa-circle" style="font-size:0.5rem;"></i> Active</span>
+                    {% else %}
+                    <span class="badge-pill badge-inactive"><i class="fas fa-circle" style="font-size:0.5rem;"></i> {{ personnel.status }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="id-card-footer">
+                <span class="id-card-id-label">Personnel ID</span>
+                <span class="id-card-id-value">{{ personnel.id }}</span>
+            </div>
         </div>
-    </div>
 
-    <!-- Footer: Personnel ID -->
-    <div class="id-card-footer">
-        <span class="id-card-id-label">Personnel ID</span>
-        <span class="id-card-id-value">{{ personnel.id }}</span>
+        <!-- BACK -->
+        <div class="id-card-face back">
+            <div class="id-card-top">
+                <span class="id-card-logo">ARMGUARD RDS</span>
+                <span style="color:rgba(255,255,255,0.85);font-size:0.62rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;">QR CODE</span>
+            </div>
+            <div class="id-card-back-body">
+                {% if qr_code_obj and qr_code_obj.qr_image %}
+                <img src="{{ qr_code_obj.qr_image.url }}?v={{ qr_code_obj.updated_at|date:'U' }}" alt="QR Code" style="width:155px;height:155px;border-radius:8px;border:1px solid #e5e7eb;">
+                {% else %}
+                <div style="width:155px;height:155px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.8rem;">No QR Code</div>
+                {% endif %}
+                <p style="font-family:monospace;font-size:0.68rem;color:#6b7280;text-align:center;word-break:break-all;margin:0;">{{ personnel.qr_code }}</p>
+                {% if qr_code_obj %}
+                <a href="{% url 'print_handler:print_single_qr' qr_code_obj.id %}" class="btn-print" target="_blank" onclick="event.stopPropagation();">
+                    <i class="fas fa-print"></i> Print QR
+                </a>
+                {% else %}
+                <button class="btn-print" disabled style="opacity:0.5;cursor:default;"><i class="fas fa-print"></i> Print QR</button>
+                {% endif %}
+            </div>
+            <div class="id-card-footer">
+                <span class="id-card-id-label">Personnel ID</span>
+                <span class="id-card-id-value">{{ personnel.id }}</span>
+            </div>
+        </div>
+
     </div>
 </div>
+<span class="flip-hint" style="display:block;width:220px;text-align:center;font-size:0.68rem;color:#9ca3af;margin-top:0.35rem;margin-bottom:1rem;"><i class="fas fa-sync-alt" style="margin-right:0.25rem;"></i>Click card to flip</span>
 
 <!-- Info Cards: 2-column -->
 <div class="info-grid">
@@ -412,30 +489,8 @@
     </div>
 </div>
 
-<!-- QR Code + Transaction History side by side -->
-<div class="bottom-grid">
-    <!-- QR Code (compact sidebar) -->
-    <div class="qr-card">
-        <p class="info-card-title" style="margin:0;align-self:flex-start;"><i class="fas fa-qrcode" style="margin-right:0.35rem;"></i>QR Code</p>
-        {% if qr_code_obj and qr_code_obj.qr_image %}
-        <img src="{{ qr_code_obj.qr_image.url }}?v={{ qr_code_obj.updated_at|date:'U' }}" alt="QR Code">
-        {% else %}
-        <div style="width:160px;height:160px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.8rem;">No QR Code</div>
-        {% endif %}
-        <p class="qr-code-text">{{ personnel.qr_code }}</p>
-        {% if qr_code_obj %}
-        <a href="{% url 'print_handler:print_single_qr' qr_code_obj.id %}" class="btn-print" target="_blank">
-            <i class="fas fa-print"></i> Print QR
-        </a>
-        {% else %}
-        <button class="btn-print" disabled style="opacity:0.5;cursor:default;">
-            <i class="fas fa-print"></i> Print QR
-        </button>
-        {% endif %}
-    </div>
-
-    <!-- Transaction History -->
-    <div class="tx-card">
+<!-- Transaction History -->
+<div class="tx-card" style="margin-bottom:1rem;">
         <p class="info-card-title"><i class="fas fa-history" style="margin-right:0.35rem;"></i>Transaction History</p>
         <div style="overflow-x:auto;">
             <table class="tx-table">
@@ -477,11 +532,10 @@
             </table>
         </div>
     </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// No JavaScript QR generation needed - using saved media images
+// Flip card is toggled via onclick class toggle on .id-card-scene
 </script>
 {% endblock %}
