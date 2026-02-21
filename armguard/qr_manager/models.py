@@ -12,9 +12,12 @@ import os
 
 def qr_upload_path(instance, filename):
     """Dynamic upload path based on QR type - sanitized to prevent path traversal"""
-    # Sanitize filename to prevent path traversal attacks
-    safe_filename = get_valid_filename(os.path.basename(filename))
-    
+    base = get_valid_filename(os.path.basename(filename))
+    # Replace dots in the stem (all but the final extension dot) with underscores
+    # so filenames like DASAN2024.10.02.png don't confuse web servers
+    stem, ext = os.path.splitext(base)
+    safe_filename = stem.replace('.', '_') + ext
+
     if instance.qr_type == 'item':
         return f'qr_codes/items/{safe_filename}'
     else:

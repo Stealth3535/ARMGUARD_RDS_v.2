@@ -91,12 +91,13 @@ def print_item_tags(request):
 
 def _ensure_qr_record(item):
     """
-    Ensure a QRCodeImage record exists for the item.
-    For M4 (factory QR): qr_data = item.id  (the factory QR string itself).
-    For all items:        qr_data = item.id  (item ID is the canonical scan value).
-    Creates the record and generates the PNG if missing.
+    Ensure a QRCodeImage record exists for the item with a valid image file.
+    qr_data = item.id (the canonical scan value for all item types incl. M4).
+    Also fixes existing records whose image filename has dots in the stem
+    (e.g. DASAN2024.10.02.png) which break web server path handling.
     """
     from qr_manager.models import QRCodeImage
+    import os as _os
     qr, created = QRCodeImage.all_objects.get_or_create(
         qr_type=QRCodeImage.TYPE_ITEM,
         reference_id=item.id,
@@ -106,7 +107,19 @@ def _ensure_qr_record(item):
         qr.is_active = True
         qr.deleted_at = None
         qr.save(update_fields=['is_active', 'deleted_at'])
-    if not qr.qr_image:
+    # Force re-generate if no image OR if image filename stem has dots
+    needs_regen = not qr.qr_image
+    if qr.qr_image:
+        stem = _os.path.splitext(_os.path.basename(qr.qr_image.name))[0]
+        if '.' in stem:
+            needs_regen = True
+    if needs_regen:
+        if qr.qr_image:
+            try:
+                qr.qr_image.delete(save=False)
+            except Exception:
+                pass
+            qr.qr_image = None
         qr.generate_qr_code()
         qr.save()
     return qr
