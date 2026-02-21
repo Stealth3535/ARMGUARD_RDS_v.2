@@ -70,7 +70,6 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
         from qr_manager.models import QRCodeImage
         from transactions.models import Transaction
         from admin.permissions import check_restricted_admin
-        import os as _os
 
         qr_code_obj = None
         try:
@@ -81,20 +80,22 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
             # Auto-heal: if the image filename stem contains dots it won't serve
             # correctly — delete the old file and regenerate with the sanitized name.
             if qr_code_obj and qr_code_obj.qr_image:
-                stem = _os.path.splitext(
-                    _os.path.basename(qr_code_obj.qr_image.name))[0]
+                stem = os.path.splitext(os.path.basename(qr_code_obj.qr_image.name))[0]
                 if '.' in stem:
                     try:
                         qr_code_obj.qr_image.delete(save=False)
                         qr_code_obj.qr_image = None
                         qr_code_obj.generate_qr_code()
                         qr_code_obj.save()
-                    except Exception:
-                        pass
+                        logger.info('Auto-healed dotted QR filename for %s → %s',
+                                    self.object.id, qr_code_obj.qr_image.name)
+                    except Exception as e:
+                        logger.error('Failed to auto-heal QR filename for %s: %s',
+                                     self.object.id, e)
         except QRCodeImage.DoesNotExist:
             # No active record — create/reactivate and generate QR image on the fly
             try:
-                qr_code_obj, _ = QRCodeImage.all_objects.get_or_create(
+                qr_code_obj, created = QRCodeImage.all_objects.get_or_create(
                     qr_type=QRCodeImage.TYPE_ITEM,
                     reference_id=self.object.id,
                     defaults={'qr_data': self.object.id, 'is_active': True},
@@ -103,7 +104,20 @@ class ItemDetailView(LoginRequiredMixin, DetailView):
                     qr_code_obj.is_active = True
                     qr_code_obj.deleted_at = None
                     qr_code_obj.save()
-            except Exception:
+                if created or not qr_code_obj.qr_image:
+                    qr_code_obj.generate_qr_code()
+                    qr_code_obj.save()
+                    logger.info('Auto-created missing QR for %s', self.object.id)
+                # If existing record has dotted filename, heal it too
+                elif qr_code_obj.qr_image:
+                    stem = os.path.splitext(os.path.basename(qr_code_obj.qr_image.name))[0]
+                    if '.' in stem:
+                        qr_code_obj.qr_image.delete(save=False)
+                        qr_code_obj.qr_image = None
+                        qr_code_obj.generate_qr_code()
+                        qr_code_obj.save()
+            except Exception as e:
+                logger.error('Failed to auto-create/heal QR for %s: %s', self.object.id, e)
                 qr_code_obj = None
 
         context['qr_code_obj'] = qr_code_obj
@@ -138,6 +152,7 @@ def is_admin_or_armorer(user):
 
 from django.contrib.auth.decorators import user_passes_test
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 

@@ -83,8 +83,10 @@ class QRCodeImage(models.Model):
         # Use unified QR generator with HD settings for print quality
         buffer = generate_qr_code_to_buffer(self.qr_data, size=size)
         
-        # Save to model - filename is just the reference_id (e.g., IP-854643041125.png)
-        filename = f"{self.reference_id}.png"
+        # Build a safe filename: replace any dots in the stem with underscores so
+        # web servers (nginx/Apache) don't misinterpret the extension.
+        safe_stem = self.reference_id.replace('.', '_')
+        filename = f"{safe_stem}.png"
         self.qr_image.save(filename, File(buffer), save=False)
         
         return self.qr_image
