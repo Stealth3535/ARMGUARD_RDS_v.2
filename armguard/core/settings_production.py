@@ -96,11 +96,28 @@ else:
     }
 
 # Static and Media Files
-# Use environment variables first, fallback to sensible defaults based on BASE_DIR
-STATIC_ROOT = config('STATIC_ROOT', default=str(BASE_DIR / 'staticfiles'))
-MEDIA_ROOT = config('MEDIA_ROOT', default=str(BASE_DIR / 'core' / 'media'))
-STATIC_URL = config('STATIC_URL', default='/static/')
-MEDIA_URL = config('MEDIA_URL', default='/media/')
+# ──────────────────────────────────────────────────────────────────────────────
+# IMPORTANT: Do NOT re-define these as literals here.
+# settings.py (imported via `from .settings import *`) is the single source of
+# truth for directory layout.  The `default=` references here USE the already-
+# inherited value so that:
+#   • If .env has no MEDIA_ROOT entry  → inherits the correct path from settings.py
+#   • If .env has MEDIA_ROOT=<path>    → that explicit override is respected
+# Previously this block contained `default=str(BASE_DIR / 'staticfiles')` etc.,
+# which caused silent mismatches when settings.py used a different sub-path.
+STATIC_ROOT = config('STATIC_ROOT', default=STATIC_ROOT)  # inherited: BASE_DIR/'staticfiles'
+MEDIA_ROOT  = config('MEDIA_ROOT',  default=MEDIA_ROOT)   # inherited: BASE_DIR/'core'/'media'
+STATIC_URL  = config('STATIC_URL',  default=STATIC_URL)   # inherited: '/static/'
+MEDIA_URL   = config('MEDIA_URL',   default=MEDIA_URL)    # inherited: '/media/'
+
+# Ensure the upload directories exist at startup so the app never mis-serves
+# a 404 on a freshly-provisioned server or after a clean deploy.
+# MEDIA_ROOT is now a pathlib.Path so we can use / for sub-paths.
+from pathlib import Path as _Path
+_media = _Path(MEDIA_ROOT)
+os.makedirs(_media, exist_ok=True)
+os.makedirs(_media / 'personnel_id_cards', exist_ok=True)
+os.makedirs(_media / 'transaction_forms', exist_ok=True)
 
 # Logging Configuration
 LOGGING = {

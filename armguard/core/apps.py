@@ -9,3 +9,7 @@ class CoreConfig(AppConfig):
     def ready(self) -> None:  # noqa: D401
         # Import device models so Django registers them for migrations
         import core.device.models  # noqa: F401
+
+        # Register system checks (MEDIA_ROOT writability, etc.)
+        from core import checks  # noqa: F401 – side-effect: @register decorators fire
+        checks.register_all_checks()

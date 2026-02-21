@@ -460,9 +460,13 @@ COMPRESS_JS_FILTERS = [
     'compressor.filters.jsmin.JSMinFilter',
 ]
 
-# Media files (User uploads - Pictures, QR Codes)
+# Media files (User uploads – pictures, QR codes, personnel ID cards)
+# BASE_DIR resolves to:  <repo>/armguard/
+# MEDIA_ROOT resolves to: <repo>/armguard/core/media/
+# This must stay consistent with MEDIA_ROOT in settings_production.py,
+# which no longer re-specifies the path but inherits this value via `from .settings import *`.
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'core', 'media')
+MEDIA_ROOT = BASE_DIR / 'core' / 'media'
 
 # Performance Optimization: Advanced Multi-Level Caching Configuration
 # ARM64/RPi compatible Redis configuration - Let Redis auto-select parser
@@ -958,9 +962,13 @@ logger.info("ArmGuard Configuration: 100% RASPBERRY PI 4B READY")
 logger.info("Deployment Guide: See RPi_DEPLOYMENT_COMPLETE.md")
 logger.info("Validation: Run python validate_deployment.py")
 
-# Create logs directory if it doesn't exist
+# Create required directories if they don't exist.
+# This runs at startup (both dev and production) so the app is never misconfigured.
 import os
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+os.makedirs(MEDIA_ROOT / 'personnel_id_cards', exist_ok=True)
+os.makedirs(MEDIA_ROOT / 'transaction_forms', exist_ok=True)
 
 # User Registration Configuration
 # SECURITY: Disabled by default for military systems - only admins can create accounts
