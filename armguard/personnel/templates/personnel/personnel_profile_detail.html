@@ -3,174 +3,424 @@
 
 {% block title %}{{ personnel.get_full_name }} - Personnel Detail{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Override page-header global box */
+    .page-header {
+        background: transparent;
+        padding: 0;
+        border-radius: 0;
+        box-shadow: none;
+        border-top: none;
+        margin-bottom: 1rem;
+    }
+
+    /* Breadcrumb */
+    .breadcrumb-nav {
+        font-size: 0.88rem;
+        color: #6b7280;
+        margin-bottom: 0.75rem;
+    }
+    .breadcrumb-nav a { color: #6b7280; text-decoration: none; }
+    .breadcrumb-nav a:hover { color: #111827; }
+
+    /* Profile header row */
+    .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        background: #fff;
+        border-radius: 12px;
+        padding: 1.1rem 1.4rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        border-left: 4px solid #2563eb;
+        margin-bottom: 1.1rem;
+    }
+
+    .profile-photo {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0;
+        border: 2px solid #e5e7eb;
+    }
+
+    .no-photo {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: #f3f4f6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: #9ca3af;
+        font-size: 0.72rem;
+        text-align: center;
+        border: 2px solid #e5e7eb;
+    }
+
+    .profile-meta { flex: 1; min-width: 0; }
+
+    .profile-name {
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #111827;
+        margin: 0 0 0.2rem 0;
+        line-height: 1.2;
+    }
+
+    .profile-role {
+        font-size: 0.82rem;
+        color: #6b7280;
+        margin: 0 0 0.45rem 0;
+    }
+
+    .profile-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+    .badge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.18rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.74rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .badge-pill.badge-officer   { background: #dbeafe; color: #1e40af; }
+    .badge-pill.badge-enlisted  { background: #dcfce7; color: #166534; }
+    .badge-pill.badge-superuser { background: #fef3c7; color: #92400e; }
+    .badge-pill.badge-active    { background: #dcfce7; color: #166534; }
+    .badge-pill.badge-inactive  { background: #fee2e2; color: #991b1b; }
+
+    .profile-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+    .btn-edit {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.45rem 1rem;
+        background: #2563eb;
+        color: #fff;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+    .btn-edit:hover { background: #1d4ed8; color: #fff; }
+
+    /* Info grid */
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .info-grid { grid-template-columns: 1fr; }
+        .profile-header { flex-wrap: wrap; }
+        .profile-actions { width: 100%; }
+    }
+
+    /* Compact cards */
+    .info-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1rem 1.2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+
+    .info-card-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #6b7280;
+        margin: 0 0 0.75rem 0;
+        padding-bottom: 0.45rem;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .info-rows { display: flex; flex-direction: column; gap: 0.45rem; }
+
+    .info-row {
+        display: grid;
+        grid-template-columns: 130px 1fr;
+        gap: 0.5rem;
+        font-size: 0.88rem;
+        align-items: baseline;
+    }
+
+    .info-label {
+        color: #9ca3af;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .info-value {
+        color: #111827;
+        font-weight: 500;
+        word-break: break-word;
+    }
+
+    /* QR + transactions row */
+    .bottom-grid {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    @media (max-width: 900px) {
+        .bottom-grid { grid-template-columns: 1fr; }
+    }
+
+    .qr-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1rem 1.2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .qr-card img {
+        width: 160px;
+        height: 160px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .qr-code-text {
+        font-size: 0.72rem;
+        font-family: monospace;
+        color: #6b7280;
+        word-break: break-all;
+        text-align: center;
+    }
+
+    .btn-print {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.4rem 0.9rem;
+        background: #f3f4f6;
+        color: #374151;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid #e5e7eb;
+        transition: background 0.2s;
+        cursor: pointer;
+    }
+    .btn-print:hover { background: #e5e7eb; }
+
+    /* Transaction table card */
+    .tx-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1rem 1.2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+
+    .tx-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+    }
+
+    .tx-table th {
+        text-align: left;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #6b7280;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .tx-table td {
+        padding: 0.45rem 0.6rem;
+        color: #374151;
+        border-bottom: 1px solid #f9fafb;
+        vertical-align: middle;
+    }
+
+    .tx-table tr:last-child td { border-bottom: none; }
+
+    .tx-badge {
+        display: inline-block;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+    }
+    .tx-withdraw { background: #fee2e2; color: #991b1b; }
+    .tx-return   { background: #dcfce7; color: #166534; }
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Breadcrumb -->
-    <div style="margin-bottom: 1rem;">
-        <a href="{% url 'dashboard' %}" style="color: var(--text-light);">Dashboard</a> / 
-        <a href="{% url 'personnel:personnel_profile_list' %}" style="color: var(--text-light);">Personnel</a> / 
-        <strong>{{ personnel.get_full_name }}</strong>
+<div class="breadcrumb-nav">
+    <a href="{% url 'dashboard' %}">Dashboard</a> /
+    <a href="{% url 'personnel:personnel_profile_list' %}">Personnel</a> /
+    <strong>{{ personnel.get_full_name }}</strong>
+</div>
+
+<!-- Profile Header -->
+<div class="profile-header">
+    {% if personnel.picture %}
+    <img src="{{ personnel.picture.url }}" alt="{{ personnel.get_full_name }}" class="profile-photo">
+    {% else %}
+    <div class="no-photo">No Photo</div>
+    {% endif %}
+
+    <div class="profile-meta">
+        <p class="profile-name">{{ personnel.get_full_name }}</p>
+        <p class="profile-role">
+            {% if personnel.user %}
+                {% if personnel.user.is_superuser %}Superuser
+                {% elif personnel.user.userprofile.is_armorer %}Armorer
+                {% elif personnel.user.groups.all|length > 0 and personnel.user.groups.all.0.name == 'Admin' %}Administrator
+                {% else %}Personnel{% endif %}
+            {% else %}Personnel{% endif %}
+            &nbsp;·&nbsp; {{ personnel.rank }}{% if personnel.classification != 'SUPERUSER' %} &nbsp;·&nbsp; {{ personnel.group }}{% endif %}
+        </p>
+        <div class="profile-badges">
+            {% if personnel.classification == 'OFFICER' %}
+            <span class="badge-pill badge-officer"><i class="fas fa-star"></i> Officer</span>
+            {% elif personnel.classification == 'SUPERUSER' %}
+            <span class="badge-pill badge-superuser"><i class="fas fa-shield-alt"></i> Superuser</span>
+            {% else %}
+            <span class="badge-pill badge-enlisted"><i class="fas fa-user"></i> Enlisted</span>
+            {% endif %}
+
+            {% if personnel.status == 'Active' %}
+            <span class="badge-pill badge-active"><i class="fas fa-circle" style="font-size:0.55rem;"></i> Active</span>
+            {% else %}
+            <span class="badge-pill badge-inactive"><i class="fas fa-circle" style="font-size:0.55rem;"></i> {{ personnel.status }}</span>
+            {% endif %}
+        </div>
     </div>
 
-    <!-- Page Header -->
-    <div class="page-header">
-        <div>
-            <h1 class="page-title">{{ personnel.get_full_name }}</h1>
-            <p class="page-subtitle">
-            {% if personnel.user %}
-                {% if personnel.user.is_superuser %}
-                    Superuser
-                {% elif personnel.user.userprofile.is_armorer %}
-                    Armorer
-                {% elif personnel.user.groups.all|length > 0 and personnel.user.groups.all.0.name == 'Admin' %}
-                    Administrator
-                {% else %}
-                    Personnel
-                {% endif %}
-            {% else %}
-                Personnel
+    {% if user.is_superuser or user.groups.all.0.name == 'Admin' %}
+    <div class="profile-actions">
+        <a href="{% url 'armguard_admin:edit_personnel' personnel.id %}" class="btn-edit">
+            <i class="fas fa-edit"></i> Edit
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Info Cards: 2-column -->
+<div class="info-grid">
+    <!-- Personal Information -->
+    <div class="info-card">
+        <p class="info-card-title"><i class="fas fa-user" style="margin-right:0.35rem;"></i>Personal Information</p>
+        <div class="info-rows">
+            <div class="info-row">
+                <span class="info-label">Full Name</span>
+                <span class="info-value">{{ personnel.get_full_name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Surname</span>
+                <span class="info-value">{{ personnel.surname }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">First Name</span>
+                <span class="info-value">{{ personnel.firstname }}</span>
+            </div>
+            {% if personnel.middle_initial %}
+            <div class="info-row">
+                <span class="info-label">Middle Initial</span>
+                <span class="info-value">{{ personnel.middle_initial }}</span>
+            </div>
             {% endif %}
-            </p>
+            <div class="info-row">
+                <span class="info-label">Contact</span>
+                <span class="info-value">{{ personnel.tel }}</span>
+            </div>
         </div>
-        {% if user.is_superuser or user.groups.all.0.name == 'Admin' %}
-        <div>
-            <a href="{% url 'armguard_admin:edit_personnel' personnel.id %}" class="btn btn-primary">
-                <i class="fas fa-edit"></i> Edit Personnel
-            </a>
+    </div>
+
+    <!-- Military & System Information -->
+    <div class="info-card">
+        <p class="info-card-title"><i class="fas fa-id-badge" style="margin-right:0.35rem;"></i>Military &amp; System</p>
+        <div class="info-rows">
+            <div class="info-row">
+                <span class="info-label">Rank</span>
+                <span class="info-value">
+                    {% if personnel.classification == 'SUPERUSER' %}N/A – Superuser{% else %}{{ personnel.rank }}{% endif %}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Serial No.</span>
+                <span class="info-value" style="font-family:monospace;">{{ personnel.get_serial_display }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Group</span>
+                <span class="info-value">{{ personnel.group }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Personnel ID</span>
+                <span class="info-value" style="font-family:monospace;font-size:0.8rem;">{{ personnel.id }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Registered</span>
+                <span class="info-value">{{ personnel.registration_date|date:"d/m/y" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Created</span>
+                <span class="info-value">{{ personnel.created_at|date:"d/m/y H:i" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Last Updated</span>
+                <span class="info-value">{{ personnel.updated_at|date:"d/m/y H:i" }}</span>
+            </div>
         </div>
+    </div>
+</div>
+
+<!-- QR Code + Transaction History side by side -->
+<div class="bottom-grid">
+    <!-- QR Code (compact sidebar) -->
+    <div class="qr-card">
+        <p class="info-card-title" style="margin:0;align-self:flex-start;"><i class="fas fa-qrcode" style="margin-right:0.35rem;"></i>QR Code</p>
+        {% if qr_code_obj and qr_code_obj.qr_image %}
+        <img src="{{ qr_code_obj.qr_image.url }}?v={{ qr_code_obj.updated_at|date:'U' }}" alt="QR Code">
+        {% else %}
+        <div style="width:160px;height:160px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.8rem;">No QR Code</div>
+        {% endif %}
+        <p class="qr-code-text">{{ personnel.qr_code }}</p>
+        {% if qr_code_obj %}
+        <a href="{% url 'print_handler:print_single_qr' qr_code_obj.id %}" class="btn-print" target="_blank">
+            <i class="fas fa-print"></i> Print QR
+        </a>
+        {% else %}
+        <button class="btn-print" disabled style="opacity:0.5;cursor:default;">
+            <i class="fas fa-print"></i> Print QR
+        </button>
         {% endif %}
     </div>
 
-    <div class="grid grid-3">
-        <!-- Personal Information -->
-        <div class="card">
-            <h2 class="card-title">Personal Information</h2>
-            
-            <div class="text-center mb-3">
-                {% if personnel.picture %}
-                <img src="{{ personnel.picture.url }}" alt="{{ personnel.get_full_name }}" class="personnel-picture">
-                {% else %}
-                <div class="no-picture">No Photo Available</div>
-                {% endif %}
-            </div>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Full Name</div>
-                <div class="detail-value">{{ personnel.get_full_name }}</div>
-            </div>
-            
-            <div class="detail-grid">
-                <div class="detail-item">
-                    <div class="detail-label">Surname</div>
-                    <div class="detail-value">{{ personnel.surname }}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">First Name</div>
-                    <div class="detail-value">{{ personnel.firstname }}</div>
-                </div>
-            </div>
-            
-            {% if personnel.middle_initial %}
-            <div class="detail-item">
-                <div class="detail-label">Middle Initial</div>
-                <div class="detail-value">{{ personnel.middle_initial }}</div>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Military Information -->
-        <div class="card">
-            <h2 class="card-title">Military Information</h2>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Rank</div>
-                <div class="detail-value">
-                {% if personnel.classification == 'SUPERUSER' %}
-                    <span class="badge badge-superuser">N/A - SUPERUSER</span>
-                {% else %}
-                    {{ personnel.rank }}
-                {% endif %}
-                </div>
-            </div>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Serial Number</div>
-                <div class="detail-value">{{ personnel.get_serial_display }}</div>
-            </div>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Group</div>
-                <div class="detail-value">{{ personnel.group }}</div>
-            </div>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Classification</div>
-                <div class="detail-value">
-                    {% if personnel.classification == 'OFFICER' %}
-                    <span class="badge badge-officer">Officer</span>
-                    {% elif personnel.classification == 'SUPERUSER' %}
-                    <span class="badge badge-superuser">Superuser</span>
-                    {% else %}
-                    <span class="badge badge-enlisted">Enlisted Personnel</span>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <div class="detail-item">
-                <div class="detail-label">Status</div>
-                <div class="detail-value">
-                    {% if personnel.status == 'Active' %}
-                    <span class="badge badge-active">{{ personnel.status }}</span>
-                    {% else %}
-                    <span class="badge badge-inactive">{{ personnel.status }}</span>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- System Information -->
-        <div class="card">
-            <h2 class="card-title">System Information</h2>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Personnel ID</div>
-                <div class="detail-value" style="font-family: monospace;">{{ personnel.id }}</div>
-            </div>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Contact Number</div>
-                <div class="detail-value">{{ personnel.tel }}</div>
-            </div>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Registration Date</div>
-                <div class="detail-value">{{ personnel.registration_date|date:"d/m/y" }}</div>
-            </div>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">QR Code</div>
-                <div class="detail-value" style="font-family: monospace; font-size: 0.9rem;">{{ personnel.qr_code }}</div>
-            </div>
-            
-            <div class="detail-item mb-2">
-                <div class="detail-label">Created</div>
-                <div class="detail-value">{{ personnel.created_at|date:"d/m/y H:i" }}</div>
-            </div>
-            
-            <div class="detail-item">
-                <div class="detail-label">Last Updated</div>
-                <div class="detail-value">{{ personnel.updated_at|date:"d/m/y H:i" }}</div>
-            </div>
-        </div>
-    </div>
-
     <!-- Transaction History -->
-    <div class="card">
-        <h2 class="card-title">Transaction History</h2>
-        <div class="table-container">
-            <table class="table">
+    <div class="tx-card">
+        <p class="info-card-title"><i class="fas fa-history" style="margin-right:0.35rem;"></i>Transaction History</p>
+        <div style="overflow-x:auto;">
+            <table class="tx-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th>#</th>
                         <th>Item</th>
                         <th>Action</th>
                         <th>Date/Time</th>
@@ -181,55 +431,32 @@
                 <tbody>
                     {% for transaction in personnel.transactions.all %}
                     <tr>
-                        <td><strong>#{{ transaction.id }}</strong></td>
+                        <td><strong>{{ transaction.id }}</strong></td>
                         <td>
-                            {{ transaction.item.item_type }} - {{ transaction.item.serial }}<br>
-                            <small class="text-muted">{{ transaction.item.id }}</small>
+                            {{ transaction.item.item_type }} – {{ transaction.item.serial }}<br>
+                            <small style="color:#9ca3af;font-size:0.72rem;">{{ transaction.item.id }}</small>
                         </td>
                         <td>
                             {% if transaction.action == 'Take' %}
-                            <span class="badge badge-issued">Withdraw</span>
+                            <span class="tx-badge tx-withdraw">Withdraw</span>
                             {% else %}
-                            <span class="badge badge-available">Return</span>
+                            <span class="tx-badge tx-return">Return</span>
                             {% endif %}
                         </td>
-                        <td>{{ transaction.date_time|date:"d/m/y H:i:s" }}</td>
-                        <td>{{ transaction.duty_type|default:"-" }}</td>
-                        <td>{{ transaction.notes|default:"-" }}</td>
+                        <td style="white-space:nowrap;">{{ transaction.date_time|date:"d/m/y H:i" }}</td>
+                        <td>{{ transaction.duty_type|default:"–" }}</td>
+                        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ transaction.notes|default:"–" }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center text-muted">No transaction history</td>
+                        <td colspan="6" style="text-align:center;color:#9ca3af;padding:1.5rem 0;">No transaction history</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
-
-    <!-- QR Code Section -->
-    <div class="card">
-        <h2 class="card-title">QR Code</h2>
-        <div class="qr-code-container">
-            <p class="text-muted">Personnel QR Code: {{ personnel.qr_code }}</p>
-            {% if qr_code_obj and qr_code_obj.qr_image %}
-            <div style="display: flex; justify-content: center; margin: 1rem 0;">
-                <img src="{{ qr_code_obj.qr_image.url }}?v={{ qr_code_obj.updated_at|date:'U' }}" alt="QR Code for {{ personnel.get_full_name }}" style="width: 256px; height: 256px; border-radius: 8px; background: #f8f8f8;">
-            </div>
-            {% else %}
-            <div style="display: flex; justify-content: center; margin: 1rem 0; padding: 128px 0; background: #f0f0f0; border-radius: 8px;">
-                <p style="margin: 0; color: #999;">No QR Code Available</p>
-            </div>
-            {% endif %}
-            <p class="mt-2 text-center">
-                {% if qr_code_obj %}
-                <a href="{% url 'print_handler:print_single_qr' qr_code_obj.id %}" class="btn btn-primary btn-sm" target="_blank">🖨️ Print QR Code</a>
-                {% else %}
-                <button class="btn btn-secondary btn-sm" disabled>🖨️ Print QR Code</button>
-                {% endif %}
-            </p>
-        </div>
-    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
