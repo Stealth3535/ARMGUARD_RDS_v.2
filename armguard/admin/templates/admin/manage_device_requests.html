@@ -394,11 +394,34 @@
                     <div class="device-info">
                         <div><strong>🖥️ Hostname:</strong> {{ request.hostname|default:"Unknown" }}</div>
                         <div><strong>🌐 IP Address:</strong> {{ request.ip_address }}</div>
+                        {% if request.mac_address %}
+                        <div><strong>🔌 MAC:</strong> <code style="font-size:0.82rem;">{{ request.mac_address }}</code></div>
+                        {% endif %}
+                        {% if request.pc_username %}
+                        <div><strong>👤 PC User:</strong> <code style="font-size:0.82rem;">{{ request.pc_username }}</code></div>
+                        {% endif %}
+                        {% if request.system_specs.os or request.system_specs.cpu_cores %}
+                        <div style="margin-top:0.25rem;">
+                            {% if request.system_specs.os %}<span style="font-size:0.78rem;background:#e0f2fe;color:#0c4a6e;border-radius:999px;padding:0.1rem 0.5rem;margin-right:2px;">{{ request.system_specs.os }}</span>{% endif %}
+                            {% if request.system_specs.cpu_cores %}<span style="font-size:0.78rem;background:#e0f2fe;color:#0c4a6e;border-radius:999px;padding:0.1rem 0.5rem;margin-right:2px;">{{ request.system_specs.cpu_cores }} cores</span>{% endif %}
+                            {% if request.system_specs.ram_gb %}<span style="font-size:0.78rem;background:#e0f2fe;color:#0c4a6e;border-radius:999px;padding:0.1rem 0.5rem;">{{ request.system_specs.ram_gb }} GB RAM</span>{% endif %}
+                        </div>
+                        {% endif %}
                         <div style="margin-top: 0.5rem;">
                             <strong>🔑 Fingerprint:</strong><br>
                             <code class="device-fingerprint">{{ request.device_fingerprint }}</code>
                         </div>
-                        <div class="device-user-agent">
+                        <div style="margin-top:0.3rem;">
+                            {% if request.csr_pem %}
+                            <span style="font-size:0.78rem;background:#dcfce7;color:#14532d;border-radius:999px;padding:0.15rem 0.55rem;font-weight:600;">🔐 CSR on file</span>
+                            {% else %}
+                            <span style="font-size:0.78rem;background:#fef9c3;color:#713f12;border-radius:999px;padding:0.15rem 0.55rem;">⚠️ No CSR</span>
+                            {% endif %}
+                            {% if request.issued_certificate_pem %}
+                            <span style="font-size:0.78rem;background:#dcfce7;color:#14532d;border-radius:999px;padding:0.15rem 0.55rem;font-weight:600;margin-left:3px;">📜 Cert issued</span>
+                            {% endif %}
+                        </div>
+                        <div class="device-user-agent" style="margin-top:0.3rem;">
                             <strong>📱 User Agent:</strong><br>
                             {{ request.user_agent|truncatechars:80 }}
                         </div>

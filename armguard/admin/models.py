@@ -128,7 +128,10 @@ class DeviceAuthorizationRequest(models.Model):
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField()
     hostname = models.CharField(max_length=255, blank=True)
-    
+    mac_address = models.CharField(max_length=64, blank=True, help_text="MAC address of the requesting network interface")
+    pc_username = models.CharField(max_length=255, blank=True, help_text="OS login username of the requesting PC")
+    system_specs = models.JSONField(default=dict, blank=True, help_text="Auto-collected hardware/OS specs (CPU cores, RAM, OS, screen, etc.)")
+
     # Request Information
     requested_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='device_requests')
     requested_at = models.DateTimeField(auto_now_add=True)

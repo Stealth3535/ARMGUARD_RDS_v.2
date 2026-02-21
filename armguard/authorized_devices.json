@@ -1,80 +1,136 @@
 {
-    "devices": [
-        {
-            "name": "Developer PC",
-            "hostname": "DESKTOP-E3N8R9V",
-            "ip": "192.168.0.82",
-            "mac": "00:00:00:00:00:00",
-            "can_transact": true,
-            "active": true,
-            "created_at": "2026-02-09T10:00:00",
-            "authorized_by": "system",
-            "description": "Primary development and admin workstation",
-            "roles": [
-                "admin",
-                "development"
-            ],
-            "max_daily_transactions": 100,
-            "security_level": "HIGH_SECURITY",
-            "last_updated": "2026-02-20T00:00:00"
-        }
-    ],
-    "allow_all": false,
-    "security_mode": "PRODUCTION",
-    "require_device_registration": true,
-    "max_failed_attempts": 3,
-    "lockout_duration_minutes": 30,
-    "protect_root_path": true,
-    "exempt_paths": [
-        "/static/",
-        "/media/",
-        "/favicon.ico",
-        "/robots.txt",
-        "/login/",
-        "/accounts/login/",
-        "/logout/",
-        "/admin/device/request-authorization/"
-    ],
-    "restricted_paths": [
-        "/transactions/create/",
-        "/transactions/api/",
-        "/inventory/api/",
-        "/admin/transactions/",
-        "/admin/inventory/",
-        "/qr_manager/generate/",
-        "/personnel/api/create/",
-        "/admin/core/",
-        "/admin/users/",
-        "/api/",
-        "/core/api/",
-        "/inventory/api/delete/",
-        "/transactions/api/delete/",
-        "/users/api/",
-        "/personnel/api/delete/"
-    ],
-    "high_security_paths": [
-        "/admin/",
-        "/transactions/delete/",
-        "/users/delete/",
-        "/inventory/delete/",
-        "/admin/auth/",
-        "/personnel/delete/",
-        "/core/settings/"
-    ],
-    "audit_settings": {
-        "log_all_attempts": true,
-        "alert_on_unauthorized": true,
-        "retention_days": 90
+  "devices": [
+    {
+      "name": "Developer PC",
+      "hostname": "DESKTOP-E3N8R9V",
+      "ip": "192.168.0.82",
+      "mac": "00:00:00:00:00:00",
+      "can_transact": true,
+      "active": true,
+      "created_at": "2026-02-09T10:00:00",
+      "authorized_by": "system",
+      "description": "Primary development and admin workstation",
+      "roles": [
+        "admin",
+        "development"
+      ],
+      "max_daily_transactions": 100,
+      "security_level": "HIGH_SECURITY",
+      "last_updated": "2026-02-20T00:00:00"
     },
-    "last_updated": "2026-02-09T10:00:00",
-    "version": "2.0",
-    "deployed_at": "2026-02-09T20:52:45.209447",
-    "deployment_version": "2.0.0",
-    "production_ready": true,
-    "security_compliance": {
-        "nist_800_53": true,
-        "fisma_moderate": true,
-        "owasp_2021": true,
-        "military_standards": true
+    {
+      "fingerprint": "3302caf92f566774c3d92048458c1cf5",
+      "name": "Officer Station",
+      "ip": "10.10.10.50",
+      "description": "Requested by gui_officer: Need access to admin panel",
+      "active": true,
+      "can_transact": true,
+      "security_level": "HIGH_SECURITY",
+      "roles": [],
+      "max_daily_transactions": 50,
+      "created_at": "2026-02-21T02:19:07.361988+00:00",
+      "authorized_by": "system",
+      "last_accessed": null
+    },
+    {
+      "fingerprint": "269a3445737a63999bc60b9666496b49",
+      "name": "Test Station",
+      "ip": "10.10.10.55",
+      "description": "Requested by gui_officer: Test access",
+      "active": true,
+      "can_transact": true,
+      "security_level": "HIGH_SECURITY",
+      "roles": [],
+      "max_daily_transactions": 50,
+      "created_at": "2026-02-21T02:19:07.826374+00:00",
+      "authorized_by": "system",
+      "last_accessed": null
+    },
+    {
+      "fingerprint": "f9f80ebf345f7973327fdf6081267716",
+      "name": "Officer Station",
+      "ip": "10.10.10.50",
+      "description": "Requested by gui_officer: Need access to admin panel",
+      "active": true,
+      "can_transact": true,
+      "security_level": "HIGH_SECURITY",
+      "roles": [],
+      "max_daily_transactions": 50,
+      "created_at": "2026-02-21T02:19:42.193678+00:00",
+      "authorized_by": "system",
+      "last_accessed": null
+    },
+    {
+      "fingerprint": "43bc757b4ad5561b52ea55caa35d5885",
+      "name": "Test Station",
+      "ip": "10.10.10.55",
+      "description": "Requested by gui_officer: Test access",
+      "active": true,
+      "can_transact": true,
+      "security_level": "HIGH_SECURITY",
+      "roles": [],
+      "max_daily_transactions": 50,
+      "created_at": "2026-02-21T02:19:42.649979+00:00",
+      "authorized_by": "system",
+      "last_accessed": null
     }
+  ],
+  "allow_all": false,
+  "security_mode": "PRODUCTION",
+  "require_device_registration": true,
+  "max_failed_attempts": 3,
+  "lockout_duration_minutes": 30,
+  "protect_root_path": true,
+  "exempt_paths": [
+    "/static/",
+    "/media/",
+    "/favicon.ico",
+    "/robots.txt",
+    "/login/",
+    "/accounts/login/",
+    "/logout/",
+    "/admin/device/request-authorization/"
+  ],
+  "restricted_paths": [
+    "/transactions/create/",
+    "/transactions/api/",
+    "/inventory/api/",
+    "/admin/transactions/",
+    "/admin/inventory/",
+    "/qr_manager/generate/",
+    "/personnel/api/create/",
+    "/admin/core/",
+    "/admin/users/",
+    "/api/",
+    "/core/api/",
+    "/inventory/api/delete/",
+    "/transactions/api/delete/",
+    "/users/api/",
+    "/personnel/api/delete/"
+  ],
+  "high_security_paths": [
+    "/admin/",
+    "/transactions/delete/",
+    "/users/delete/",
+    "/inventory/delete/",
+    "/admin/auth/",
+    "/personnel/delete/",
+    "/core/settings/"
+  ],
+  "audit_settings": {
+    "log_all_attempts": true,
+    "alert_on_unauthorized": true,
+    "retention_days": 90
+  },
+  "last_updated": "2026-02-21T02:19:42.649979+00:00",
+  "version": "2.0",
+  "deployed_at": "2026-02-09T20:52:45.209447",
+  "deployment_version": "2.0.0",
+  "production_ready": true,
+  "security_compliance": {
+    "nist_800_53": true,
+    "fisma_moderate": true,
+    "owasp_2021": true,
+    "military_standards": true
+  }
 }

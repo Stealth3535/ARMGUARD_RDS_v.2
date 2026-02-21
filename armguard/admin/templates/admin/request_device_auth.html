@@ -272,7 +272,44 @@
                        required>
                 <p class="help-text">Provide a descriptive name for this device</p>
             </div>
-            
+
+            <div class="form-group">
+                <label for="pc_username">
+                    PC / OS Username
+                    <span class="required">*</span>
+                </label>
+                <input type="text"
+                       id="pc_username"
+                       name="pc_username"
+                       class="form-control"
+                       placeholder="e.g., john.doe  (your Windows/Linux login name)"
+                       required>
+                <p class="help-text">The operating-system login name on this PC</p>
+            </div>
+
+            <div class="form-group">
+                <label for="mac_address">
+                    Network MAC Address
+                    <span class="required">*</span>
+                </label>
+                <input type="text"
+                       id="mac_address"
+                       name="mac_address"
+                       class="form-control"
+                       placeholder="e.g., AA:BB:CC:DD:EE:FF"
+                       pattern="^([0-9A-Fa-f]{2}[:\-]){5}[0-9A-Fa-f]{2}$"
+                       title="Enter MAC address in format XX:XX:XX:XX:XX:XX"
+                       required>
+                <p class="help-text">
+                    Primary NIC MAC address. 
+                    <em>Windows:</em> <code>ipconfig /all</code> → Physical Address.
+                    <em>Linux/Mac:</em> <code>ip link</code> or <code>ifconfig</code>.
+                </p>
+            </div>
+
+            <!-- System specs auto-collected by JS (hidden) -->
+            <input type="hidden" id="system_specs" name="system_specs" value="{}">
+
             <div class="form-group">
                 <label for="reason">
                     Reason for Authorization
@@ -517,6 +554,29 @@
                 if (cn) { readyFlag.value = '0'; doGenerate(cn, false); }
             }, 1500);
         });
+
+        /* ── Auto-collect system specs ─────────────────────────── */
+        function collectSpecs() {
+            const nav = navigator;
+            const uad = nav.userAgentData || null;
+            let osHint = nav.platform || '';
+            if (uad && uad.platform) osHint = uad.platform;
+
+            const specs = {
+                os:           osHint,
+                browser_ua:   nav.userAgent,
+                cpu_cores:    nav.hardwareConcurrency || null,
+                ram_gb:       nav.deviceMemory || null,
+                screen:       screen ? (screen.width + 'x' + screen.height) : null,
+                color_depth:  screen ? screen.colorDepth : null,
+                timezone:     Intl ? Intl.DateTimeFormat().resolvedOptions().timeZone : null,
+                lang:         nav.language || null,
+                touch_points: nav.maxTouchPoints || 0,
+                collected_at: new Date().toISOString(),
+            };
+            document.getElementById('system_specs').value = JSON.stringify(specs);
+        }
+        collectSpecs();
 
         /* On load: try to restore from IndexedDB first */
         doGenerate(nameInput.value.trim() || 'ArmGuard Device', false);

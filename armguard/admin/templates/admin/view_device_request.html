@@ -3,26 +3,154 @@
 {% block title %}View Device Request - ArmGuard{% endblock %}
 
 {% block content %}
-<div style="max-width: 780px; margin: 2rem auto; background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 6px 20px rgba(0,0,0,0.08);">
-    <h2 style="margin-top: 0;"> Device Request Details</h2>
+<div style="max-width: 860px; margin: 2rem auto; background: #fff; border-radius: 12px; padding: 1.75rem; box-shadow: 0 6px 20px rgba(0,0,0,0.08);">
+    <h2 style="margin-top: 0;">🖥️ Device Request Details</h2>
 
-    <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; margin: 1rem 0; line-height: 1.8;">
-        <div><strong>Device:</strong> {{ auth_request.hostname|default:'Unknown' }}</div>
-        <div><strong>Device Name:</strong> {{ auth_request.device_name|default:'N/A' }}</div>
-        <div><strong>Fingerprint:</strong> {{ auth_request.device_fingerprint }}</div>
-        <div><strong>IP:</strong> {{ auth_request.ip_address }}</div>
-        <div><strong>Requested by:</strong> {{ auth_request.requested_by.username }}</div>
-        <div><strong>Requested at:</strong> {{ auth_request.requested_at|date:"M d, Y H:i" }}</div>
-        <div><strong>Status:</strong> {{ auth_request.status|upper }}</div>
-        <div><strong>Reviewed by:</strong> {{ auth_request.reviewed_by.username|default:'N/A' }}</div>
-        <div><strong>Reviewed at:</strong> {{ auth_request.reviewed_at|date:"M d, Y H:i"|default:'N/A' }}</div>
-        <div><strong>Security Level:</strong> {{ auth_request.security_level }}</div>
-        <div><strong>CSR Submitted:</strong> {% if auth_request.csr_pem %}Yes{% else %}No{% endif %}</div>
-        <div><strong>Certificate Issued:</strong> {% if auth_request.issued_certificate_pem %}Yes{% else %}No{% endif %}</div>
-        {% if auth_request.review_notes %}
-        <div><strong>Review Notes:</strong> {{ auth_request.review_notes }}</div>
+    <!-- ── Status Banner ───────────────────────────────────────── -->
+    {% if auth_request.status == 'approved' %}
+    <div style="padding:0.65rem 1rem; border-radius:8px; background:#f0fdf4; border:1px solid #bbf7d0; color:#14532d; font-weight:700; margin-bottom:1rem;">
+        ✅ APPROVED — by {{ auth_request.reviewed_by.username|default:'N/A' }} on {{ auth_request.reviewed_at|date:"M d, Y H:i"|default:'N/A' }}
+        {% if auth_request.review_notes %} &nbsp;·&nbsp; <em style="font-weight:400;">{{ auth_request.review_notes }}</em>{% endif %}
+    </div>
+    {% elif auth_request.status == 'rejected' %}
+    <div style="padding:0.65rem 1rem; border-radius:8px; background:#fef2f2; border:1px solid #fecaca; color:#7f1d1d; font-weight:700; margin-bottom:1rem;">
+        ❌ REJECTED — by {{ auth_request.reviewed_by.username|default:'N/A' }} on {{ auth_request.reviewed_at|date:"M d, Y H:i"|default:'N/A' }}
+        {% if auth_request.review_notes %} &nbsp;·&nbsp; <em style="font-weight:400;">{{ auth_request.review_notes }}</em>{% endif %}
+    </div>
+    {% else %}
+    <div style="padding:0.65rem 1rem; border-radius:8px; background:#fffbeb; border:1px solid #fcd34d; color:#78350f; font-weight:700; margin-bottom:1rem;">
+        ⏳ PENDING — submitted {{ auth_request.requested_at|date:"M d, Y H:i" }}
+    </div>
+    {% endif %}
+
+    <style>
+        .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        @media (max-width: 600px) { .req-grid { grid-template-columns: 1fr; } }
+        .req-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem; }
+        .req-card h4 { margin: 0 0 0.6rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; }
+        .req-row { display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid #f3f4f6; font-size: 0.9rem; gap: 0.5rem; }
+        .req-row:last-child { border-bottom: none; }
+        .req-label { color: #6b7280; white-space: nowrap; min-width: 120px; }
+        .req-value { color: #111827; word-break: break-all; text-align: right; }
+        .badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; }
+        .badge-green  { background:#dcfce7; color:#14532d; }
+        .badge-yellow { background:#fef9c3; color:#713f12; }
+        .badge-red    { background:#fee2e2; color:#7f1d1d; }
+        .badge-blue   { background:#dbeafe; color:#1e3a8a; }
+        details summary { cursor: pointer; color: #2563eb; font-size: 0.88rem; font-weight: 600; padding: 0.35rem 0; user-select: none; }
+        details summary:hover { color: #1d4ed8; }
+        pre.pem-block { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.75rem; font-size: 0.72rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: 0.5rem 0 0; }
+        .spec-pill { display: inline-block; background: #e0f2fe; color: #0c4a6e; border-radius: 999px; padding: 0.15rem 0.6rem; font-size: 0.78rem; margin: 0.15rem; }
+    </style>
+
+    <!-- ── Row 1: Hardware & Request ───────────────────────────── -->
+    <div class="req-grid">
+        <!-- Hardware card -->
+        <div class="req-card">
+            <h4>🖥️ Hardware / Network</h4>
+            <div class="req-row"><span class="req-label">Hostname</span><span class="req-value">{{ auth_request.hostname|default:'—' }}</span></div>
+            <div class="req-row"><span class="req-label">Device Name</span><span class="req-value">{{ auth_request.device_name|default:'—' }}</span></div>
+            <div class="req-row"><span class="req-label">IP Address</span><span class="req-value">{{ auth_request.ip_address }}</span></div>
+            <div class="req-row"><span class="req-label">MAC Address</span>
+                <span class="req-value">
+                    {% if auth_request.mac_address %}
+                        <code style="font-size:0.85rem;">{{ auth_request.mac_address }}</code>
+                    {% else %}<em style="color:#9ca3af;">Not provided</em>{% endif %}
+                </span>
+            </div>
+            <div class="req-row"><span class="req-label">PC Username</span>
+                <span class="req-value">
+                    {% if auth_request.pc_username %}
+                        <code style="font-size:0.85rem;">{{ auth_request.pc_username }}</code>
+                    {% else %}<em style="color:#9ca3af;">Not provided</em>{% endif %}
+                </span>
+            </div>
+            <div class="req-row"><span class="req-label">Fingerprint</span><span class="req-value" style="font-family:monospace;font-size:0.78rem;">{{ auth_request.device_fingerprint }}</span></div>
+            {% if auth_request.system_specs %}
+            <div style="margin-top:0.5rem;">
+                {% if auth_request.system_specs.os %}<span class="spec-pill">🔧 OS: {{ auth_request.system_specs.os }}</span>{% endif %}
+                {% if auth_request.system_specs.cpu_cores %}<span class="spec-pill">⚙️ {{ auth_request.system_specs.cpu_cores }} cores</span>{% endif %}
+                {% if auth_request.system_specs.ram_gb %}<span class="spec-pill">💾 {{ auth_request.system_specs.ram_gb }} GB RAM</span>{% endif %}
+                {% if auth_request.system_specs.screen %}<span class="spec-pill">🖥️ {{ auth_request.system_specs.screen }}</span>{% endif %}
+                {% if auth_request.system_specs.timezone %}<span class="spec-pill">🕐 {{ auth_request.system_specs.timezone }}</span>{% endif %}
+                {% if auth_request.system_specs.lang %}<span class="spec-pill">🌐 {{ auth_request.system_specs.lang }}</span>{% endif %}
+            </div>
+            <details style="margin-top:0.4rem;">
+                <summary>Full system specs JSON</summary>
+                <pre class="pem-block">{{ auth_request.system_specs|pprint }}</pre>
+            </details>
+            {% endif %}
+            <div style="margin-top:0.5rem;"><span class="req-label" style="font-size:0.82rem;">User Agent</span>
+                <p style="font-size:0.78rem;color:#6b7280;margin:0.2rem 0 0;word-break:break-all;">{{ auth_request.user_agent }}</p>
+            </div>
+        </div>
+
+        <!-- Request card -->
+        <div class="req-card">
+            <h4>📋 Request</h4>
+            <div class="req-row"><span class="req-label">Requested by</span><span class="req-value">{{ auth_request.requested_by.username }}</span></div>
+            <div class="req-row"><span class="req-label">Email</span><span class="req-value" style="font-size:0.85rem;">{{ auth_request.requested_by.email|default:'—' }}</span></div>
+            <div class="req-row"><span class="req-label">Requested at</span><span class="req-value">{{ auth_request.requested_at|date:"M d, Y H:i" }}</span></div>
+            <div class="req-row"><span class="req-label">Security Level</span>
+                <span class="req-value">
+                    {% if auth_request.security_level == 'MILITARY' %}<span class="badge badge-red">{{ auth_request.security_level }}</span>
+                    {% elif auth_request.security_level == 'HIGH' %}<span class="badge badge-yellow">{{ auth_request.security_level }}</span>
+                    {% else %}<span class="badge badge-blue">{{ auth_request.security_level }}</span>{% endif %}
+                </span>
+            </div>
+            <div class="req-row"><span class="req-label">Can Transact</span><span class="req-value">{% if auth_request.can_transact %}✅ Yes{% else %}❌ No{% endif %}</span></div>
+            <div class="req-row"><span class="req-label">Max Daily Tx</span><span class="req-value">{{ auth_request.max_daily_transactions }}</span></div>
+            <div style="margin-top:0.65rem;font-size:0.88rem;color:#374151;">
+                <strong>Reason:</strong><br>
+                <p style="margin:0.3rem 0 0;color:#4b5563;">{{ auth_request.reason }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Row 2: Certificate / CSR ────────────────────────────── -->
+    <div class="req-card" style="margin-bottom:1rem;">
+        <h4>🔐 Certificate / CSR</h4>
+        <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:0.5rem;">
+            <div>
+                <span class="req-label" style="font-size:0.82rem;">CSR on file</span><br>
+                {% if auth_request.csr_pem %}
+                    <span class="badge badge-green">✅ Submitted</span>
+                {% else %}
+                    <span class="badge badge-yellow">⚠️ Not submitted</span>
+                {% endif %}
+            </div>
+            <div>
+                <span class="req-label" style="font-size:0.82rem;">Certificate issued</span><br>
+                {% if auth_request.issued_certificate_pem %}
+                    <span class="badge badge-green">✅ Issued</span>
+                    {% if auth_request.issued_certificate_issued_at %}
+                        <span style="font-size:0.8rem;color:#6b7280;margin-left:0.4rem;">{{ auth_request.issued_certificate_issued_at|date:"M d, Y H:i" }}</span>
+                    {% endif %}
+                {% else %}
+                    <span class="badge badge-yellow">⏳ Pending</span>
+                {% endif %}
+            </div>
+            {% if auth_request.issued_certificate_serial %}
+            <div>
+                <span class="req-label" style="font-size:0.82rem;">Cert Serial</span><br>
+                <code style="font-size:0.82rem;">{{ auth_request.issued_certificate_serial }}</code>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if auth_request.csr_pem %}
+        <details>
+            <summary>📄 View CSR PEM (Certificate Signing Request)</summary>
+            <pre class="pem-block">{{ auth_request.csr_pem }}</pre>
+        </details>
         {% endif %}
-        <div><strong>Reason:</strong> {{ auth_request.reason }}</div>
+
+        {% if auth_request.issued_certificate_pem %}
+        <details style="margin-top:0.4rem;">
+            <summary>📜 View Issued Certificate PEM</summary>
+            <pre class="pem-block">{{ auth_request.issued_certificate_pem }}</pre>
+        </details>
+        {% endif %}
     </div>
 
     {% if auth_request.status == 'approved' and not auth_request.csr_pem %}

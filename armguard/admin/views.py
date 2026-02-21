@@ -1004,6 +1004,14 @@ def request_device_authorization(request):
         reason = request.POST.get('reason', '')
         device_name = request.POST.get('device_name', '')
         csr_pem = request.POST.get('csr_pem', '').strip()
+        mac_address = request.POST.get('mac_address', '').strip()
+        pc_username = request.POST.get('pc_username', '').strip()
+        # system_specs comes as a JSON string from the hidden field
+        import json as _json
+        try:
+            system_specs = _json.loads(request.POST.get('system_specs', '{}') or '{}')
+        except (ValueError, TypeError):
+            system_specs = {}
         
         if not reason or not device_name:
             messages.error(request, 'Please provide both device name and reason.')
@@ -1023,6 +1031,9 @@ def request_device_authorization(request):
                     stale_approved_request.ip_address = ip_address
                     stale_approved_request.user_agent = user_agent
                     stale_approved_request.csr_pem = csr_pem
+                    stale_approved_request.mac_address = mac_address
+                    stale_approved_request.pc_username = pc_username
+                    stale_approved_request.system_specs = system_specs
                     stale_approved_request.issued_certificate_pem = ''
                     stale_approved_request.issued_certificate_serial = ''
                     stale_approved_request.issued_certificate_issued_at = None
@@ -1039,6 +1050,9 @@ def request_device_authorization(request):
                         reason=reason,
                         device_name=device_name,
                         csr_pem=csr_pem,
+                        mac_address=mac_address,
+                        pc_username=pc_username,
+                        system_specs=system_specs,
                     )
             except DatabaseError:
                 logger.exception("Database error while creating device authorization request")

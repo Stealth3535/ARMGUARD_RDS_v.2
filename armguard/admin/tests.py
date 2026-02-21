@@ -324,14 +324,17 @@ class CSRFullFlowTests(TestCase):
         )
 
     def test_submit_with_csr_stores_it(self):
-        """DeviceAuthorizationRequest created via POST stores csr_pem."""
+        """DeviceAuthorizationRequest created via POST stores csr_pem, mac, pc_user, specs."""
         client = Client()
         client.force_login(self.officer)
         url = reverse('armguard_admin:request_device_authorization')
         client.post(url, {
-            'device_name': 'Flow Test PC',
-            'reason':      'Integration test',
-            'csr_pem':     FAKE_CSR,
+            'device_name':  'Flow Test PC',
+            'reason':       'Integration test',
+            'csr_pem':      FAKE_CSR,
+            'mac_address':  'AA:BB:CC:DD:EE:FF',
+            'pc_username':  'test.officer',
+            'system_specs': '{"os":"Win32","cpu_cores":8,"ram_gb":16}',
         }, follow=True)
         req = DeviceAuthorizationRequest.objects.filter(
             requested_by=self.officer,
@@ -339,6 +342,9 @@ class CSRFullFlowTests(TestCase):
         ).first()
         self.assertIsNotNone(req, 'DeviceAuthorizationRequest must be created')
         self.assertIn('BEGIN CERTIFICATE REQUEST', req.csr_pem)
+        self.assertEqual(req.mac_address, 'AA:BB:CC:DD:EE:FF')
+        self.assertEqual(req.pc_username, 'test.officer')
+        self.assertEqual(req.system_specs.get('cpu_cores'), 8)
 
     def test_approve_with_csr_creates_active_v2_device(self):
         """approve() with CSR creates an ACTIVE AuthorizedDevice in v2 DB.
@@ -384,3 +390,42 @@ class CSRFullFlowTests(TestCase):
         req.refresh_from_db()
         self.assertIn('BEGIN CERTIFICATE REQUEST', req.csr_pem,
                       'CSR must persist in DB after attach')
+
+    def test_new_fields_saved_on_request_creation(self):
+        """mac_address, pc_username, and system_specs are saved to the DB on creation."""
+        req = DeviceAuthorizationRequest.objects.create(
+            device_fingerprint=secrets.token_hex(16),
+            ip_address='10.0.0.5',
+            user_agent='TestBrowser/1.0',
+            requested_by=self.officer,
+            reason='Testing PC fields',
+            device_name='Field Test PC',
+            mac_address='11:22:33:44:55:66',
+            pc_username='field.user',
+            system_specs={'os': 'Linux x86_64', 'cpu_cores': 4, 'ram_gb': 8},
+        )
+        req.refresh_from_db()
+        self.assertEqual(req.mac_address, '11:22:33:44:55:66')
+        self.assertEqual(req.pc_username, 'field.user')
+        self.assertEqual(req.system_specs['cpu_cores'], 4)
+
+    def test_view_page_shows_mac_and_pc_username(self):
+        """view_device_request template renders MAC address and PC username."""
+        req = _make_approved_request(
+            self.admin,
+            csr_pem='',
+            device_name='MAC Test PC',
+        )
+        req.mac_address = 'AA:BB:CC:DD:EE:FF'
+        req.pc_username = 'mac.test.user'
+        req.system_specs = {'os': 'Win32', 'cpu_cores': 8}
+        req.save()
+
+        client = Client()
+        client.force_login(self.admin)
+        url = reverse('armguard_admin:view_device_request', args=[req.id])
+        resp = client.get(url)
+        html = _decode(resp)
+        self.assertIn('AA:BB:CC:DD:EE:FF', html, 'MAC address must appear in View page')
+        self.assertIn('mac.test.user', html, 'PC username must appear in View page')
+        self.assertIn('Win32', html, 'OS from system_specs must appear in View page')
