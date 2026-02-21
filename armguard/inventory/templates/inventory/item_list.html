@@ -79,6 +79,8 @@
         overflow: hidden;
         opacity: 0;
         transform: translateY(20px);
+        display: flex;
+        flex-direction: column;
     }
     
     .stat-card::before {
@@ -103,13 +105,11 @@
     .stat-card.total { --card-color: #667eea; }
     
     .stat-content {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+        display: contents;
     }
     
     .stat-info {
-        flex: 1;
+        display: contents;
     }
 
     .stat-head {
