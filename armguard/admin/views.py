@@ -1092,7 +1092,11 @@ def manage_device_requests(request):
     
     status_filter = request.GET.get('status', 'pending')
     
-    requests_qs = DeviceAuthorizationRequest.objects.all()
+    requests_qs = (
+        DeviceAuthorizationRequest.objects
+        .select_related('requested_by', 'reviewed_by')
+        .order_by('-requested_at')
+    )
     if status_filter and status_filter != 'all':
         requests_qs = requests_qs.filter(status=status_filter)
 

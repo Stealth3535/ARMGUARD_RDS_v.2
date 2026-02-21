@@ -429,3 +429,191 @@ class CSRFullFlowTests(TestCase):
         self.assertIn('AA:BB:CC:DD:EE:FF', html, 'MAC address must appear in View page')
         self.assertIn('mac.test.user', html, 'PC username must appear in View page')
         self.assertIn('Win32', html, 'OS from system_specs must appear in View page')
+
+
+# ── ManageDeviceRequestsTests ─────────────────────────────────────────────────
+
+@NO_DEVICE_MIDDLEWARE
+class ManageDeviceRequestsTests(TestCase):
+    """Rigorous tests for /admin/device/requests/ (manage_device_requests view)."""
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username='mgr_admin', password='pass', email='mgr@a.com'
+        )
+        self.officer = User.objects.create_user(
+            username='mgr_officer', password='pass'
+        )
+        self.client = Client()
+        self.client.force_login(self.admin)
+        self.url = reverse('armguard_admin:manage_device_requests')
+
+    # ── Access control ──────────────────────────────────────────────────────
+
+    def test_redirects_anonymous(self):
+        """Unauthenticated request is redirected to login."""
+        c = Client()
+        resp = c.get(self.url)
+        self.assertIn(resp.status_code, (302, 403))
+
+    def test_non_superuser_denied(self):
+        """Regular (non-superuser) user cannot access the manage page."""
+        c = Client()
+        c.force_login(self.officer)
+        resp = c.get(self.url)
+        self.assertIn(resp.status_code, (302, 403))
+
+    def test_superuser_gets_200(self):
+        """Superuser can access the manage page."""
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 200)
+
+    # ── Rendering with no records ───────────────────────────────────────────
+
+    def test_empty_state_renders(self):
+        """Page renders OK with zero requests."""
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 200)
+        html = _decode(resp)
+        self.assertIn('Device Authorization Requests', html)
+
+    # ── Rendering with new fields ───────────────────────────────────────────
+
+    def test_mac_and_pc_username_shown_in_list(self):
+        """MAC address and PC username appear in the manage list for matching records."""
+        req = _make_approved_request(self.admin, device_name='MAC List PC')
+        req.mac_address = 'DE:AD:BE:EF:00:01'
+        req.pc_username = 'list.user'
+        req.save()
+
+        resp = self.client.get(self.url + '?status=approved')
+        html = _decode(resp)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('DE:AD:BE:EF:00:01', html, 'MAC must appear in list')
+        self.assertIn('list.user', html, 'PC username must appear in list')
+
+    def test_system_specs_pills_shown_in_list(self):
+        """OS / CPU / RAM spec pills render correctly in the list."""
+        req = _make_approved_request(self.admin, device_name='Spec Pill PC')
+        req.system_specs = {'os': 'Win64', 'cpu_cores': 16, 'ram_gb': 32}
+        req.save()
+
+        resp = self.client.get(self.url + '?status=approved')
+        html = _decode(resp)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('Win64', html, 'OS pill must appear in list')
+        self.assertIn('16 cores', html, 'CPU pill must appear in list')
+        self.assertIn('32 GB RAM', html, 'RAM pill must appear in list')
+
+    def test_old_record_empty_system_specs_does_not_crash(self):
+        """Records with empty system_specs ({}) render without raising a 500."""
+        req = _make_approved_request(self.admin, device_name='Old Record PC')
+        # system_specs defaults to {} — simulate a legacy record
+        req.system_specs = {}
+        req.mac_address = ''
+        req.pc_username = ''
+        req.save()
+
+        resp = self.client.get(self.url + '?status=approved')
+        self.assertEqual(resp.status_code, 200,
+            'Empty system_specs must not cause 500 — migration may not be applied on server')
+
+    def test_csr_badge_shown_when_csr_present(self):
+        """CSR on file badge appears when csr_pem is set."""
+        req = _make_approved_request(self.admin, csr_pem=FAKE_CSR, device_name='CSR Badge PC')
+
+        resp = self.client.get(self.url + '?status=approved')
+        html = _decode(resp)
+        self.assertIn('CSR on file', html, 'CSR badge must show when csr_pem exists')
+
+    def test_no_csr_badge_shown_when_no_csr(self):
+        """No CSR badge appears when csr_pem is empty."""
+        req = _make_approved_request(self.admin, csr_pem='', device_name='No CSR Badge PC')
+
+        resp = self.client.get(self.url + '?status=approved')
+        html = _decode(resp)
+        self.assertIn('No CSR', html, 'No-CSR badge must show when csr_pem is empty')
+
+    # ── Status filter ───────────────────────────────────────────────────────
+
+    def test_filter_approved_only_shows_approved(self):
+        """?status=approved returns only approved records without crashing."""
+        approved_fp = secrets.token_hex(16)
+        DeviceAuthorizationRequest.objects.create(
+            device_fingerprint=approved_fp,
+            ip_address='10.10.10.10',
+            user_agent='Browser/1',
+            requested_by=self.admin,
+            reason='Approved req',
+            device_name='Approved One',
+            status='approved',
+        )
+        pending_fp = secrets.token_hex(16)
+        DeviceAuthorizationRequest.objects.create(
+            device_fingerprint=pending_fp,
+            ip_address='10.20.20.20',
+            user_agent='Browser/1',
+            requested_by=self.officer,
+            reason='Pending req',
+            device_name='Pending One',
+            status='pending',
+        )
+
+        resp = self.client.get(self.url + '?status=approved')
+        html = _decode(resp)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('10.10.10.10', html, 'Approved IP must appear')
+        self.assertNotIn('10.20.20.20', html, 'Pending IP must NOT appear in approved filter')
+
+    def test_filter_pending_returns_200(self):
+        resp = self.client.get(self.url + '?status=pending')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_filter_rejected_returns_200(self):
+        resp = self.client.get(self.url + '?status=rejected')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_all_filter_returns_all_statuses(self):
+        DeviceAuthorizationRequest.objects.create(
+            device_fingerprint=secrets.token_hex(16),
+            ip_address='10.30.30.30',
+            user_agent='Browser/1',
+            requested_by=self.admin,
+            reason='All filter approved',
+            device_name='AllFilter Approved',
+            status='approved',
+        )
+        DeviceAuthorizationRequest.objects.create(
+            device_fingerprint=secrets.token_hex(16),
+            ip_address='10.40.40.40',
+            user_agent='Browser/1',
+            requested_by=self.officer,
+            reason='All filter pending',
+            device_name='AllFilter Pending',
+            status='pending',
+        )
+        resp = self.client.get(self.url + '?status=all')
+        html = _decode(resp)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('10.30.30.30', html, 'Approved IP must appear in all-filter')
+        self.assertIn('10.40.40.40', html, 'Pending IP must appear in all-filter')
+
+    # ── Context variables ───────────────────────────────────────────────────
+
+    def test_stat_counts_in_context(self):
+        """pending_count, approved_count, rejected_count are passed to context."""
+        _make_approved_request(self.admin, device_name='Count Test')
+        resp = self.client.get(self.url)
+        self.assertIn('pending_count', resp.context)
+        self.assertIn('approved_count', resp.context)
+        self.assertIn('rejected_count', resp.context)
+        self.assertGreaterEqual(resp.context['approved_count'], 1)
+
+    def test_select_related_does_not_raise(self):
+        """Queryset uses select_related so accessing requested_by doesn't trigger extra queries."""
+        req = _make_approved_request(self.admin, device_name='SR Test')
+        resp = self.client.get(self.url + '?status=approved')
+        self.assertEqual(resp.status_code, 200)
+        html = _decode(resp)
+        # requested_by.username must be visible
+        self.assertIn(self.admin.username, html)
